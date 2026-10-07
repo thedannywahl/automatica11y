@@ -9,6 +9,37 @@ export const IMPACTS = ["minor", "moderate", "serious", "critical"];
 export const TOOLKIT_LEVELS = [1, 2, 3];
 export const FAIL_MODES = ["any", "all"];
 export const ARCHETYPES = ["button", "link", "dialog", "menu", "tabs", "combobox", "form-field", "accordion", "tooltip", "chart"];
+export const FLAVORS = ["react", "wc"];
+export const MAPPING_STATUSES = ["template", "authored", "needs-fixture", "no-match"];
+
+/** What a candidate mapping says about one archetype of one npm target. */
+export const MappingEntrySchema = v.object({
+  flavor: v.optional(v.picklist(FLAVORS)),
+  /** Export name (React) the fixture or template uses. */
+  export: v.optional(v.string()),
+  /** Custom element tag (web components) the fixture or template uses. */
+  tag: v.optional(v.string()),
+  /** Path to an authored fixture, relative to where the command runs. */
+  fixture: v.optional(v.nullable(v.string())),
+  status: v.optional(v.picklist(MAPPING_STATUSES)),
+  candidates: v.optional(v.array(v.string())),
+  parts: v.optional(v.array(v.string())),
+  reason: v.optional(v.string()),
+});
+
+/** The file `--mapping` points to: target id, then archetype. */
+export const MappingFileSchema = v.record(v.string(), v.record(v.picklist(ARCHETYPES), MappingEntrySchema));
+
+/**
+ * Parse a mapping file. Throws an Error with a readable summary when it's invalid.
+ * @param {unknown} input
+ */
+export function parseMappingFile(input) {
+  const result = v.safeParse(MappingFileSchema, input);
+  if (!result.success) throw new Error(`Invalid mapping:\n${v.summarize(result.issues)}`);
+  return result.output;
+}
+
 export const TARGET_KINDS = ["npm", "npm-react", "npm-wc", "npm-unsupported", "npm-non-ui", "storybook", "url", "html-file", "static-dir"];
 
 const nullableString = v.nullable(v.string());
@@ -22,7 +53,7 @@ export const TargetSchema = v.object({
   kind: v.nullable(v.picklist(TARGET_KINDS)),
   evidenceLevel: v.nullable(v.picklist(["component", "page"])),
   resolved: v.nullable(v.record(v.string(), nullableString)),
-  mapping: v.nullable(v.record(v.string(), v.unknown())),
+  mapping: v.nullable(v.record(v.string(), MappingEntrySchema)),
 });
 
 export const FailConfigSchema = v.object({
@@ -130,16 +161,28 @@ const StorybookInfoSchema = v.object({
 
 export const TargetResultSchema = v.object({
   id: v.string(),
-  status: v.picklist(["ran", "failed"]),
+  status: v.picklist(["ran", "failed", "unsupported", "not-applicable"]),
   reason: nullableString,
   archetypes: v.record(
     v.string(),
     v.object({
       status: v.picklist(["ran", "gap"]),
-      configs: v.array(v.object({ libA11y: v.picklist(["on", "off", "n/a"]), tiers: v.record(v.string(), TierResultSchema) })),
+      reason: v.optional(v.nullable(v.string())),
+      configs: v.array(v.object({ libA11y: v.picklist(["on", "off", "n/a"]), state: v.optional(v.string()), tiers: v.record(v.string(), TierResultSchema) })),
     }),
   ),
   storybook: v.optional(StorybookInfoSchema),
+  npm: v.optional(
+    v.object({
+      name: v.string(),
+      version: nullableString,
+      flavor: v.picklist(FLAVORS),
+      framework: nullableString,
+      react: nullableString,
+      reactDom: nullableString,
+      tags: v.array(v.string()),
+    }),
+  ),
   summary: v.object({
     engines: v.record(v.string(), EngineSummarySchema),
     gaps: v.array(v.string()),

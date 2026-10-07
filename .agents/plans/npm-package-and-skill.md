@@ -233,24 +233,28 @@ Detect by `react` in `peerDependencies`.
 - The runner validates each fixture: it must render, expose the stable test hooks, and mount without console errors.
 - A missing or invalid fixture produces a `gap`, never a pass.
 
-**Fixture contract.** Each fixture default-exports a React component that renders the archetype in its initial state. It marks the trigger with `data-a11y-trigger` and the primary surface with `data-a11y-root`. The runner's interaction scripts target only those hooks and ARIA roles.
+**Fixture contract.** Each fixture default-exports a React component that renders the archetype in its initial state. It marks exactly one element with `data-a11y-trigger` and the primary surface with `data-a11y-root`. Put `data-a11y-root` on the element that carries the dialog or menu role, not on an overlay or portal wrapper. The root may not exist until the trigger fires, and it may render in a portal, so the runner looks for it in the whole document. The fixture must mount without console errors. The runner's interaction scripts target only those hooks and ARIA roles.
+
+**Where fixtures live.** The runner looks for `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) relative to where the command runs. A mapping file can name a fixture elsewhere. The first real run on an npm target writes the candidate mapping to `mapping.json` in the output folder, in the format `--mapping` reads, so it can be edited and passed back.
+
+**Templates.** The runner fills in a fixture itself only for `button` and `link`, from the export name. Every other archetype needs an authored fixture, and without one it's a gap.
 
 ### npm package, web components.
 
-Detect `custom-elements.json` (or a `customElements` field in `package.json`), or a `customElements.define` call in the package's entry. A package with both React and web component signals runs as React unless the target says otherwise (see below).
+Detect a `customElements` field in the package metadata, a dependency on Lit, Stencil, FAST, or Polymer, or, when the metadata can't say, any custom element the package defines when the browser loads it. A package with both React and web component signals runs as React unless the target says otherwise (see below).
 
 1. Install into a per-target temp directory, as for React. No React or peer framework is needed unless the package asks for one.
 2. Read the custom elements manifest (or scan the entry) for tag names, and generate a **candidate archetype mapping** from names (for example `my-dialog`, `x-tabs`).
 3. Generate one framework-free fixture per mapped archetype from `harness/templates/`.
 4. Bundle with esbuild and serve locally, as for React.
 
-**Fixture contract (web components).** A fixture is a plain `.js` file that default-exports `mount(container)`, a function that appends the archetype in its initial state to `container` and may return a promise. It marks the trigger with `data-a11y-trigger` and the primary surface with `data-a11y-root`. Put the hooks on elements the runner can reach: a custom element's host, a slotted light-DOM child, or an element inside an **open** shadow root. Playwright's CSS selectors pierce open shadow roots. Content inside a closed shadow root is unreachable, so the runner reports it as `not-testable` with that reason, never as clean.
+**Fixture contract (web components).** A fixture is a plain `.js` file that default-exports `mount(container)`, a function that appends the archetype in its initial state to `container` and may return a promise. The runner imports the package before it calls `mount`, so the fixture doesn't import it. It marks the trigger with `data-a11y-trigger` and the primary surface with `data-a11y-root`. Put the hooks on elements the runner can reach: a custom element's host, a slotted light-DOM child, or an element inside an **open** shadow root. Playwright's CSS selectors pierce open shadow roots. Content inside a closed shadow root is unreachable, so the runner reports it as `not-testable` with that reason, never as clean.
 
 The runner validates web component fixtures the same way as React fixtures: they must mount, expose the hooks, and run without console errors. A missing or invalid fixture produces a `gap`.
 
 **Choosing between React and web components.** When a package ships both, the candidate mapping records which flavor it picked and why. `--mapping` can force `"flavor": "wc"` or `"flavor": "react"` per archetype.
 
-Open risks, checked in M4: whether axe, IBM, and the virtual screen reader read content inside open shadow roots. See the implementation plan.
+Shadow DOM (M4 spike): axe and IBM read open shadow roots. The virtual screen reader reads none, so the vsr tier reports shadow content as `not-testable`. A closed shadow root hides its content from every engine, and both engines report nothing there, so the runner records closed roots with an init script and lists their host tags as not testable on every target type.
 
 ### Unsupported and non-UI.
 

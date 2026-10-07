@@ -27,13 +27,13 @@ export function makeIo(overrides = {}) {
   const out = { stdout: "", stderr: "" };
   return {
     out,
-    io: {
+    io: /** @type {any} */ ({
       stdout: { write: (text) => (out.stdout += text) },
       stderr: { write: (text) => (out.stderr += text) },
       cwd: makeTree(),
       env: { PATH: "" },
       ...overrides,
-    },
+    }),
   };
 }
 

@@ -29,3 +29,14 @@ export async function closedShadowHosts(page) {
 export function notTestableEntries(counts) {
   return Object.entries(counts).map(([tag, n]) => `closed shadow root in <${tag}> (${n}): its content isn't visible to the rule engines`);
 }
+
+/** Runs before any page script. Notes every custom element the page or a package defines. */
+export function recordCustomElements() {
+  const original = customElements.define.bind(customElements);
+  const tags = [];
+  Object.defineProperty(window, "__a11yDefined", { value: tags, configurable: true });
+  customElements.define = (name, constructor, options) => {
+    tags.push(name);
+    return original(name, constructor, options);
+  };
+}

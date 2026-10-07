@@ -108,7 +108,8 @@ test("tiers that aren't built yet are reported as skipped, not clean", { skip },
   const tiers = tiersOf(run.results);
   assert.equal(tiers.interactions.status, "skipped");
   assert.equal(tiers.vsr.status, "skipped");
-  assert.match(run.report, /Not run: The interactions tier isn't built yet \(M5\)\./);
+  assert.match(run.report, /\*\*Not run\.\*\*/);
+  assert.match(run.report, /- Interactions: The interactions tier isn't built yet \(M5\)\./);
 });
 
 test("--tiers limits what runs and what the matrix shows", { skip }, async () => {

@@ -8,8 +8,11 @@ import { STORYBOOK_INDEX, fakeFetch, makeFakeBrowser, makeIo, makeTree } from ".
 
 const onUnix = process.platform !== "win32";
 
+/** The registry, faked. Every package looks like a React library at version 1.1.0. */
+const npmView = async (spec) => ({ name: spec.replace(/@[^@/]*$/, ""), version: "1.1.0", peerDependencies: { react: "*" } });
+
 async function run(argv, overrides = {}) {
-  const { io, out } = makeIo(overrides);
+  const { io, out } = makeIo({ npmView, ...overrides });
   const code = await main(argv, io);
   return { code, ...out, cwd: io.cwd };
 }
@@ -76,7 +79,7 @@ test("--plan writes a valid plan.json and exits 0", async () => {
     ["local", "html-file", "ok"],
     ["sb", "storybook", "ok"],
     ["example.com", "url", "ok"],
-    ["radix", "npm", "ok"],
+    ["radix", "npm-react", "ok"],
   ]);
   assert.equal(plan.targets[3].resolved.requested, "1.1.0");
   assert.equal(plan.tools.node, process.versions.node);

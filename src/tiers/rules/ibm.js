@@ -54,33 +54,42 @@ function group(items, ruleInfo, kindOf, maxNodes, withKind) {
  * The engine's WCAG rulesets cover levels A and AA. Level AAA runs the AA rules and says so.
  * ace.js goes in through page.evaluate, because a strict CSP blocks addScriptTag.
  * @param {import("playwright-core").Page} page
- * @param {{ wcag: string, level: string, maxNodes?: number, scope?: string | null }} options
+ * @param {{ wcag: string, level: string, maxNodes?: number, scope?: string | string[] | null }} options
  *   `scope` is a CSS selector. Component evidence checks only that element.
  */
 export async function runIbm(page, { wcag, level, maxNodes = 5, scope = null }) {
   const ruleset = `WCAG_${wcag.replace(".", "_")}`;
   const maxLevel = LEVEL_ORDER[level] ?? LEVEL_ORDER.AA;
   await page.evaluate(loadAce());
-  const raw = await page.evaluate(async ({ id, scope }) => {
+  const scopes = [scope ?? []].flat();
+  const raw = await page.evaluate(async ({ id, scopes }) => {
     // @ts-ignore ace.js defines window.ace in the page.
     const checker = new window.ace.Checker();
     const set = checker.rulesets.find((r) => r.id === id);
     if (!set) throw new Error(`The IBM engine has no ruleset ${id}.`);
-    const root = scope ? document.querySelector(scope) : document;
-    if (!root) throw new Error(`Nothing matches the scope ${scope}.`);
-    const report = await checker.check(root, [id]);
+    const roots = scopes.length ? scopes.flatMap((selector) => [...document.querySelectorAll(selector)]) : [document];
+    if (roots.length === 0) throw new Error(`Nothing matches the scope ${scopes.join(", ")}.`);
     const passed = new Set();
     const found = [];
-    for (const r of report.results) {
-      if (r.value[1] === "PASS") passed.add(r.ruleId);
-      else found.push({ ruleId: r.ruleId, value: r.value, message: r.message, dom: r.path?.dom, snippet: r.snippet });
+    const seen = new Set();
+    for (const root of roots) {
+      const report = await checker.check(root, [id]);
+      for (const r of report.results) {
+        if (r.value[1] === "PASS") passed.add(r.ruleId);
+        else {
+          const key = `${r.ruleId}|${r.path?.dom}|${r.value.join()}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          found.push({ ruleId: r.ruleId, value: r.value, message: r.message, dom: r.path?.dom, snippet: r.snippet });
+        }
+      }
     }
     return {
       checkpoints: set.checkpoints.map((cp) => ({ num: cp.num, level: cp.wcagLevel, rules: cp.rules.map((x) => [x.id, x.toolkitLevel]) })),
       found,
       passedRules: [...passed],
     };
-  }, { id: ruleset, scope });
+  }, { id: ruleset, scopes });
 
   /** @type {Map<string, { wcag: string[], toolkitLevel: number | null }>} */
   const ruleInfo = new Map();

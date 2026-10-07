@@ -1,5 +1,5 @@
 import { VIEWPORT } from "./browser.js";
-import { recordClosedShadowRoots } from "./shadow.js";
+import { recordClosedShadowRoots, recordCustomElements } from "./shadow.js";
 
 const NETWORK_IDLE_MS = 30_000;
 
@@ -8,16 +8,19 @@ const NETWORK_IDLE_MS = 30_000;
  * The returned `warnings` hold anything the report should mention, such as a network that never went idle.
  * @param {import("playwright-core").Browser} browser
  * @param {string} url
- * @param {{ viewport?: { width: number, height: number }, forcedColors?: boolean }} [options]
+ * @param {{ viewport?: { width: number, height: number }, forcedColors?: boolean, beforeGoto?: (page: import("playwright-core").Page) => void }} [options]
+ *   `beforeGoto` runs before navigation, so a caller can attach console listeners that see the first messages.
  */
-export async function openPage(browser, url, { viewport = VIEWPORT, forcedColors = false } = {}) {
+export async function openPage(browser, url, { viewport = VIEWPORT, forcedColors = false, beforeGoto } = {}) {
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1, forcedColors: forcedColors ? "active" : "none" });
   await context.addInitScript(recordClosedShadowRoots);
+  await context.addInitScript(recordCustomElements);
   /** @type {string[]} */
   const warnings = [];
   try {
     const page = await context.newPage();
     page.setDefaultTimeout(30_000);
+    beforeGoto?.(page);
     let response;
     try {
       response = await page.goto(url, { waitUntil: "networkidle", timeout: NETWORK_IDLE_MS });

@@ -60,8 +60,8 @@ function findingBlock(finding, { showImpact, showToolkit }) {
   return lines.join("\n");
 }
 
-function engineSection(engine, result) {
-  const title = `#### ${ENGINE_NAMES[engine] ?? engine}${result.version ? ` ${result.version}` : ""}.`;
+function engineSection(engine, result, nested = false) {
+  const title = `${nested ? "#####" : "####"} ${ENGINE_NAMES[engine] ?? engine}${result.version ? ` ${result.version}` : ""}.`;
   if (result.status !== "ran") return `${title}\n\nThis engine didn't run: ${result.reason ?? result.status}. Treat this as a coverage gap, not a pass.\n`;
   const showImpact = engine === "axe";
   const showToolkit = engine === "ibm";
@@ -148,27 +148,47 @@ function storybookSection(planTarget, target) {
   return lines.join("\n");
 }
 
+function archetypeTable(target) {
+  const rows = Object.entries(target.archetypes).map(([name, archetype]) => {
+    if (archetype.status === "gap") return `| ${name} | gap | - | ${cell(sentence(archetype.reason ?? "No fixture."))} |`;
+    const states = archetype.configs.map((c) => c.state).filter(Boolean).join(", ") || "-";
+    return `| ${name} | ran | ${states} | |`;
+  });
+  return ["| Archetype | Status | States | Note |", "| --- | --- | --- | --- |", ...rows];
+}
+
 function targetSection(planTarget, target) {
   if (target.status === "ran" && target.storybook) return storybookSection(planTarget, target);
   const lines = [`### ${planTarget.label}.`, ""];
   lines.push(`Target ${code(planTarget.input)}, ${planTarget.kind ?? "unclassified"}${planTarget.evidenceLevel ? `, ${planTarget.evidenceLevel} evidence` : ""}.`, "");
-  if (target.status === "failed") {
-    lines.push(`This target failed: ${sentence(target.reason)}. A failed target is a gap in coverage. It isn't a pass.`, "");
+  if (target.status !== "ran" && target.status !== "failed") {
+    lines.push(`This target is ${target.status}: ${sentence(target.reason)}. That's a gap in coverage. It isn't a pass.`, "");
     return lines.join("\n");
   }
+  if (target.npm) {
+    const n = target.npm;
+    lines.push(`Installed ${code(`${n.name}@${n.version}`)} on its own, as ${n.flavor === "react" ? `React${n.react ? ` (react ${n.react})` : ""}` : `web components (${n.tags.length ? n.tags.slice(0, 6).join(", ") : "no tags found"})`}.`, "");
+  }
   for (const warning of target.warnings) lines.push(`Warning: ${warning}`, "");
+  if (target.status === "failed") {
+    lines.push(`This target failed: ${sentence(target.reason)}. A failed target is a gap in coverage. It isn't a pass.`, "");
+  }
+  if (target.npm) lines.push("**Archetypes.** A gap means the archetype wasn't tested, so it counts against coverage and never as a pass.", "", ...archetypeTable(target), "");
+  /** @type {Set<string>} */
+  const skipped = new Set();
   for (const [name, archetype] of Object.entries(target.archetypes)) {
     for (const config of archetype.configs) {
-      if (name !== "page") lines.push(`#### ${name}.`, "");
+      if (name !== "page") lines.push(`#### ${name}${config.state ? ` (${config.state} state)` : ""}.`, "");
       for (const [tier, result] of Object.entries(config.tiers)) {
         if (tier === "rules") {
-          for (const [engine, engineResult] of Object.entries(result.engines ?? {})) lines.push(engineSection(engine, engineResult), "");
+          for (const [engine, engineResult] of Object.entries(result.engines ?? {})) lines.push(engineSection(engine, engineResult, name !== "page"), "");
         } else if (result.status !== "ran") {
-          lines.push(`#### ${TIER_NAMES[tier] ?? tier}.`, "", `Not run: ${sentence(result.reason ?? result.status)}.`, "");
+          skipped.add(`${TIER_NAMES[tier] ?? tier}: ${sentence(result.reason ?? result.status)}.`);
         }
       }
     }
   }
+  if (skipped.size) lines.push("**Not run.**", "", ...[...skipped].map((item) => `- ${item}`), "");
   return lines.join("\n");
 }
 

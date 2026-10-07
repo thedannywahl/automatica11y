@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
  *   resolved: Record<string, string | null> | null,
  * }} ClassifiedTarget
  * @typedef {(url: string | URL, init?: { signal?: AbortSignal, redirect?: string }) => Promise<{ ok: boolean, status: number, text(): Promise<string> }>} FetchLike
- * @typedef {{ cwd?: string, home?: string, fetch?: FetchLike, timeoutMs?: number }} ClassifyContext
+ * @typedef {{ cwd?: string, home?: string, fetch?: FetchLike, timeoutMs?: number, npmView?: (spec: string) => Promise<any> }} ClassifyContext
  */
 
 const LOCAL_PATH = /^(\.{1,2}(\/|$)|\/|~(\/|$)|file:)/;

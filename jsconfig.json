@@ -7,7 +7,17 @@
     "target": "es2022",
     "strict": false,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["bin", "src", "test"]
+  "include": [
+    "bin",
+    "src",
+    "test"
+  ],
+  "exclude": [
+    "test/fixtures",
+    "node_modules"
+  ]
 }

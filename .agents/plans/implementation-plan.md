@@ -236,17 +236,31 @@ Exit: `audit` works on a local Storybook directory and a Storybook URL. It does:
 
 
 
-### M4. npm React and web component path (four days). Highest risk.
+### M4. npm React and web component path (done).
 
-- [ ] `plan/resolve-npm.js`: name to concrete version, using `npm view`.
-- [ ] Framework detection: React, web components, unsupported (name the framework), non-UI. For packages with both React and web component signals, pick React, record why, and let `--mapping` set `"flavor"` per archetype. Fill in `kind` (`npm-react`, `npm-wc`, `npm-unsupported`, `npm-non-ui`) and the resolved version in the plan.
-- [ ] Shadow DOM spike first, one note in `.agents/notes/spike-shadow-dom.md`: build a small open-shadow-root custom element and check what axe, IBM, and the virtual screen reader report inside it. Adjust the web component plan to what they do.
-- [ ] `harness/npm-react.js` and `harness/npm-wc.js`: isolated temp install, export or manifest scan, candidate mapping, fixture generation, esbuild bundle, local serve. Share the install and serve code.
-- [ ] `plan/mapping.js`: load and validate `--mapping`. Validation renders each fixture, checks for the two hooks, and fails on console errors. Bad fixtures become `gap`.
-- [ ] One parameterized fixture template per flavor (React and web component). Start with button, dialog, and tabs. Apply the eight contract tweaks in `spike-fixtures.md`, including an `alias` that pins one copy of React.
-- [ ] Clean up temp directories on exit, including on failure.
+- [x] `plan/resolve-npm.js`: name to concrete version, using `npm view`.
+- [x] Framework detection: React, web components, unsupported (name the framework), non-UI. For packages with both React and web component signals, pick React, record why, and let `--mapping` set `"flavor"` per archetype. Fill in `kind` (`npm-react`, `npm-wc`, `npm-unsupported`, `npm-non-ui`) and the resolved version in the plan.
+- [x] Shadow DOM spike first, one note in `.agents/notes/spike-shadow-dom.md`: build a small open-shadow-root custom element and check what axe, IBM, and the virtual screen reader report inside it. Adjust the web component plan to what they do.
+- [x] `harness/npm-react.js` and `harness/npm-wc.js`: isolated temp install, export or manifest scan, candidate mapping, fixture generation, esbuild bundle, local serve. Share the install and serve code.
+- [x] `plan/mapping.js`: load and validate `--mapping`. Validation renders each fixture, checks for the two hooks, and fails on console errors. Bad fixtures become `gap`.
+- [x] One parameterized fixture template per flavor (React and web component). Start with button, dialog, and tabs. Apply the eight contract tweaks in `spike-fixtures.md`, including an `alias` that pins one copy of React.
+- [x] Clean up temp directories on exit, including on failure.
 
-Exit: `audit` on one non-compound React library (button, tabs), one compound React library (Radix dialog, authored fixture), and one web component library (a small Lit or Shoelace-style package, authored fixture where needed). Closed shadow roots report `not-testable`.
+Exit (met): `audit` on one non-compound React library (button, tabs), one compound React library (Radix dialog, authored fixture), and one web component library (a small Lit or Shoelace-style package, authored fixture where needed). Closed shadow roots report `not-testable`.
+
+**Results.** `npm test` runs 111 tests in about 70 seconds, and `npm run lint` is clean. I also ran real packages from the registry: Radix Dialog (React, authored fixture), `react-aria-components` and `@headlessui/react` (React, templates), and Shoelace (web components, template). Each audit took four to 13 seconds.
+
+- **Shadow DOM spike** (`spike-shadow-dom.md`): axe and IBM read open shadow roots. The virtual screen reader reads no shadow roots, so M6 reports shadow content as not testable. A closed root hides its content from every engine and looks clean, so an init script that wraps `attachShadow` records closed roots on every target type, and the report lists them under "Not testable."
+- **No separate planning step.** `--plan` resolves npm metadata with `npm view` (version and framework guess) but installs nothing. The first real run installs the package, discovers its exports or custom elements, writes the candidate mapping to `mapping.json` (the format `--mapping` reads) and into `plan.json`, and audits whatever has a fixture. The skill reviews the mapping, writes fixtures into `fixtures/<target id>/<archetype>.jsx` (or `.js` for web components) or names them in a mapping file, and reruns. Fixtures in that folder are found without `--mapping`.
+- **Discovery.** The runner bundles `import * as lib from "<package>"` and loads it in the browser, so it reads real exports and compound parts such as `Dialog.Trigger`, and records every custom element the package defines. A package with no framework signal in its metadata is decided here: custom elements mean web components, React components mean React, and neither means `not-applicable`.
+- **Templates.** Only `button` and `link` have templates, because other archetypes are compound and need a fixture. A template that can't mark its trigger (the library drops `data-*` props) becomes a gap with that reason. Every other archetype without a match or a fixture is a gap, listed in the report.
+- **Fixture contract in practice.** Exactly one `data-a11y-trigger`. No console errors on mount, except a missing favicon. Web component fixtures are plain `.js` files that default-export `mount(container)`, and the entry imports the package first, so its elements get defined. A fixture that doesn't mount, doesn't bundle, or breaks the contract is a gap with the reason, and the other archetypes still run.
+- **States.** Dialog, menu, tooltip, and combobox run `closed` and `open`. Accordion runs `collapsed` and `expanded`. Others run `initial`. The open state activates the trigger (focus for tooltips) and waits for `data-a11y-root` to show or the trigger to report `aria-expanded`. The rules scope is `#root` in the first state and `#root` plus `[data-a11y-root]` in the next, so portals count. A state that never appears fails the engines for that state.
+- **Status values.** Targets can now end `ran`, `failed`, `unsupported` (framework named), or `not-applicable`. Exit 4 means no target ran.
+- **Cleanup.** Each package installs into its own temporary folder, built and served from there, and removed afterward. `AUTOMATICA11Y_KEEP_TEMP=1` keeps it for debugging.
+- **Not done from `spike-fixtures.md`.** An optional `open` export to pick the activation method, and a hard failure when two copies of React resolve. The alias pins one copy, so the second matters less. Both can wait for a real need.
+- **Found along the way.** `aria-dialog-name` is a best-practice rule in axe 4.14, so the WCAG tag set leaves it out. The tests use an image without alt text that only exists in the open state instead.
+- **Dependencies added.** `esbuild` and `@guidepup/virtual-screen-reader` (M6 uses the latter), plus `react` and `react-dom` as dev dependencies for the test packages.
 
 ### M5. Interactions tier (three days).
 

@@ -13,6 +13,8 @@ import { parseResults } from "../schema.js";
 import { runRules, selfTest } from "../tiers/rules/index.js";
 import { evaluateFailCheck } from "./fail-check.js";
 import { mapPool } from "./pool.js";
+import { auditNpm } from "./audit-npm.js";
+import { failedTarget, summarize } from "./summary.js";
 
 /** How many stories to audit at once. */
 const STORY_CONCURRENCY = 4;
@@ -24,36 +26,8 @@ const NOT_BUILT = {
   vsr: "The virtual screen reader tier isn't built yet (M6).",
 };
 
-const UNSUPPORTED_KIND = (kind) => `${kind} targets aren't built yet (M4).`;
-
-/** Roll the engine results up into counts. Impact counts belong to axe and Toolkit-level counts belong to IBM. */
-function summarize(archetypes, engines, gaps = []) {
-  const summary = { engines: {}, gaps, notTestable: [] };
-  for (const engine of engines) {
-    const results = Object.values(archetypes).flatMap((a) => a.configs.map((c) => c.tiers.rules?.engines?.[engine]).filter(Boolean));
-    if (results.length === 0) continue;
-    const ran = results.filter((r) => r.status === "ran");
-    const entry = {
-      status: ran.length ? "ran" : results[0].status,
-      violations: ran.reduce((n, r) => n + r.violations.length, 0),
-      needsReview: ran.reduce((n, r) => n + r.incomplete.length, 0),
-    };
-    if (engine === "axe") {
-      entry.violationsByImpact = { critical: 0, serious: 0, moderate: 0, minor: 0 };
-      for (const r of ran) for (const f of r.violations) if (f.impact) entry.violationsByImpact[f.impact] += 1;
-    }
-    if (engine === "ibm") {
-      entry.violationsByToolkitLevel = { 1: 0, 2: 0, 3: 0, 4: 0 };
-      for (const r of ran) for (const f of r.violations) if (f.toolkitLevel != null) entry.violationsByToolkitLevel[f.toolkitLevel] += 1;
-    }
-    summary.engines[engine] = entry;
-  }
-  return summary;
-}
-
-function failedTarget(id, reason) {
-  return { id, status: "failed", reason, archetypes: {}, summary: { engines: {}, gaps: [], notTestable: [] }, warnings: [] };
-}
+const NPM_KINDS = new Set(["npm", "npm-react", "npm-wc", "npm-unsupported"]);
+const UNSUPPORTED_KIND = (kind) => `${kind} targets aren't supported.`;
 
 /** Audit one page and return its target result. */
 async function auditPage(browser, url, planTarget, plan, extraWarnings) {
@@ -168,29 +142,30 @@ async function auditStorybook(browser, planTarget, plan, servers) {
 }
 
 /** Run one target. Anything that goes wrong becomes a failed result, so one target can't stop the rest. */
-async function runTarget(browser, planTarget, plan) {
-  if (planTarget.status === "failed") return failedTarget(planTarget.id, planTarget.reason);
+async function runTarget(browser, planTarget, plan, io) {
+  if (planTarget.status === "failed") return { result: failedTarget(planTarget.id, planTarget.reason), mapping: null };
   const servers = [];
   try {
     const pageNote = plan.options.archetypes ? ["--archetypes only applies to Storybook and npm targets. This page was checked as a whole."] : [];
-    if (planTarget.kind === "storybook") return await auditStorybook(browser, planTarget, plan, servers);
-    if (planTarget.kind === "url") return await auditPage(browser, planTarget.resolved.url, planTarget, plan, pageNote);
+    if (planTarget.kind === "storybook") return { result: await auditStorybook(browser, planTarget, plan, servers), mapping: null };
+    if (NPM_KINDS.has(planTarget.kind)) return await auditNpm({ browser, planTarget, plan, cwd: io.cwd, install: io.installPackage });
+    if (planTarget.kind === "url") return { result: await auditPage(browser, planTarget.resolved.url, planTarget, plan, pageNote), mapping: null };
     if (planTarget.kind === "html-file") {
       const file = planTarget.resolved.path;
       const server = await serveStatic(dirname(file));
       servers.push(server);
-      return await auditPage(browser, `${server.origin}/${encodeURIComponent(basename(file))}`, planTarget, plan, pageNote);
+      return { result: await auditPage(browser, `${server.origin}/${encodeURIComponent(basename(file))}`, planTarget, plan, pageNote), mapping: null };
     }
     if (planTarget.kind === "static-dir") {
       const dir = planTarget.resolved.path;
-      if (!existsSync(resolve(dir, "index.html"))) return failedTarget(planTarget.id, "The directory has no index.html to check.");
+      if (!existsSync(resolve(dir, "index.html"))) return { result: failedTarget(planTarget.id, "The directory has no index.html to check."), mapping: null };
       const server = await serveStatic(dir);
       servers.push(server);
-      return await auditPage(browser, `${server.origin}/`, planTarget, plan, ["Only index.html was checked. Other pages in the directory weren't.", ...pageNote]);
+      return { result: await auditPage(browser, `${server.origin}/`, planTarget, plan, ["Only index.html was checked. Other pages in the directory weren't.", ...pageNote]), mapping: null };
     }
-    return failedTarget(planTarget.id, UNSUPPORTED_KIND(planTarget.kind));
+    return { result: failedTarget(planTarget.id, UNSUPPORTED_KIND(planTarget.kind)), mapping: null };
   } catch (error) {
-    return failedTarget(planTarget.id, error instanceof Error ? error.message.split("\n")[0] : String(error));
+    return { result: failedTarget(planTarget.id, error instanceof Error ? error.message.split("\n")[0] : String(error)), mapping: null };
   } finally {
     for (const server of servers) await server.close();
   }
@@ -198,7 +173,7 @@ async function runTarget(browser, planTarget, plan) {
 
 /** A short line per target for the terminal. */
 function describeResult(target) {
-  if (target.status === "failed") return `${target.id}: failed (${target.reason})`;
+  if (target.status !== "ran") return `${target.id}: ${target.status} (${target.reason})`;
   const parts = Object.entries(target.summary.engines).map(([engine, s]) => {
     if (s.status !== "ran") return `${engine} ${s.status}`;
     const extra = engine === "axe" ? Object.entries(s.violationsByImpact).filter(([, n]) => n).map(([k, n]) => `${n} ${k}`) : [];
@@ -236,7 +211,16 @@ export async function runPlan(plan, io) {
       }
     }
     const targets = [];
-    for (const planTarget of plan.targets) targets.push(await runTarget(browser, planTarget, plan));
+    const mappings = {};
+    for (const planTarget of plan.targets) {
+      const { result, mapping } = await runTarget(browser, planTarget, plan, io);
+      targets.push(result);
+      if (mapping) {
+        mappings[planTarget.id] = mapping;
+        planTarget.mapping = mapping;
+      }
+      if (result.npm) planTarget.kind = result.npm.flavor === "react" ? "npm-react" : "npm-wc";
+    }
 
     const results = parseResults({
       schema: 1,
@@ -251,14 +235,19 @@ export async function runPlan(plan, io) {
     mkdirSync(outDir, { recursive: true });
     writeFileSync(resolve(outDir, "results.json"), `${JSON.stringify(results, null, 2)}\n`);
     writeFileSync(resolve(outDir, "report.md"), renderReport({ plan, results }));
+    if (Object.keys(mappings).length > 0) {
+      // The candidate mapping, in the shape --mapping reads, so it can be edited and passed back in.
+      writeFileSync(resolve(outDir, "mapping.json"), `${JSON.stringify(mappings, null, 2)}\n`);
+      writeFileSync(resolve(outDir, "plan.json"), `${JSON.stringify(plan, null, 2)}\n`);
+    }
 
     const lines = ["", ...results.targets.map((t) => `  ${describeResult(t)}`)];
     if (results.failCheck) lines.push(`  Fail check (${results.failCheck.mode}): ${results.failCheck.tripped ? "tripped" : "not tripped"}`);
     lines.push(`  Wrote ${resolve(outDir, "results.json")}`, `  Wrote ${resolve(outDir, "report.md")}`);
     io.stdout.write(`${lines.join("\n")}\n`);
 
-    if (results.targets.every((t) => t.status === "failed")) {
-      io.stderr.write("Every target failed.\n");
+    if (!results.targets.some((t) => t.status === "ran")) {
+      io.stderr.write("No target produced results.\n");
       return EXIT.ALL_TARGETS_FAILED;
     }
     return results.failCheck?.tripped ? EXIT.FAIL_THRESHOLD : EXIT.OK;

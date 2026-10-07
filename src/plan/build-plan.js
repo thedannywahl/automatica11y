@@ -1,4 +1,5 @@
 import { classifyTarget, parseTargetInput } from "./classify.js";
+import { npmView, resolveNpmTarget } from "./resolve-npm.js";
 import { readToolVersions } from "../env/versions.js";
 
 /** @param {string} text */
@@ -19,7 +20,8 @@ function slug(text) {
  * }} input
  */
 export async function buildPlan({ command, targets, options, browserVersion = null, ctx = {}, now = new Date() }) {
-  const classified = await Promise.all(targets.map((raw) => classifyTarget(raw, ctx)));
+  const view = ctx.npmView ?? npmView;
+  const classified = await Promise.all(targets.map(async (raw) => resolveNpmTarget(await classifyTarget(raw, ctx), view)));
   const seen = new Map();
   const planTargets = classified.map((target) => {
     const base = slug(target.label ?? target.name);

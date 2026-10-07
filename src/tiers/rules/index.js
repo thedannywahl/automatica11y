@@ -6,7 +6,7 @@ const RUNNERS = { axe: runAxe, ibm: runIbm };
 /**
  * Run each chosen engine against the page. Engines report separately, and one failing engine doesn't stop the other.
  * @param {import("playwright-core").Page} page
- * @param {{ engines: string[], wcag: string, level: string, maxNodes?: number, scope?: string | null }} options
+ * @param {{ engines: string[], wcag: string, level: string, maxNodes?: number, scope?: string | string[] | null }} options
  */
 export async function runRules(page, { engines, wcag, level, maxNodes = 5, scope = null }) {
   /** @type {Record<string, any>} */

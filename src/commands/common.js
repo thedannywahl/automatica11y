@@ -4,6 +4,7 @@ import { parseArgs } from "node:util";
 import { checkEnvironment } from "../env/browser.js";
 import { readToolVersions } from "../env/versions.js";
 import { buildPlan, findDuplicateLabel } from "../plan/build-plan.js";
+import { loadMappingFile } from "../plan/mapping.js";
 import { runPlan } from "../run/run-plan.js";
 import { ARCHETYPES, ENGINES, FAIL_MODES, IMPACTS, LEVELS, LIB_A11Y, TIERS, TOOLKIT_LEVELS, WCAG_VERSIONS, parsePlan } from "../schema.js";
 
@@ -13,7 +14,7 @@ export const EXIT = { OK: 0, FAIL_THRESHOLD: 1, USAGE: 2, ENVIRONMENT: 3, ALL_TA
 export class UsageError extends Error {}
 
 /**
- * @typedef {{ stdout: { write(text: string): unknown }, stderr: { write(text: string): unknown }, cwd: string, env: NodeJS.ProcessEnv, fetch?: import("../plan/classify.js").FetchLike, platform?: NodeJS.Platform }} Io
+ * @typedef {{ stdout: { write(text: string): unknown }, stderr: { write(text: string): unknown }, cwd: string, env: NodeJS.ProcessEnv, fetch?: import("../plan/classify.js").FetchLike, npmView?: (spec: string) => Promise<any>, installPackage?: Function, platform?: NodeJS.Platform }} Io
  */
 
 const OPTION_DEFS = /** @type {const} */ ({
@@ -119,7 +120,7 @@ export function parseRunArgs(command, argv) {
 export function describeTarget(target) {
   if (target.status === "failed") return `failed: ${target.reason}`;
   const r = target.resolved ?? {};
-  if (target.kind === "npm") return `${r.name}@${r.requested ?? "latest"}`;
+  if (target.kind?.startsWith("npm")) return `${r.name}@${r.version ?? r.requested ?? "latest"}${r.framework ? ` (${r.framework})` : ""}`;
   return r.url ?? r.path ?? "";
 }
 
@@ -191,7 +192,22 @@ export async function runCommand(command, argv, io) {
     const env = await checkEnvironment({ env: io.env, platform: io.platform });
     browserVersion = env.browser?.version ?? null;
   }
-  const plan = parsePlan(await buildPlan({ command, targets: parsed.targets, options, browserVersion, ctx: { cwd: io.cwd, fetch: io.fetch } }));
+  let mapping = null;
+  if (options.mapping) {
+    try {
+      mapping = loadMappingFile(options.mapping, io.cwd);
+    } catch (error) {
+      throw new UsageError(error instanceof Error ? error.message : String(error));
+    }
+  }
+  const built = await buildPlan({ command, targets: parsed.targets, options, browserVersion, ctx: { cwd: io.cwd, fetch: io.fetch, npmView: io.npmView } });
+  if (mapping) {
+    const ids = new Set(built.targets.map((t) => t.id));
+    const unknown = Object.keys(mapping).filter((id) => !ids.has(id));
+    if (unknown.length) throw new UsageError(`The mapping has entries for ${unknown.join(", ")}, which ${unknown.length === 1 ? "isn't" : "aren't"} a target in this run. Targets here: ${[...ids].join(", ")}.`);
+    for (const target of built.targets) target.mapping = mapping[target.id] ?? null;
+  }
+  const plan = parsePlan(built);
   return executePlan(plan, { planOnly: parsed.planOnly }, io);
 }
 
