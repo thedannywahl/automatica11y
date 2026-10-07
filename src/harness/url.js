@@ -1,4 +1,5 @@
 import { VIEWPORT } from "./browser.js";
+import { recordClosedShadowRoots } from "./shadow.js";
 
 const NETWORK_IDLE_MS = 30_000;
 
@@ -11,6 +12,7 @@ const NETWORK_IDLE_MS = 30_000;
  */
 export async function openPage(browser, url, { viewport = VIEWPORT, forcedColors = false } = {}) {
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1, forcedColors: forcedColors ? "active" : "none" });
+  await context.addInitScript(recordClosedShadowRoots);
   /** @type {string[]} */
   const warnings = [];
   try {

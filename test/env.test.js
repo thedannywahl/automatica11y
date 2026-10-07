@@ -64,9 +64,7 @@ test("tool versions: installed tools report a version, and missing ones are null
   assert.equal(tools.node, process.versions.node);
   assert.match(tools.automatica11y, /^\d+\.\d+\.\d+/);
   assert.equal(tools.chromium, "1.2.3.4");
-  for (const key of ["axe-core", "ibm-checker-engine", "playwright-core"]) assert.match(tools[key], /^\d+\.\d+\.\d+/, key);
-  assert.equal(tools.esbuild, null);
-  assert.equal(tools["guidepup-vsr"], null);
+  for (const key of ["axe-core", "ibm-checker-engine", "playwright-core", "esbuild", "guidepup-vsr"]) assert.match(tools[key], /^\d+\.\d+\.\d+/, key);
   assert.equal(readPackageVersion("valibot")?.split(".")[0], "1");
   assert.equal(readPackageVersion("not-a-real-package-xyz"), null);
 });

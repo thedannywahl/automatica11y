@@ -212,6 +212,11 @@ export function renderReport({ plan, results }) {
   for (const warning of results.warnings) lines.push(`Warning: ${warning}`, "");
   lines.push("## Coverage.", "", coverageMatrix(plan, results), "");
   lines.push("A gap, a failed engine, or a target that wasn't testable is a finding. It never counts as a pass.", "");
+  for (const target of results.targets) {
+    const items = target.summary.notTestable;
+    if (!items.length) continue;
+    lines.push(`**Not testable in ${target.id}.**`, "", ...items.slice(0, 20).map((item) => `- ${item}`), ...(items.length > 20 ? [`- and ${num(items.length - 20)} more`] : []), "");
+  }
   lines.push("## Findings.", "");
   lines.push("Findings from different engines are listed separately. The engines overlap, and each catches things the other misses, so don't add their counts together. Impact is axe-core's own label. IBM Toolkit level is IBM's staged adoption scale (level 1 is essential requirements with high user impact). The two scales aren't comparable.", "");
   for (const target of results.targets) lines.push(targetSection(plan.targets.find((t) => t.id === target.id), target));
