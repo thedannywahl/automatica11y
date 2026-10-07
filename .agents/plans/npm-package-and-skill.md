@@ -16,7 +16,7 @@ Users invoke it as `/automatica11y <prompt>` in a Claude host, or as a CLI in a 
 ### Non-goals (v1).
 
 - Native screen readers (VoiceOver, NVDA). Add later as a fourth tier.
-- Vue, Svelte, Angular, and other non-React frameworks. Report "unsupported framework" and stop.
+- Vue, Svelte, Angular, and other frameworks that aren't React or web components. Report "unsupported framework" and stop.
 - Component source files (`.tsx`, `.vue`) as targets. They need a bundler and a framework decision.
 - A single accessibility score.
 - Docker. The existing chartty Docker setup exists to limit variance in performance runs. Accessibility checks don't need it.
@@ -43,15 +43,19 @@ automatica11y/
   package.json
   README.md
   SKILL.md                      # source of truth; copied by init-skill
+  bin/
+    automatica11y.js            # calls main() in src/cli.js
   src/
-    cli.js                      # arg parsing, command dispatch
+    cli.js                      # command dispatch
     commands/
+      common.js                 # option parsing, validation, plan execution, usage text
       audit.js
       compare.js
       doctor.js
       init-skill.js
     plan/
       classify.js               # target classification
+      build-plan.js             # classify every target, assemble plan.json
       resolve-npm.js            # name -> concrete version
       mapping.js                # archetype mapping load/validate
     harness/
@@ -115,6 +119,8 @@ Rules:
 - A directory is a static site. If it holds `index.json`, treat it as a Storybook build.
 - Reject other file types with a clear message.
 - A bare package name means the latest published version. `name@version` pins one.
+- A directory or URL is Storybook only when its `index.json` or `stories.json` has the Storybook shape (an `entries` or `stories` object).
+- A target that can't be classified or resolved becomes a `failed` entry with a reason. Exit 4 applies only when every target fails.
 
 ### Options.
 
@@ -186,7 +192,7 @@ The CLI accepts only the declarative grammar. The skill treats any input that do
     {
       "id": "radix",
       "input": "radix=@radix-ui/react-dialog",
-      "kind": "npm-react",              // npm-react | npm-unsupported | npm-non-ui | storybook | url | html-file | static-dir
+      "kind": "npm-react",              // npm-react | npm-wc | npm-unsupported | npm-non-ui | storybook | url | html-file | static-dir
       "resolved": { "name": "@radix-ui/react-dialog", "version": "1.1.0" },
       "evidenceLevel": "component",     // component | page
       "mapping": { "dialog": { "fixture": "fixtures/radix/dialog.jsx" } }
@@ -230,7 +236,20 @@ Detect by `react` in `peerDependencies`.
 
 ### npm package, web components.
 
-Deferred past v1. Detect `custom-elements.json` or `customElements.define` and report `unsupported framework` (web components), the same as Vue or Svelte. Revisit after v1 ships.
+Detect `custom-elements.json` (or a `customElements` field in `package.json`), or a `customElements.define` call in the package's entry. A package with both React and web component signals runs as React unless the target says otherwise (see below).
+
+1. Install into a per-target temp directory, as for React. No React or peer framework is needed unless the package asks for one.
+2. Read the custom elements manifest (or scan the entry) for tag names, and generate a **candidate archetype mapping** from names (for example `my-dialog`, `x-tabs`).
+3. Generate one framework-free fixture per mapped archetype from `harness/templates/`.
+4. Bundle with esbuild and serve locally, as for React.
+
+**Fixture contract (web components).** A fixture is a plain `.js` file that default-exports `mount(container)`, a function that appends the archetype in its initial state to `container` and may return a promise. It marks the trigger with `data-a11y-trigger` and the primary surface with `data-a11y-root`. Put the hooks on elements the runner can reach: a custom element's host, a slotted light-DOM child, or an element inside an **open** shadow root. Playwright's CSS selectors pierce open shadow roots. Content inside a closed shadow root is unreachable, so the runner reports it as `not-testable` with that reason, never as clean.
+
+The runner validates web component fixtures the same way as React fixtures: they must mount, expose the hooks, and run without console errors. A missing or invalid fixture produces a `gap`.
+
+**Choosing between React and web components.** When a package ships both, the candidate mapping records which flavor it picked and why. `--mapping` can force `"flavor": "wc"` or `"flavor": "react"` per archetype.
+
+Open risks, checked in M4: whether axe, IBM, and the virtual screen reader read content inside open shadow roots. See the implementation plan.
 
 ### Unsupported and non-UI.
 

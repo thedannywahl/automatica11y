@@ -52,7 +52,7 @@ Use **esbuild** through its JS API.
 - Builds in milliseconds, so a per-target bundle adds no real wait.
 - The runner generates one entry file per archetype and state, calls `esbuild.build({ bundle: true, format: "esm", splitting: true, outdir })`, writes a tiny HTML shell for each, and serves the folder with the existing static server from M2. No second server stack.
 - Fewer failure modes: no Vite config resolution, no dependency pre-bundling cache, no plugin version drift under "latest."
-- Web component targets are deferred past v1 (Finding 7).
+- Web component targets use the same esbuild path with a framework-free fixture (Finding 7).
 
 Trade-off: esbuild doesn't type-check. That's fine. Fixtures only need to render, and the runner's validation step (renders, exposes hooks, no console errors) catches real breakage.
 
@@ -81,7 +81,7 @@ Decision: write the tool in plain ESM JavaScript with JSDoc types. Nothing here 
 
 - **`playwright-core`, not `@playwright/test`.** No test runner, no bundled browsers. Launch the user's Chrome with `channel: "chrome"`. If none exists, `doctor` exits 3 and prints `npx playwright-core install --only-shell chromium`. Record the browser version in the plan. Keep `@axe-core/playwright` for now (it handles iframes and shadow DOM).
 - **Lazy loading.** Load Playwright, esbuild, axe-core, the IBM engine, and the virtual screen reader with dynamic `import()` when a command or tier needs them. `doctor`, `--plan`, `--version`, and usage errors never touch a browser.
-- **Web components deferred.** v1 reports `unsupported framework` for custom elements. That removes a second fixture flow and its tests.
+- **Web components stay in v1.** Decided: since `--plan` can't tell React from web components without reading the package, M4 detects both. Web components get a framework-free fixture (`mount(container)`) on the same esbuild path. A closed shadow root is `not-testable`. The M4 risks are whether axe, IBM, and the virtual screen reader read open shadow roots.
 - **Table-driven interactions.** One `archetypes.js` table and one runner replace nine per-archetype modules. Adding an archetype means adding a row.
 - **Plain-function reports.** Two JavaScript functions return markdown strings. No template engine, no template files. A single-file `report.html` stays out of v1.
 - **One schema file.** `src/schema.js` holds the plan, mapping, and results schemas, which share most of their shapes.
@@ -121,9 +121,9 @@ Both engines run at once, so one `--fail-on` threshold can't describe them. IBM 
 
 ## 2. Open questions that need Danny.
 
-Registry blocks work only at M8.
+Registry and license are decided. One question remains, and it only blocks M8.
 
-1. **Registry.** Public npm, a scoped public package, or GitHub Packages? Decide by the end of M1, once the dry-run result is in.
+1. **Package name.** The dry run can't confirm `automatica11y` is yours to publish (see `spike-package-name.md`). A real publish from a logged-in account settles it. If npm refuses, the fallback is `@instructure/automatica11y`, which is still public.
 
 Everything else has a default in this plan.
 
@@ -153,17 +153,32 @@ Exit: five short notes, one yes or no on the package name, and one schema librar
 - **IBM** (`spike-ibm.md`): `ace.js` runs through `page.evaluate` on all three tested pages. Use `evaluate`, not `addScriptTag`, which a strict CSP blocks. `toolkitLevel` is documented by IBM as an adoption level (1 to 3), so IBM findings carry it as a separate field. A first draft of this note said it was undocumented. That was wrong.
 - **Package name** (`spike-package-name.md`): the dry run passes for `automatica11y@0.2.0`, but a dry run can't prove the name is claimable. `npm whoami` fails here, and nothing was published. A real publish settles it.
 
-### M1. Skeleton (one day).
+### M1. Skeleton (done).
 
-- [ ] `package.json` (`"type": "module"`, Node 20 or newer, `bin`, `files`), `jsconfig.json` for editor checks, test runner (`node:test`).
-- [ ] `cli.js` with `audit`, `compare`, `run`, `doctor`, `init-skill`, `--version`. Usage errors exit 2.
-- [ ] `plan/classify.js` with one test per row in the section 4 table, plus the label syntax and the "bare `button` is a package" rule.
-- [ ] `schema.js` (valibot, holds plan, mapping, and results schemas), `env/versions.js`, `env/browser.js`.
-- [ ] `doctor` checks Node version and for Chrome or Chromium. A missing browser exits 3 with the install command.
-- [ ] Lazy-load heavy dependencies with dynamic `import()`. Test that `--plan`, `doctor`, and `--version` run without importing Playwright.
-- [ ] `--plan` writes `plan.json` without installing or launching anything.
+- [x] `package.json` (`"type": "module"`, Node 20 or newer, `bin`, `files`), `jsconfig.json` for editor checks, test runner (`node:test`).
+- [x] `cli.js` with `audit`, `compare`, `run`, `doctor`, `init-skill`, `--version`. Usage errors exit 2.
+- [x] `plan/classify.js` with one test per row in the section 4 table, plus the label syntax and the "bare `button` is a package" rule.
+- [x] `schema.js` (valibot, holds plan, mapping, and results schemas), `env/versions.js`, `env/browser.js`.
+- [x] `doctor` checks Node version and for Chrome or Chromium. A missing browser exits 3 with the install command.
+- [x] Lazy-load heavy dependencies with dynamic `import()`. Test that `--plan`, `doctor`, and `--version` run without importing Playwright.
+- [x] `--plan` writes `plan.json` without installing or launching anything.
 
-Exit: acceptance criteria for `--plan` and exit code 3 pass.
+Exit: acceptance criteria for `--plan` and exit code 3 pass. They do: `npm test` runs 43 tests, and `npm run lint` is clean.
+
+**Results.**
+
+- `bin/automatica11y.js` calls `main(argv, io)` in `src/cli.js`. The streams, environment, working directory, and `fetch` are arguments, so tests drive the CLI in-process.
+- Targets that can't be classified come back as `failed` entries with a reason (path not found, unsupported file type, HTTP 404, unreachable, bad package name), not as exceptions. One bad target doesn't stop a comparison, and if every target fails the CLI exits 4.
+- A directory or URL counts as Storybook only when its `index.json` or `stories.json` has the Storybook shape (an `entries` or `stories` object). A random `index.json` in a static site stays a static site. A real Storybook (Carbon's) classified correctly.
+- npm targets stay `kind: "npm"` in the plan with `resolved.version: null` and the requested range. `--plan` can't tell React from web components without reading the package, so M4 fills in the framework and the resolved version. Web components are in scope for v1.
+- `doctor` and real runs find a browser without importing Playwright: an `AUTOMATICA11Y_CHROME` override, then Chrome or Chromium in the usual places, then Playwright's headless shell cache. A test traces module resolution in a child process and fails if `--version`, `doctor`, or `--plan` loads a heavy package. Nothing heavy is installed yet, so the guard protects later milestones.
+- Real runs write `plan.json`, check the environment, then exit 70 with "tiers arrive in M2." `init-skill` exits 70 until M8. Exit 70 is temporary and goes away in M2.
+- `run --plan` re-runs a saved plan and warns when installed tool versions differ.
+- `package.json` has `"private": true`, so nothing publishes by accident. Remove it at M8. The package is public on npm under the MIT license (`license`, `publishConfig.access`, and a `LICENSE` file are set).
+- `jsconfig.json` runs with `strict: false`. Strict mode demanded annotations on every helper and gave no real bugs. The lint still checks calls and property names.
+- The only runtime dependency so far is `valibot`. The others arrive with the milestone that uses them.
+
+
 
 ### M2. URL and HTML path with the rules tier (three days).
 
@@ -192,16 +207,17 @@ Exit: `audit` works end to end on `url`, `html-file`, and `static-dir`.
 
 Exit: `audit` works on a local Storybook directory and a Storybook URL.
 
-### M4. npm React path (three days). Highest risk.
+### M4. npm React and web component path (four days). Highest risk.
 
 - [ ] `plan/resolve-npm.js`: name to concrete version, using `npm view`.
-- [ ] Framework detection: React, unsupported (name the framework, including web components, which are deferred), non-UI.
-- [ ] `harness/npm-react.js`: isolated temp install, export scan, candidate mapping, fixture generation, esbuild bundle, local serve.
+- [ ] Framework detection: React, web components, unsupported (name the framework), non-UI. For packages with both React and web component signals, pick React, record why, and let `--mapping` set `"flavor"` per archetype. Fill in `kind` (`npm-react`, `npm-wc`, `npm-unsupported`, `npm-non-ui`) and the resolved version in the plan.
+- [ ] Shadow DOM spike first, one note in `.agents/notes/spike-shadow-dom.md`: build a small open-shadow-root custom element and check what axe, IBM, and the virtual screen reader report inside it. Adjust the web component plan to what they do.
+- [ ] `harness/npm-react.js` and `harness/npm-wc.js`: isolated temp install, export or manifest scan, candidate mapping, fixture generation, esbuild bundle, local serve. Share the install and serve code.
 - [ ] `plan/mapping.js`: load and validate `--mapping`. Validation renders each fixture, checks for the two hooks, and fails on console errors. Bad fixtures become `gap`.
-- [ ] One parameterized fixture template. Start with button, dialog, and tabs. Apply the eight contract tweaks in `spike-fixtures.md`, including an `alias` that pins one copy of React.
+- [ ] One parameterized fixture template per flavor (React and web component). Start with button, dialog, and tabs. Apply the eight contract tweaks in `spike-fixtures.md`, including an `alias` that pins one copy of React.
 - [ ] Clean up temp directories on exit, including on failure.
 
-Exit: `audit` on one non-compound library (button, tabs) and one compound library (Radix dialog, authored fixture).
+Exit: `audit` on one non-compound React library (button, tabs), one compound React library (Radix dialog, authored fixture), and one web component library (a small Lit or Shoelace-style package, authored fixture where needed). Closed shadow roots report `not-testable`.
 
 ### M5. Interactions tier (three days).
 
