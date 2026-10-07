@@ -60,3 +60,105 @@ export function parsePlan(input) {
   if (!result.success) throw new Error(`Invalid plan:\n${v.summarize(result.issues)}`);
   return result.output;
 }
+
+// ---- Results ----
+
+const TIER_STATUS = ["ran", "skipped", "not-applicable", "not-testable", "failed"];
+const IMPACT_COUNTS = v.object({ critical: v.number(), serious: v.number(), moderate: v.number(), minor: v.number() });
+
+const NodeSchema = v.object({ selector: v.string(), html: v.string() });
+
+/** One finding from one engine. `impact` belongs to axe. `toolkitLevel` belongs to IBM. Neither converts to the other. */
+const FindingSchema = v.object({
+  ruleId: v.string(),
+  impact: v.nullable(v.picklist(IMPACTS)),
+  toolkitLevel: v.optional(v.nullable(v.number())),
+  kind: v.optional(v.picklist(["potential", "manual", "recommendation"])),
+  wcag: v.array(v.string()),
+  tags: v.optional(v.array(v.string())),
+  help: v.string(),
+  helpUrl: v.string(),
+  nodeCount: v.number(),
+  nodes: v.array(NodeSchema),
+});
+
+const EngineResultSchema = v.object({
+  status: v.picklist(TIER_STATUS),
+  reason: v.optional(v.nullable(v.string())),
+  version: v.optional(v.nullable(v.string())),
+  config: v.optional(v.record(v.string(), v.unknown())),
+  violations: v.optional(v.array(FindingSchema)),
+  incomplete: v.optional(v.array(FindingSchema)),
+  /** Rules that passed. Both engines count rules, not elements. */
+  passesCount: v.optional(v.number()),
+  notes: v.optional(v.array(v.string())),
+});
+
+const TierResultSchema = v.object({
+  status: v.picklist(TIER_STATUS),
+  reason: v.optional(v.nullable(v.string())),
+  engines: v.optional(v.record(v.string(), EngineResultSchema)),
+  checks: v.optional(v.array(v.unknown())),
+  simulated: v.optional(v.boolean()),
+  log: v.optional(v.array(v.unknown())),
+});
+
+const EngineSummarySchema = v.object({
+  status: v.picklist(TIER_STATUS),
+  violations: v.number(),
+  needsReview: v.number(),
+  /** axe only. IBM findings have no impact. */
+  violationsByImpact: v.optional(IMPACT_COUNTS),
+  /** IBM only. Keys are Toolkit levels 1 to 4. */
+  violationsByToolkitLevel: v.optional(v.record(v.string(), v.number())),
+});
+
+export const TargetResultSchema = v.object({
+  id: v.string(),
+  status: v.picklist(["ran", "failed"]),
+  reason: nullableString,
+  archetypes: v.record(
+    v.string(),
+    v.object({
+      status: v.picklist(["ran", "gap"]),
+      configs: v.array(v.object({ libA11y: v.picklist(["on", "off", "n/a"]), tiers: v.record(v.string(), TierResultSchema) })),
+    }),
+  ),
+  summary: v.object({
+    engines: v.record(v.string(), EngineSummarySchema),
+    gaps: v.array(v.string()),
+    notTestable: v.array(v.string()),
+  }),
+  warnings: v.array(v.string()),
+});
+
+const FailEngineSchema = v.object({ threshold: v.union([v.string(), v.number()]), hits: v.number(), tripped: v.boolean() });
+
+export const FailCheckSchema = v.object({
+  mode: v.picklist(FAIL_MODES),
+  axe: v.nullable(FailEngineSchema),
+  ibm: v.nullable(FailEngineSchema),
+  /** Per target, because the combined mode decides one target at a time. */
+  targets: v.record(v.string(), v.object({ axe: v.nullable(FailEngineSchema), ibm: v.nullable(FailEngineSchema), tripped: v.boolean() })),
+  tripped: v.boolean(),
+});
+
+export const ResultsSchema = v.object({
+  schema: v.literal(1),
+  planRef: v.string(),
+  runAt: v.string(),
+  tools: v.record(v.string(), nullableString),
+  targets: v.array(TargetResultSchema),
+  failCheck: v.nullable(FailCheckSchema),
+  warnings: v.array(v.string()),
+});
+
+/**
+ * Parse a results object. Throws an Error with a readable summary when it's invalid.
+ * @param {unknown} input
+ */
+export function parseResults(input) {
+  const result = v.safeParse(ResultsSchema, input);
+  if (!result.success) throw new Error(`Invalid results:\n${v.summarize(result.issues)}`);
+  return result.output;
+}

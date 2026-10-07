@@ -180,23 +180,38 @@ Exit: acceptance criteria for `--plan` and exit code 3 pass. They do: `npm test`
 
 
 
-### M2. URL and HTML path with the rules tier (three days).
+### M2. URL and HTML path with the rules tier (done).
 
-- [ ] `harness/static-serve.js` serves files and directories over localhost. Pick a free port and shut down cleanly.
-- [ ] `harness/url.js`, with wait-for-network-idle.
-- [ ] `tiers/rules/axe.js`, ported from chartty. Separate lists for violations, incomplete, and passes. Cap node selectors.
-- [ ] `tiers/rules/ibm.js`: inject `ace.js`, run `IBM_Accessibility`, filter by WCAG version and level, and map `FAIL` to violations and `POTENTIAL`, manual, and recommendation results to needs-review. Attach each rule's `toolkitLevel` to its findings.
-- [ ] `tiers/rules/index.js` and the `--engine` flag (`axe`, `ibm`, `axe,ibm`). Default runs both. Reject unknown engine names with exit 2.
-- [ ] Self-test on every run: audit a known-bad snippet with each engine and refuse to report if either engine misses it (ported from chartty).
-- [ ] Inject `ace.js` with `page.evaluate`, never `addScriptTag` (see `spike-ibm.md`).
-- [ ] Never merge findings across engines. Add a test with a page both engines flag and assert both report separately, each labeled.
-- [ ] `results.json` writer (schema lives in `schema.js`) and `report/single.js`, a plain function that renders `report.md`.
-- [ ] Fixture pages in `test/fixtures/`: missing label, low contrast, broken dialog focus return, plus clean twins. Assert exact rule IDs per engine. Include the clean twin and assert axe and IBM report no violations on it.
-- [ ] Fail checks (Finding 9): `--fail-on-axe`, `--fail-on-ibm`, `--fail-mode any|all`, exit code 1, the `failCheck` object in `results.json`, and exit 2 on invalid combinations.
-- [ ] Tests for the fail matrix: each flag alone, both flags with `any`, both with `all`, one engine tripped, a flag for an engine left out of `--engine`, and `--fail-mode` without a flag.
-- [ ] Determinism test: same plan twice, identical findings.
+- [x] `harness/static-serve.js` serves files and directories over localhost. Pick a free port and shut down cleanly.
+- [x] `harness/url.js`, with wait-for-network-idle.
+- [x] `tiers/rules/axe.js`, ported from chartty. Separate lists for violations, incomplete, and passes. Cap node selectors.
+- [x] `tiers/rules/ibm.js`: inject `ace.js`, run `IBM_Accessibility`, filter by WCAG version and level, and map `FAIL` to violations and `POTENTIAL`, manual, and recommendation results to needs-review. Attach each rule's `toolkitLevel` to its findings.
+- [x] `tiers/rules/index.js` and the `--engine` flag (`axe`, `ibm`, `axe,ibm`). Default runs both. Reject unknown engine names with exit 2.
+- [x] Self-test on every run: audit a known-bad snippet with each engine and refuse to report if either engine misses it (ported from chartty).
+- [x] Inject `ace.js` with `page.evaluate`, never `addScriptTag` (see `spike-ibm.md`).
+- [x] Never merge findings across engines. Add a test with a page both engines flag and assert both report separately, each labeled.
+- [x] `results.json` writer (schema lives in `schema.js`) and `report/single.js`, a plain function that renders `report.md`.
+- [x] Fixture pages in `test/fixtures/`: missing label, low contrast, broken dialog focus return, plus clean twins. Assert exact rule IDs per engine. Include the clean twin and assert axe and IBM report no violations on it.
+- [x] Fail checks (Finding 9): `--fail-on-axe`, `--fail-on-ibm`, `--fail-mode any|all`, exit code 1, the `failCheck` object in `results.json`, and exit 2 on invalid combinations.
+- [x] Tests for the fail matrix: each flag alone, both flags with `any`, both with `all`, one engine tripped, a flag for an engine left out of `--engine`, and `--fail-mode` without a flag.
+- [x] Determinism test: same plan twice, identical findings.
 
-Exit: `audit` works end to end on `url`, `html-file`, and `static-dir`.
+Exit: `audit` works end to end on `url`, `html-file`, and `static-dir`. It does: `npm test` runs 71 tests in about a minute, and `npm run lint` is clean.
+
+**Results.**
+
+- **Flow.** A real run checks the environment (exit 3), launches one browser from the path `doctor` found, runs the engine self-test (exit 3 if either engine misses a known problem), audits each target, and writes `results.json` and `report.md`. A target that fails becomes a `failed` result with a reason. Exit 4 applies when every target fails.
+- **Page evidence.** Page targets use `page` as their archetype key. Tiers the user requests but we haven't built are `skipped` with a reason, and the report says so. They never read as clean. `interactions` arrives in M5 and `vsr` in M6.
+- **IBM ruleset.** The `ibm` engine runs the `WCAG_2_0`, `WCAG_2_1`, or `WCAG_2_2` ruleset that matches `--wcag`, not `IBM_Accessibility`. Those rulesets hold only A and AA checkpoints, so `--level AAA` runs the AA rules and says so in the results and the report. Level `A` keeps only checkpoints marked A. Findings carry WCAG criteria (for example `1.4.3`) for both engines.
+- **Pass counts.** Both engines report `passesCount` in the same unit: the number of rules that passed. IBM reports a result per element, so the adapter counts distinct passing rules.
+- **axe-core version.** `@axe-core/playwright` ships its own copy of axe-core, which was one minor version behind ours. The adapter hands AxeBuilder our `axe.min.js`, so the version we record is the version that ran.
+- **Fail check.** `failCheck` in `results.json` records totals per engine and a `targets` object with one entry per target. In `all` mode a target trips only when every checked engine hits on that target, so two targets that each trip one engine don't add up to a trip.
+- **Static directories.** Only `index.html` is checked, and the report says so. A directory with no `index.html` is a failed target.
+- **Report.** `report/single.js` renders one report for `audit` and `compare`: coverage matrix, findings per engine and target, fail check, and the method note. Counts from zero to nine are spelled out in prose. The matrix across targets is basic until M7.
+- **Fixtures.** `test/fixtures/` holds a clean page, missing-label, low-contrast, missing-alt, a static site, and a site without `index.html`. Two dialog pages (`bad-dialog.html`, `good-dialog.html`) wait for M5: both start closed, so the rules tier correctly sees no violation in the closed state.
+- **Dependencies added.** `playwright-core`, `axe-core`, `@axe-core/playwright`, and `accessibility-checker-engine`.
+
+
 
 ### M3. Storybook path (one day).
 

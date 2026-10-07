@@ -116,7 +116,7 @@ Rules:
 
 - Local paths need the explicit prefix. A bare `button` is a package, never a folder.
 - An `.html` file is served from a local static server over `http://localhost`. Never load it over `file://`, because module scripts and relative assets break there.
-- A directory is a static site. If it holds `index.json`, treat it as a Storybook build.
+- A directory is a static site. If it holds `index.json`, treat it as a Storybook build. A static site audits `index.html` only. A directory without one is a failed target.
 - Reject other file types with a clear message.
 - A bare package name means the latest published version. `name@version` pins one.
 - A directory or URL is Storybook only when its `index.json` or `stories.json` has the Storybook shape (an `entries` or `stories` object).
@@ -158,6 +158,7 @@ Rules:
 - `--fail-mode` without any fail flag exits 2.
 - With `compare`, the check applies to each target. Exit 1 if any target trips it. Targets that failed to resolve don't count as hits. Exit 4 still applies when every target failed.
 - A target is checked per engine across all its archetypes and configurations. Engine counts are never summed together.
+- In `all` mode a target trips only when every checked engine hits on that target. Two targets that each trip a different engine don't add up to a trip.
 - `--plan` ignores fail flags. It prints them in the plan.
 - `results.json` records the outcome in a `failCheck` object: the mode, each checked engine's threshold, hit count, and whether it hit, and the final exit code. The report prints each engine's result and then the combined result.
 
@@ -279,12 +280,14 @@ Every tier reports one status per target and archetype: `ran`, `skipped`, `not-a
 The `rules` tier runs the engines named by `--engine` (default `axe,ibm`) against the same page and state. Each engine reports on its own.
 
 - **axe:** `@axe-core/playwright` against the tag set for the chosen WCAG version and level.
-- **ibm:** inject `ace.js` from `accessibility-checker-engine` into the page with `page.evaluate` (a strict CSP blocks `addScriptTag`) and run the `IBM_Accessibility` policy. Filter by the chosen WCAG version and level using the ruleset's checkpoint levels.
+- **ibm:** inject `ace.js` from `accessibility-checker-engine` into the page with `page.evaluate` (a strict CSP blocks `addScriptTag`) and run the `WCAG_2_0`, `WCAG_2_1`, or `WCAG_2_2` ruleset that matches `--wcag`. Filter by the chosen level using each checkpoint's `wcagLevel`. These rulesets hold levels A and AA only, so `--level AAA` runs the AA rules and the result carries a note that says so.
+- **Passes.** `passesCount` is the number of rules that passed, for both engines. IBM reports per element, so count distinct passing rules.
+- **Page evidence.** A page target has one pseudo-archetype, `page`. A tier that was requested but can't run reports `skipped` with a reason.
 - Keep `violations`, `incomplete` (needs review), and `passes` in separate lists, per engine.
 - Keep rule ID, WCAG tags or criteria, help URL, and the first N node selectors per finding. Keep impact when the engine reports one.
 - **IBM mapping.** IBM `FAIL` results are violations. `POTENTIAL`, manual, and recommendation results are `incomplete` (needs review). IBM has no impact scale, so its findings carry `impact: null`.
 - **Never merge across engines.** Don't deduplicate, sum, or average findings from different engines. When both engines flag the same element, show both, each labeled with its engine.
-- **Impact and fail checks.** Impact is the engine's own label, never one we compute. Axe findings carry axe's impact. IBM findings carry `impact: null` and a separate `toolkitLevel` (`"1"` to `"4"`). IBM documents Toolkit level as a staged adoption scale: 1 is essential requirements with high user impact, 2 adds the next-most important, and 3 is the full set. The report labels it "IBM Toolkit level" and never converts it to axe's scale. IBM defines no Level 4. Each engine has its own fail flag (`--fail-on-axe`, `--fail-on-ibm`), and `--fail-mode` combines them. See section 4, "Fail checks."
+- **Impact and fail checks.** Impact is the engine's own label, never one we compute. Axe findings carry axe's impact. IBM findings carry `impact: null` and a separate numeric `toolkitLevel` (1 to 4). IBM documents Toolkit level as a staged adoption scale: 1 is essential requirements with high user impact, 2 adds the next-most important, and 3 is the full set. The report labels it "IBM Toolkit level" and never converts it to axe's scale. IBM defines no Level 4. Each engine has its own fail flag (`--fail-on-axe`, `--fail-on-ibm`), and `--fail-mode` combines them. See section 4, "Fail checks."
 - Run each archetype in its meaningful states (closed and open for dialog, menu, and tooltip).
 - **Canvas detection.** If the rendered output is mainly `<canvas>` with no accessible alternative, set the status `not-testable` with the reason "canvas output exposes nothing to rule checks." Never report it as clean.
 - Include contrast results. They depend on Chromium rendering, so record the Chromium version.
@@ -343,14 +346,14 @@ Write `results.json` next to `plan.json`.
                     "axe": {
                       "status": "ran",
                       "version": "",
-                      "violations": [{ "ruleId": "", "impact": "serious", "wcag": ["wcag2aa","wcag143"], "helpUrl": "", "nodes": [{ "selector": "", "html": "" }] }],
+                      "violations": [{ "ruleId": "", "impact": "serious", "wcag": ["1.4.3"], "tags": ["wcag2aa","wcag143"], "help": "", "helpUrl": "", "nodeCount": 1, "nodes": [{ "selector": "", "html": "" }] }],
                       "incomplete": [],
                       "passesCount": 0
                     },
                     "ibm": {
                       "status": "ran",
                       "version": "",
-                      "violations": [{ "ruleId": "", "impact": null, "toolkitLevel": "1", "wcag": ["1.4.3"], "helpUrl": "", "nodes": [{ "selector": "", "html": "" }] }],
+                      "violations": [{ "ruleId": "", "impact": null, "toolkitLevel": 1, "wcag": ["1.4.3"], "help": "", "helpUrl": "", "nodeCount": 1, "nodes": [{ "selector": "", "html": "" }] }],
                       "incomplete": [],
                       "passesCount": 0
                     }
@@ -366,7 +369,7 @@ Write `results.json` next to `plan.json`.
       "summary": { "violationsByImpact": { "critical": 0, "serious": 0, "moderate": 0, "minor": 0 }, "gaps": [], "notTestable": [] }
     }
   ],
-  "failCheck": { "mode": "any", "axe": { "threshold": "serious", "hits": 0, "tripped": false }, "ibm": { "threshold": 1, "hits": 0, "tripped": false }, "tripped": false },  // null when no fail flag is set
+  "failCheck": { "mode": "any", "axe": { "threshold": "serious", "hits": 0, "tripped": false }, "ibm": { "threshold": 1, "hits": 0, "tripped": false }, "targets": { "radix": { "axe": null, "ibm": null, "tripped": false } }, "tripped": false },  // null when no fail flag is set
   "warnings": []
 }
 ```

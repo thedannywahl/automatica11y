@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dialog without a name</title>
+</head>
+<body>
+<main>
+<h1>Dialog without a name</h1>
+<button id="open" type="button" style="min-width:44px;min-height:44px">Open</button>
+<div id="dlg" role="dialog" hidden>
+<p>Are you sure?</p>
+<button id="close" type="button" style="min-width:44px;min-height:44px">Close</button>
+</div>
+<script>
+// Broken on purpose: opens without moving focus and closes without returning it.
+open.onclick = () => { dlg.hidden = false; };
+close.onclick = () => { dlg.hidden = true; };
+</script>
+</main>
+</body>
+</html>

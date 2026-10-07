@@ -4,6 +4,7 @@ import { parseArgs } from "node:util";
 import { checkEnvironment } from "../env/browser.js";
 import { readToolVersions } from "../env/versions.js";
 import { buildPlan, findDuplicateLabel } from "../plan/build-plan.js";
+import { runPlan } from "../run/run-plan.js";
 import { ARCHETYPES, ENGINES, FAIL_MODES, IMPACTS, LEVELS, LIB_A11Y, TIERS, TOOLKIT_LEVELS, WCAG_VERSIONS, parsePlan } from "../schema.js";
 
 export const EXIT = { OK: 0, FAIL_THRESHOLD: 1, USAGE: 2, ENVIRONMENT: 3, ALL_TARGETS_FAILED: 4, NOT_IMPLEMENTED: 70 };
@@ -149,7 +150,6 @@ function versionWarnings(plan) {
 
 /**
  * Write plan.json, then stop (plan only) or run the plan.
- * Tiers aren't built yet. A real run checks the environment and exits 70 until M2.
  * @param {ReturnType<typeof parsePlan>} plan
  * @param {{ planOnly: boolean, savedPlanPath?: string }} mode
  * @param {Io} io
@@ -170,13 +170,7 @@ export async function executePlan(plan, { planOnly, savedPlanPath }, io) {
   }
   if (planOnly) return EXIT.OK;
 
-  const env = await checkEnvironment({ env: io.env, platform: io.platform });
-  if (!env.ok) {
-    for (const problem of env.problems) io.stderr.write(`${problem.message}\n  Fix: ${problem.fix}\n`);
-    return EXIT.ENVIRONMENT;
-  }
-  io.stderr.write("Running tiers isn't built yet. It arrives in M2. The plan above is complete.\n");
-  return EXIT.NOT_IMPLEMENTED;
+  return runPlan(plan, io);
 }
 
 /**

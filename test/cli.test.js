@@ -117,10 +117,10 @@ test("a real run with no browser exits 3 and prints the install command", async 
   assert.match(result.stderr, /npx playwright-core install --only-shell chromium/);
 });
 
-test("a real run with a browser writes the plan, then reports tiers aren't built yet", { skip: !onUnix }, async () => {
+test("a real run writes the plan first, even when the browser won't start", { skip: !onUnix }, async () => {
   const result = await run(["audit", "react"], { env: { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser("123.0.4567.89") } });
-  assert.equal(result.code, 70);
-  assert.match(result.stderr, /arrives in M2/);
+  assert.equal(result.code, 3);
+  assert.match(result.stderr, /Couldn't start the browser/);
   const plan = JSON.parse(readFileSync(join(result.cwd, "a11y-report", "plan.json"), "utf8"));
   assert.equal(plan.tools.chromium, "123.0.4567.89");
 });
@@ -133,7 +133,7 @@ test("run --plan re-runs a saved plan and warns when versions differ", { skip: !
   writeFileSync(planFile, JSON.stringify(plan));
   const env = { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser() };
   const result = await run(["run", "--plan", planFile], { cwd: first.cwd, env });
-  assert.equal(result.code, 70);
+  assert.equal(result.code, 3);
   assert.match(result.stderr, /node was 18\.0\.0 when this plan was made/);
 });
 
