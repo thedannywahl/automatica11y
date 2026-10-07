@@ -213,14 +213,28 @@ Exit: `audit` works end to end on `url`, `html-file`, and `static-dir`. It does:
 
 
 
-### M3. Storybook path (one day).
+### M3. Storybook path (done).
 
-- [ ] `harness/storybook.js`: fetch `index.json` or `stories.json`, enumerate, build iframe URLs.
-- [ ] Story cap at 200, `--max-stories`, and a truncation warning in the report.
-- [ ] `--archetypes` filtering by title and tag heuristics, with matched stories listed.
-- [ ] Check in a small static Storybook build as a fixture.
+- [x] `harness/storybook.js`: fetch `index.json` or `stories.json`, enumerate, build iframe URLs.
+- [x] Story cap at 200, `--max-stories`, and a truncation warning in the report.
+- [x] `--archetypes` filtering by title and tag heuristics, with matched stories listed.
+- [x] Check in a small static Storybook build as a fixture.
 
-Exit: `audit` works on a local Storybook directory and a Storybook URL.
+Exit: `audit` works on a local Storybook directory and a Storybook URL. It does: `npm test` runs 89 tests in about a minute, and `npm run lint` is clean.
+
+**Results.**
+
+- **Units.** Each story renders at `iframe.html?id=<id>&viewMode=story` in its own page and context, four at a time. Results come back in a fixed order. Docs entries are left out. Results key each story as `story:<id>` under `archetypes`.
+- **Scope.** Rules run on `#storybook-root` only, for both engines (`--scope` in the adapters: axe `include`, IBM `check(element)`). Page-level rules such as document title, page language, and landmarks stay quiet, and a test asserts it. Without the scope they fire on every story.
+- **Render signal.** A story is ready when `body` has `sb-show-main`. `sb-show-errordisplay` and `sb-show-nopreview` fail that story with a reason.
+- **Failed stories.** A story that doesn't render is a `gap` with its reason in `storybook.failedStories`, and it shows in the report. It never reads as clean. If no story renders, the target fails.
+- **Cap.** The default is 200 (`--max-stories`). When the cap cuts the list short, it takes one story per component in turn, so one big component can't use the budget. The order is fixed, so two runs pick the same stories. A warning says how many were audited.
+- **Archetype filter.** `--archetypes` matches story title, name, and tags against name patterns. The report lists the matched stories per archetype. An archetype with no match is a gap and a warning. If nothing matches, the target fails. On a page target the flag is noted in a warning.
+- **Report.** Storybook targets aggregate findings by rule, with the number of stories and three examples per rule, because hundreds of stories would drown a per-story listing. Element-level detail stays in `results.json`.
+- **Fixture.** `test/fixtures/storybook-static/` is a hand-written stand-in that follows the iframe contract (story id in the query string, render into `#storybook-root`, status class on `body`). It isn't a real Storybook build. I also ran the CLI against a real Storybook (Carbon, 507 stories): six stories from the `button` and `tabs` filter took about five seconds. A real small build in the test suite is still worth adding if the contract changes.
+- **Not yet covered.** Storybook builds that need a `viewport` or global setup, and stories with `play` functions that change state, run in their initial state only. The interactions tier handles state later.
+
+
 
 ### M4. npm React and web component path (four days). Highest risk.
 

@@ -113,6 +113,21 @@ const EngineSummarySchema = v.object({
   violationsByToolkitLevel: v.optional(v.record(v.string(), v.number())),
 });
 
+const StorybookInfoSchema = v.object({
+  index: v.string(),
+  /** Stories in the index, before any filtering. */
+  total: v.number(),
+  /** Stories left after the archetype filter. */
+  matched: v.number(),
+  audited: v.number(),
+  /** True when the story cap cut the list short. */
+  truncated: v.boolean(),
+  maxStories: v.number(),
+  archetypeMatches: v.record(v.string(), v.array(v.string())),
+  /** Stories that didn't render. They count as failures, never as passes. */
+  failedStories: v.array(v.object({ id: v.string(), reason: v.string() })),
+});
+
 export const TargetResultSchema = v.object({
   id: v.string(),
   status: v.picklist(["ran", "failed"]),
@@ -124,6 +139,7 @@ export const TargetResultSchema = v.object({
       configs: v.array(v.object({ libA11y: v.picklist(["on", "off", "n/a"]), tiers: v.record(v.string(), TierResultSchema) })),
     }),
   ),
+  storybook: v.optional(StorybookInfoSchema),
   summary: v.object({
     engines: v.record(v.string(), EngineSummarySchema),
     gaps: v.array(v.string()),

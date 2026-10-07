@@ -4,11 +4,17 @@ import { checkEnvironment } from "../env/browser.js";
 import { readToolVersions } from "../env/versions.js";
 import { launchBrowser } from "../harness/browser.js";
 import { serveStatic } from "../harness/static-serve.js";
+import { listStories, readIndex, selectStories, storyUrl, waitForStory } from "../harness/storybook.js";
 import { openPage } from "../harness/url.js";
 import { renderReport } from "../report/single.js";
+import { num } from "../text.js";
 import { parseResults } from "../schema.js";
 import { runRules, selfTest } from "../tiers/rules/index.js";
 import { evaluateFailCheck } from "./fail-check.js";
+import { mapPool } from "./pool.js";
+
+/** How many stories to audit at once. */
+const STORY_CONCURRENCY = 4;
 
 const EXIT = { OK: 0, FAIL_THRESHOLD: 1, ENVIRONMENT: 3, ALL_TARGETS_FAILED: 4 };
 
@@ -17,12 +23,11 @@ const NOT_BUILT = {
   vsr: "The virtual screen reader tier isn't built yet (M6).",
 };
 
-const UNSUPPORTED_KIND = (kind) =>
-  kind === "storybook" ? "Storybook targets aren't built yet (M3)." : `${kind} targets aren't built yet (M4).`;
+const UNSUPPORTED_KIND = (kind) => `${kind} targets aren't built yet (M4).`;
 
 /** Roll the engine results up into counts. Impact counts belong to axe and Toolkit-level counts belong to IBM. */
-function summarize(archetypes, engines) {
-  const summary = { engines: {}, gaps: [], notTestable: [] };
+function summarize(archetypes, engines, gaps = []) {
+  const summary = { engines: {}, gaps, notTestable: [] };
   for (const engine of engines) {
     const results = Object.values(archetypes).flatMap((a) => a.configs.map((c) => c.tiers.rules?.engines?.[engine]).filter(Boolean));
     if (results.length === 0) continue;
@@ -76,24 +81,107 @@ async function auditPage(browser, url, planTarget, plan, extraWarnings) {
   }
 }
 
+/** Audit one story in its own page. The story's root element is the scope, so page-level rules don't fire. */
+async function auditStory(browser, base, story, plan) {
+  const opened = await openPage(browser, storyUrl(base, story.id));
+  try {
+    await waitForStory(opened.page);
+    /** @type {Record<string, any>} */
+    const tiers = {};
+    for (const tier of plan.options.tiers) {
+      tiers[tier] =
+        tier === "rules"
+          ? await runRules(opened.page, { engines: plan.options.engines, wcag: plan.options.wcag, level: plan.options.level, scope: "#storybook-root" })
+          : { status: "skipped", reason: NOT_BUILT[tier] };
+    }
+    return { id: story.id, ok: true, archetype: { status: "ran", configs: [{ libA11y: "n/a", tiers }] } };
+  } catch (error) {
+    return { id: story.id, ok: false, reason: error instanceof Error ? error.message.split("\n")[0] : String(error) };
+  } finally {
+    await opened.close();
+  }
+}
+
+/** Audit a Storybook: list the stories, pick the ones to run, and audit each as its own unit. */
+async function auditStorybook(browser, planTarget, plan, servers) {
+  const resolved = planTarget.resolved;
+  const index = await readIndex(resolved);
+  const stories = listStories(index);
+  if (stories.length === 0) return failedTarget(planTarget.id, "The Storybook index lists no stories.");
+  const picked = selectStories(stories, { archetypes: plan.options.archetypes, max: plan.options.maxStories });
+  if (picked.selected.length === 0) {
+    return failedTarget(planTarget.id, `No stories matched the archetypes ${plan.options.archetypes.join(", ")}.`);
+  }
+  let base = resolved.url;
+  if (resolved.path) {
+    const server = await serveStatic(resolved.path);
+    servers.push(server);
+    base = `${server.origin}/`;
+  }
+  const audited = await mapPool(picked.selected, STORY_CONCURRENCY, (story) => auditStory(browser, base, story, plan));
+
+  const archetypes = {};
+  const failedStories = [];
+  for (const item of audited) {
+    if (item.ok) archetypes[`story:${item.id}`] = item.archetype;
+    else {
+      archetypes[`story:${item.id}`] = { status: "gap", configs: [] };
+      failedStories.push({ id: item.id, reason: item.reason });
+    }
+  }
+  const warnings = [];
+  if (picked.truncated) {
+    warnings.push(`The story cap cut the list short. ${num(picked.selected.length)} of ${num(picked.matched)} ${plan.options.archetypes ? "matching " : ""}stories ${picked.selected.length === 1 ? "was" : "were"} audited, spread across components. Raise --max-stories to audit more.`);
+  }
+  const gaps = failedStories.map((f) => `story:${f.id}`);
+  for (const archetype of plan.options.archetypes ?? []) {
+    if (!picked.matchedByArchetype[archetype]) {
+      gaps.push(`archetype:${archetype}`);
+      warnings.push(`No stories matched the ${archetype} archetype. That's a gap in coverage, not a pass.`);
+    }
+  }
+  const ranCount = audited.filter((item) => item.ok).length;
+  if (ranCount === 0) return failedTarget(planTarget.id, `None of the ${audited.length} audited stories rendered.`);
+  return {
+    id: planTarget.id,
+    status: "ran",
+    reason: null,
+    archetypes,
+    storybook: {
+      index: resolved.index,
+      total: picked.total,
+      matched: picked.matched,
+      audited: audited.length,
+      truncated: picked.truncated,
+      maxStories: plan.options.maxStories,
+      archetypeMatches: picked.matchedByArchetype,
+      failedStories,
+    },
+    summary: summarize(archetypes, plan.options.engines, gaps),
+    warnings,
+  };
+}
+
 /** Run one target. Anything that goes wrong becomes a failed result, so one target can't stop the rest. */
 async function runTarget(browser, planTarget, plan) {
   if (planTarget.status === "failed") return failedTarget(planTarget.id, planTarget.reason);
   const servers = [];
   try {
-    if (planTarget.kind === "url") return await auditPage(browser, planTarget.resolved.url, planTarget, plan, []);
+    const pageNote = plan.options.archetypes ? ["--archetypes only applies to Storybook and npm targets. This page was checked as a whole."] : [];
+    if (planTarget.kind === "storybook") return await auditStorybook(browser, planTarget, plan, servers);
+    if (planTarget.kind === "url") return await auditPage(browser, planTarget.resolved.url, planTarget, plan, pageNote);
     if (planTarget.kind === "html-file") {
       const file = planTarget.resolved.path;
       const server = await serveStatic(dirname(file));
       servers.push(server);
-      return await auditPage(browser, `${server.origin}/${encodeURIComponent(basename(file))}`, planTarget, plan, []);
+      return await auditPage(browser, `${server.origin}/${encodeURIComponent(basename(file))}`, planTarget, plan, pageNote);
     }
     if (planTarget.kind === "static-dir") {
       const dir = planTarget.resolved.path;
       if (!existsSync(resolve(dir, "index.html"))) return failedTarget(planTarget.id, "The directory has no index.html to check.");
       const server = await serveStatic(dir);
       servers.push(server);
-      return await auditPage(browser, `${server.origin}/`, planTarget, plan, ["Only index.html was checked. Other pages in the directory weren't."]);
+      return await auditPage(browser, `${server.origin}/`, planTarget, plan, ["Only index.html was checked. Other pages in the directory weren't.", ...pageNote]);
     }
     return failedTarget(planTarget.id, UNSUPPORTED_KIND(planTarget.kind));
   } catch (error) {

@@ -1,11 +1,8 @@
+import { cap, num, plural } from "../text.js";
+
 /** Markdown helpers. */
 const cell = (text) => String(text ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
 const code = (text) => `\`${String(text).replace(/`/g, "'")}\``;
-const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
-/** Spell out zero through nine and use numerals from 10, as the house style asks. */
-const num = (n) => (Number.isInteger(n) && n >= 0 && n <= 9 ? WORDS[n] : String(n));
-const plural = (n, word) => `${num(n)} ${word}${n === 1 ? "" : "s"}`;
-const cap = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 /** Keep a reason from ending in two periods. */
 const sentence = (text) => String(text).replace(/\.+$/, "");
 /** Escape angle brackets so rule text like <input> doesn't turn into HTML. */
@@ -81,7 +78,78 @@ function engineSection(engine, result) {
   return out.join("\n");
 }
 
+
+/** Group one engine's findings across every story, so a long Storybook reads as rules, not as hundreds of repeats. */
+function aggregate(target, engine, listName) {
+  const byRule = new Map();
+  let version = null;
+  let ranStories = 0;
+  for (const [key, archetype] of Object.entries(target.archetypes)) {
+    const result = archetype.configs[0]?.tiers.rules?.engines?.[engine];
+    if (!result || result.status !== "ran") continue;
+    version ??= result.version;
+    ranStories += 1;
+    for (const finding of result[listName]) {
+      const id = `${finding.ruleId}|${finding.kind ?? ""}`;
+      const entry = byRule.get(id) ?? { finding, stories: [] };
+      entry.stories.push(key.replace(/^story:/, ""));
+      byRule.set(id, entry);
+    }
+  }
+  return { rows: [...byRule.values()].sort((a, b) => b.stories.length - a.stories.length || a.finding.ruleId.localeCompare(b.finding.ruleId)), version, ranStories };
+}
+
+function ruleTable(rows, engine) {
+  if (rows.length === 0) return ["None."];
+  const head = engine === "axe" ? "Impact" : "Toolkit level";
+  const lines = [`| Rule | ${head} | WCAG | Stories | Examples |`, "| --- | --- | --- | --- | --- |"];
+  for (const { finding, stories } of rows) {
+    const level = engine === "axe" ? finding.impact ?? "-" : finding.toolkitLevel ?? "-";
+    const rule = finding.kind ? `${finding.ruleId} (${finding.kind})` : finding.ruleId;
+    lines.push(`| ${cell(code(rule))} | ${level} | ${cell(finding.wcag.join(", ") || "-")} | ${stories.length} | ${cell(stories.slice(0, 3).join(", "))}${stories.length > 3 ? ", and more" : ""} |`);
+  }
+  return lines;
+}
+
+function storybookSection(planTarget, target) {
+  const sb = target.storybook;
+  const lines = [`### ${planTarget.label}.`, "", `Storybook ${code(planTarget.input)}, component evidence. Each story ran as its own unit, and rules were scoped to the story's root element.`, ""];
+  const filtered = Object.keys(sb.archetypeMatches).length > 0 || sb.matched !== sb.total;
+  lines.push(
+    `The index lists ${plural(sb.total, "story", "stories")}. ${filtered ? `${cap(num(sb.matched))} matched the archetype filter. ` : ""}${cap(num(sb.audited))} ${sb.audited === 1 ? "was" : "were"} audited, with a cap of ${num(sb.maxStories)}.`,
+    "",
+  );
+  for (const warning of target.warnings) lines.push(`Warning: ${warning}`, "");
+  const matches = Object.entries(sb.archetypeMatches);
+  if (matches.length) {
+    lines.push("**Archetype matches.** Matches come from story titles, names, and tags, so check them.", "");
+    for (const [archetype, ids] of matches) lines.push(`- ${archetype}: ${ids.slice(0, 8).map(code).join(", ")}${ids.length > 8 ? `, and ${num(ids.length - 8)} more` : ""}`);
+    lines.push("");
+  }
+  if (sb.failedStories.length) {
+    lines.push("**Stories that didn't render.** Each one is a gap in coverage, not a pass.", "");
+    for (const failure of sb.failedStories) lines.push(`- ${code(failure.id)}: ${sentence(failure.reason)}.`);
+    lines.push("");
+  }
+  for (const engine of Object.keys(target.summary.engines)) {
+    const violations = aggregate(target, engine, "violations");
+    const review = aggregate(target, engine, "incomplete");
+    lines.push(`#### ${ENGINE_NAMES[engine] ?? engine}${violations.version ? ` ${violations.version}` : ""}.`, "");
+    if (violations.ranStories === 0) {
+      lines.push("This engine didn't run on any story. Treat that as a coverage gap, not a pass.", "");
+      continue;
+    }
+    lines.push("**Violations by rule.**", "");
+    if (violations.rows.length === 0) lines.push(`No automated violations found by ${ENGINE_NAMES[engine]} across ${plural(violations.ranStories, "story", "stories")}.`);
+    else lines.push(...ruleTable(violations.rows, engine));
+    lines.push("", "**Needs review by rule.**", "", ...ruleTable(review.rows, engine));
+    lines.push("", "Element-level detail for every story is in results.json.", "");
+  }
+  return lines.join("\n");
+}
+
 function targetSection(planTarget, target) {
+  if (target.status === "ran" && target.storybook) return storybookSection(planTarget, target);
   const lines = [`### ${planTarget.label}.`, ""];
   lines.push(`Target ${code(planTarget.input)}, ${planTarget.kind ?? "unclassified"}${planTarget.evidenceLevel ? `, ${planTarget.evidenceLevel} evidence` : ""}.`, "");
   if (target.status === "failed") {

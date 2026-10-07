@@ -209,9 +209,9 @@ The CLI accepts only the declarative grammar. The skill treats any input that do
 ### Storybook.
 
 1. Fetch `index.json` (or `stories.json`).
-2. Enumerate stories. Load each as `iframe.html?id=<storyId>&viewMode=story`.
+2. Enumerate stories. Leave out docs entries. Load each as `iframe.html?id=<storyId>&viewMode=story`, wait for `body.sb-show-main`, and run the rules tier scoped to `#storybook-root`. A story that fails to render is a gap with a reason.
 3. Treat each story as a unit. If the user passed `--archetypes`, filter by title or tag heuristics and report which stories matched.
-4. Cap the story count by default (for example 200) and report when the cap truncates. Provide `--max-stories`.
+4. Cap the story count at 200 by default, and provide `--max-stories`. When the cap cuts the list short, take one story per component in turn so the audit spreads across the library, keep the order fixed, and report the truncation.
 
 ### Plain URL and HTML.
 

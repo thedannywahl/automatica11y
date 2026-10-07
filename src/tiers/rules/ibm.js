@@ -54,18 +54,21 @@ function group(items, ruleInfo, kindOf, maxNodes, withKind) {
  * The engine's WCAG rulesets cover levels A and AA. Level AAA runs the AA rules and says so.
  * ace.js goes in through page.evaluate, because a strict CSP blocks addScriptTag.
  * @param {import("playwright-core").Page} page
- * @param {{ wcag: string, level: string, maxNodes?: number }} options
+ * @param {{ wcag: string, level: string, maxNodes?: number, scope?: string | null }} options
+ *   `scope` is a CSS selector. Component evidence checks only that element.
  */
-export async function runIbm(page, { wcag, level, maxNodes = 5 }) {
+export async function runIbm(page, { wcag, level, maxNodes = 5, scope = null }) {
   const ruleset = `WCAG_${wcag.replace(".", "_")}`;
   const maxLevel = LEVEL_ORDER[level] ?? LEVEL_ORDER.AA;
   await page.evaluate(loadAce());
-  const raw = await page.evaluate(async (id) => {
+  const raw = await page.evaluate(async ({ id, scope }) => {
     // @ts-ignore ace.js defines window.ace in the page.
     const checker = new window.ace.Checker();
     const set = checker.rulesets.find((r) => r.id === id);
     if (!set) throw new Error(`The IBM engine has no ruleset ${id}.`);
-    const report = await checker.check(document, [id]);
+    const root = scope ? document.querySelector(scope) : document;
+    if (!root) throw new Error(`Nothing matches the scope ${scope}.`);
+    const report = await checker.check(root, [id]);
     const passed = new Set();
     const found = [];
     for (const r of report.results) {
@@ -77,7 +80,7 @@ export async function runIbm(page, { wcag, level, maxNodes = 5 }) {
       found,
       passedRules: [...passed],
     };
-  }, ruleset);
+  }, { id: ruleset, scope });
 
   /** @type {Map<string, { wcag: string[], toolkitLevel: number | null }>} */
   const ruleInfo = new Map();
@@ -100,7 +103,7 @@ export async function runIbm(page, { wcag, level, maxNodes = 5 }) {
   return {
     status: /** @type {const} */ ("ran"),
     version: readPackageVersion("accessibility-checker-engine"),
-    config: { ruleset, levels: level === "A" ? ["A"] : ["A", "AA"] },
+    config: { ruleset, levels: level === "A" ? ["A"] : ["A", "AA"], ...(scope ? { scope } : {}) },
     violations: group(violations, ruleInfo, () => "violation", maxNodes, false),
     incomplete: group(review, ruleInfo, reviewKind, maxNodes, true),
     passesCount: raw.passedRules.filter((id) => ruleInfo.has(id)).length,

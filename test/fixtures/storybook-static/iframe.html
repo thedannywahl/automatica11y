@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Storybook</title>
+</head>
+<body class="sb-show-preparing-story">
+<!-- A stand-in for a Storybook build. It follows the iframe contract the runner relies on:
+     the story id arrives in the query string, the story renders into #storybook-root, and
+     body gets sb-show-main, sb-show-errordisplay, or sb-show-nopreview when rendering ends. -->
+<div id="storybook-root"></div>
+<div class="sb-errordisplay"><pre id="error-message"></pre></div>
+<script>
+  const box = 'style="min-width:44px;min-height:44px"';
+  const stories = {
+    "button--primary": `<button type="button" ${box}>Save</button>`,
+    "button--icon-only": `<button type="button" ${box}></button>`,
+    "form-input--labeled": `<label for="n">Name</label><input id="n" type="text">`,
+    "form-input--unlabeled": `<input type="text">`,
+    "dialog-modal--open": `<div role="dialog" aria-labelledby="t"><h2 id="t">Confirm</h2><p>Are you sure?</p></div>`,
+    "tabs--default": `<div role="tablist" aria-label="Sections"><button role="tab" id="t1" aria-selected="true" aria-controls="p1" ${box}>One</button><button role="tab" id="t2" aria-selected="false" aria-controls="p2" tabindex="-1" ${box}>Two</button></div><div role="tabpanel" id="p1" aria-labelledby="t1"><p>First panel</p></div><div role="tabpanel" id="p2" aria-labelledby="t2" hidden><p>Second panel</p></div>`,
+  };
+  const id = new URLSearchParams(location.search).get("id");
+  document.body.classList.remove("sb-show-preparing-story");
+  if (id === "broken--throws") {
+    document.getElementById("error-message").textContent = "Error: this story throws on purpose";
+    document.body.classList.add("sb-show-errordisplay");
+  } else if (!(id in stories)) {
+    document.body.classList.add("sb-show-nopreview");
+  } else {
+    document.getElementById("storybook-root").innerHTML = stories[id];
+    document.body.classList.add("sb-show-main");
+  }
+</script>
+</body>
+</html>

@@ -54,16 +54,19 @@ function normalize(items, maxNodes) {
 /**
  * Run axe-core against the page for one WCAG version and level.
  * @param {import("playwright-core").Page} page
- * @param {{ wcag: string, level: string, maxNodes?: number }} options
+ * @param {{ wcag: string, level: string, maxNodes?: number, scope?: string | null }} options
+ *   `scope` is a CSS selector. Component evidence checks only that element, so page-level rules like document title don't fire.
  */
-export async function runAxe(page, { wcag, level, maxNodes = 5 }) {
+export async function runAxe(page, { wcag, level, maxNodes = 5, scope = null }) {
   const { AxeBuilder } = await import("@axe-core/playwright");
   const tags = axeTags(wcag, level);
-  const result = await new AxeBuilder({ page, axeSource: loadAxe() }).withTags(tags).analyze();
+  const builder = new AxeBuilder({ page, axeSource: loadAxe() }).withTags(tags);
+  if (scope) builder.include(scope);
+  const result = await builder.analyze();
   return {
     status: /** @type {const} */ ("ran"),
     version: result.testEngine.version,
-    config: { tags },
+    config: { tags, ...(scope ? { scope } : {}) },
     violations: normalize(result.violations, maxNodes),
     incomplete: normalize(result.incomplete, maxNodes),
     passesCount: result.passes.length,
