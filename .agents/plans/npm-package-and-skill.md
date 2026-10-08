@@ -269,7 +269,7 @@ A target with no equivalent for an archetype gets a `gap` entry. The comparison 
 
 ### Library accessibility options.
 
-Some libraries ship opt-in accessibility features (the Highcharts accessibility module is one). Mapping entries can declare a `libA11y` toggle. With `--lib-a11y on,off`, run both configurations and label each result with the configuration used.
+Some libraries ship opt-in accessibility features (the Highcharts accessibility module is one). A mapping entry declares the toggle with `"libA11y": true`. The fixture then receives `libA11y` (a prop in React, a second argument to `mount` for web components), and the runner loads it with `?libA11y=on` and `?libA11y=off`. With `--lib-a11y on,off`, run both configurations and label each result with the configuration used. An archetype that doesn't declare the toggle runs once and is labeled `n/a`.
 
 ### Mixed comparisons.
 
@@ -293,7 +293,7 @@ The `rules` tier runs the engines named by `--engine` (default `axe,ibm`) agains
 - **Never merge across engines.** Don't deduplicate, sum, or average findings from different engines. When both engines flag the same element, show both, each labeled with its engine.
 - **Impact and fail checks.** Impact is the engine's own label, never one we compute. Axe findings carry axe's impact. IBM findings carry `impact: null` and a separate numeric `toolkitLevel` (1 to 4). IBM documents Toolkit level as a staged adoption scale: 1 is essential requirements with high user impact, 2 adds the next-most important, and 3 is the full set. The report labels it "IBM Toolkit level" and never converts it to axe's scale. IBM defines no Level 4. Each engine has its own fail flag (`--fail-on-axe`, `--fail-on-ibm`), and `--fail-mode` combines them. See section 4, "Fail checks."
 - Run each archetype in its meaningful states (closed and open for dialog, menu, and tooltip).
-- **Canvas detection.** If the rendered output is mainly `<canvas>` with no accessible alternative, set the status `not-testable` with the reason "canvas output exposes nothing to rule checks." Never report it as clean.
+- **Canvas detection.** If the rendered output is mainly `<canvas>` with no accessible alternative (no label, text, table, or SVG), set the status `not-testable` with the reason "canvas output exposes nothing to rule checks." Never report it as clean. A canvas with an alternative is tested, and the result notes that the drawing itself isn't.
 - Include contrast results. They depend on Chromium rendering, so record the Chromium version.
 
 ### Tier 2: interactions.

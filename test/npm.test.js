@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -9,40 +9,13 @@ import { detectFlavor } from "../src/plan/resolve-npm.js";
 import { candidateMapping } from "../src/plan/mapping.js";
 import { parseResults } from "../src/schema.js";
 import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { installPackage, npmView } from "./helpers/npm-fakes.js";
 
-const packages = new URL("./fixtures/packages/", import.meta.url).pathname;
-const repoModules = new URL("../node_modules/", import.meta.url).pathname;
+// Other test files run at the same time and make their own temporary folders. Give this file its own, so counting leftovers is exact.
+process.env.TMPDIR = makeTree();
+
 const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
-
-/** Registry metadata for the fake packages, as `npm view` would return it. */
-const REGISTRY = {
-  "fake-ui": { name: "fake-ui", version: "1.0.0", peerDependencies: { react: "*", "react-dom": "*" } },
-  "fake-nospread": { name: "fake-nospread", version: "1.0.0", peerDependencies: { react: "*", "react-dom": "*" } },
-  "fake-wc": { name: "fake-wc", version: "1.0.0", customElements: "custom-elements.json" },
-  "closed-wc": { name: "closed-wc", version: "2.0.0" },
-  "plain-utils": { name: "plain-utils", version: "3.0.0" },
-  "vue-lib": { name: "vue-lib", version: "1.0.0", peerDependencies: { vue: "^3" } },
-};
-
-const npmView = async (spec) => {
-  const name = spec.replace(/@[^@/]*$/, "");
-  const meta = REGISTRY[name];
-  if (!meta) throw new Error(`"${spec}" wasn't found on npm.`);
-  return meta;
-};
-
-/** Stand in for npm: copy the fake package into the install folder and link the repo's React. */
-async function installPackage({ dir, name, version, flavor }) {
-  if (!REGISTRY[name]) throw new Error(`npm couldn't install ${name}@${version}: not found`);
-  mkdirSync(join(dir, "node_modules"), { recursive: true });
-  cpSync(join(packages, name), join(dir, "node_modules", name), { recursive: true });
-  if (flavor === "react") {
-    for (const dep of ["react", "react-dom", "scheduler"]) if (existsSync(join(repoModules, dep))) symlinkSync(join(repoModules, dep), join(dir, "node_modules", dep));
-  }
-  const react = flavor === "react" ? JSON.parse(readFileSync(join(repoModules, "react", "package.json"), "utf8")).version : null;
-  return { dir, warnings: [], react, reactDom: react, version };
-}
 
 const REACT_DIALOG = `import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogClose } from "fake-ui";
 export default function Fixture() {
@@ -216,6 +189,30 @@ test("web components: shadow content the virtual screen reader can't read is lis
   const vsr = archetype(result, "button").configs[0].tiers.vsr;
   assert.match(vsr.notTestable[0], /open shadow root in <fake-button> \(1\)/);
   assert.match(result.results.targets[0].summary.notTestable.join("\n"), /button: open shadow root in <fake-button>/);
+});
+
+test("--lib-a11y runs a library's accessibility options both ways and labels each result", { skip }, async () => {
+  // With the option on, the icon button gets a name. With it off, it has none.
+  const fixture = `import { Button } from "fake-ui";\nexport default function Fixture({ libA11y }) {\n  return <Button data-a11y-trigger data-a11y-root aria-label={libA11y ? "Save" : undefined} />;\n}\n`;
+  const files = { "fixtures/ui/button.jsx": fixture, "map.json": JSON.stringify({ ui: { button: { libA11y: true } } }) };
+  const both = await run(["audit", "ui=fake-ui", "--mapping", "map.json", "--archetypes", "button", "--tiers", "rules,vsr"], { files });
+  assert.equal(both.code, 0, both.stderr);
+  const configs = archetype(both, "button").configs;
+  assert.deepEqual(configs.map((c) => c.libA11y), ["on", "off"]);
+  assert.deepEqual(violations(configs[0], "axe"), []);
+  assert.deepEqual(violations(configs[1], "axe"), ["button-name"]);
+  assert.deepEqual(violations(configs[1], "ibm"), ["input_label_exists"]);
+  assert.deepEqual(configs.map((c) => c.tiers.vsr.log[0].announcements), [["document", "button, Save", "end of document"], ["document", "button", "end of document"]]);
+  assert.match(both.report, /#### button \(initial state, library accessibility on\)\./);
+  assert.match(both.report, /#### button \(initial state, library accessibility off\)\./);
+  assert.match(both.report, /\| button \| ran \| initial \| library accessibility on and off \|/);
+
+  const onlyOn = await run(["audit", "ui=fake-ui", "--mapping", "map.json", "--archetypes", "button", "--lib-a11y", "on", "--tiers", "rules"], { files });
+  assert.deepEqual(archetype(onlyOn, "button").configs.map((c) => c.libA11y), ["on"]);
+
+  // An archetype that doesn't declare the option runs once, unlabeled, whatever the flag says.
+  const plain = await run(["audit", "ui=fake-ui", "--archetypes", "button", "--lib-a11y", "on,off", "--tiers", "rules"]);
+  assert.deepEqual(archetype(plain, "button").configs.map((c) => c.libA11y), ["n/a"]);
 });
 
 test("--archetypes limits which archetypes run and which gaps show", { skip }, async () => {

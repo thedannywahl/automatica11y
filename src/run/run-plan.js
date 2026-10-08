@@ -9,7 +9,7 @@ import { closedShadowHosts, notTestableEntries } from "../harness/shadow.js";
 import { NOT_APPLICABLE_FOR_PAGES } from "../tiers/interactions/index.js";
 import { failedVsr, runVsr } from "../tiers/vsr.js";
 import { openPage } from "../harness/url.js";
-import { renderReport } from "../report/single.js";
+import { renderReport } from "../report/index.js";
 import { num } from "../text.js";
 import { parseResults } from "../schema.js";
 import { runRules, selfTest } from "../tiers/rules/index.js";
@@ -134,6 +134,7 @@ async function auditStorybook(browser, planTarget, plan, servers) {
       audited: audited.length,
       truncated: picked.truncated,
       maxStories: plan.options.maxStories,
+      filtered: picked.filtered,
       archetypeMatches: picked.matchedByArchetype,
       failedStories,
     },

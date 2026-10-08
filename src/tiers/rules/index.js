@@ -1,3 +1,4 @@
+import { CANVAS_REASON, inspectCanvas } from "./canvas.js";
 import { runAxe } from "./axe.js";
 import { runIbm } from "./ibm.js";
 
@@ -9,6 +10,15 @@ const RUNNERS = { axe: runAxe, ibm: runIbm };
  * @param {{ engines: string[], wcag: string, level: string, maxNodes?: number, scope?: string | string[] | null }} options
  */
 export async function runRules(page, { engines, wcag, level, maxNodes = 5, scope = null }) {
+  const canvas = await inspectCanvas(page, scope);
+  if (canvas.canvasOnly) {
+    const reason = `${CANVAS_REASON} The page or component is mainly a canvas with no text alternative, label, table, or SVG, so there was nothing to test.`;
+    return {
+      status: "not-testable",
+      reason,
+      engines: Object.fromEntries(engines.map((engine) => [engine, { status: "not-testable", reason }])),
+    };
+  }
   /** @type {Record<string, any>} */
   const results = {};
   for (const engine of engines) {
@@ -16,6 +26,11 @@ export async function runRules(page, { engines, wcag, level, maxNodes = 5, scope
       results[engine] = await RUNNERS[/** @type {keyof typeof RUNNERS} */ (engine)](page, { wcag, level, maxNodes, scope });
     } catch (error) {
       results[engine] = { status: "failed", reason: error instanceof Error ? error.message.split("\n")[0] : String(error) };
+    }
+  }
+  if (canvas.canvases > 0) {
+    for (const result of Object.values(results)) {
+      if (result.status === "ran") (result.notes ??= []).push("The canvas drawing itself isn't checked. The rules ran on the markup around it.");
     }
   }
   const statuses = Object.values(results).map((r) => r.status);

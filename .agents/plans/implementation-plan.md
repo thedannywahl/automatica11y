@@ -311,16 +311,28 @@ Exit: the full check table in spec section 7 has a test per row.
 - **Storybook report.** It groups flags by phrase with story counts, because 200 per-story logs would drown the report. Full logs stay in `results.json`.
 - **Not built.** Comparing the log against the rules findings, and `chart`-specific handling, which belongs to M7.
 
-### M7. Comparison reporting (two days).
+### M7. Comparison reporting (done).
 
-- [ ] `commands/compare.js` with at least two targets. One failed target doesn't abort the run.
-- [ ] `report/comparison.js`: coverage matrix first (target by archetype by tier), then findings.
-- [ ] Mixed-evidence warning when component and page targets mix.
-- [ ] `--lib-a11y on,off` runs both configurations and labels each.
-- [ ] Chart archetype with canvas detection. Canvas-only output reports `not-testable`.
-- [ ] Test every rule in spec section 9 against fixed `results.json` inputs.
+- [x] `commands/compare.js` with at least two targets. One failed target doesn't abort the run.
+- [x] `report/comparison.js`: coverage matrix first (target by archetype by tier), then findings.
+- [x] Mixed-evidence warning when component and page targets mix.
+- [x] `--lib-a11y on,off` runs both configurations and labels each.
+- [x] Chart archetype with canvas detection. Canvas-only output reports `not-testable`.
+- [x] Test every rule in spec section 9 against fixed `results.json` inputs.
 
 Exit: two-library comparison meets the acceptance criterion.
+
+**Results.** 164 tests pass in about two minutes, and `npm run lint` is clean.
+
+- **Report split.** `report/parts.js` holds the shared pieces. `report/single.js` renders an audit. `report/comparison.js` renders a `compare` of two or more targets. `report/index.js` picks one.
+- **Coverage matrix.** One table per tier (rules, interactions, virtual screen reader), with archetypes as rows and targets as columns. Each cell says `ran`, `gap`, `not-testable`, `not-applicable`, `skipped`, or `failed`. A cell names the configuration (state, library accessibility) when a target has more than one, and the story count when a Storybook row stands for several stories. A target whose archetypes were all gaps still shows each gap, instead of one `failed` for the whole column.
+- **Findings.** Impact and Toolkit-level tables sit apart, one per engine, with no totals across engines or targets. Then one table per archetype puts targets side by side: rule IDs with element counts per engine, failed interaction checks, and flagged virtual screen reader phrases. Counts in those tables are numerals, because they are data, and prose spells out zero through nine.
+- **Same settings.** The report states that every target ran with the same WCAG version, level, engines, and archetypes. They share one options object, so they can't differ.
+- **Mixed evidence.** Components plus pages, or a Storybook plus a page, open with the non-equivalence warning above the matrix.
+- **Storybook rows.** The runner now matches every story to archetypes even without `--archetypes`, so a Storybook lines up by archetype with an npm target. A story-less archetype is a gap.
+- **`--lib-a11y`.** A mapping entry with `"libA11y": true` declares that the library has opt-in accessibility features. The fixture receives `{ libA11y }` (a prop in React, a second argument to `mount` for web components), and the runner loads it with `?libA11y=on` and `?libA11y=off`. Each result carries its label in the config, the report headings, and the comparison rows. `--lib-a11y on` runs only that side. An archetype that doesn't declare the option runs once, unlabeled.
+- **Canvas.** If a scope is mainly `<canvas>` with no label, text, table, or SVG, the rules tier reports `not-testable` for both engines and skips them. It never reports clean. A canvas with a label or a table nearby is tested, with a note that the drawing itself isn't.
+- **Fix found while testing.** An npm package version that the registry listed but couldn't yet serve (`ETARGET` on a package published minutes earlier) failed that target with the reason, as designed. A retry on `ETARGET` would help, and I left it for later.
 
 ### M8. Skill and packaging (two days).
 

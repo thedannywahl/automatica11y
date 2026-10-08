@@ -21,6 +21,8 @@ export const MappingEntrySchema = v.object({
   tag: v.optional(v.string()),
   /** Path to an authored fixture, relative to where the command runs. */
   fixture: v.optional(v.nullable(v.string())),
+  /** The library ships opt-in accessibility features. The fixture gets `libA11y` (true or false) and `--lib-a11y` runs it both ways. */
+  libA11y: v.optional(v.boolean()),
   status: v.optional(v.picklist(MAPPING_STATUSES)),
   candidates: v.optional(v.array(v.string())),
   parts: v.optional(v.array(v.string())),
@@ -179,6 +181,9 @@ const StorybookInfoSchema = v.object({
   /** True when the story cap cut the list short. */
   truncated: v.boolean(),
   maxStories: v.number(),
+  /** True when --archetypes limited which stories were audited. */
+  filtered: v.optional(v.boolean()),
+  /** Every archetype each story's title, name, and tags suggest, for all stories in the index. */
   archetypeMatches: v.record(v.string(), v.array(v.string())),
   /** Stories that didn't render. They count as failures, never as passes. */
   failedStories: v.array(v.object({ id: v.string(), reason: v.string() })),

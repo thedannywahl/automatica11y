@@ -271,3 +271,28 @@ test("the static server never serves files outside its root", async () => {
     await server.close();
   }
 });
+
+test("canvas-only output is not testable, never clean", { skip }, async () => {
+  const run = await audit(["audit", `${fixtures}canvas-only.html`, "--tiers", "rules"]);
+  assert.equal(run.code, 0, run.stderr);
+  const rules = tiersOf(run.results).rules;
+  assert.equal(rules.status, "not-testable");
+  assert.match(rules.reason, /Canvas output exposes nothing to rule checks/);
+  assert.deepEqual(Object.values(rules.engines).map((e) => e.status), ["not-testable", "not-testable"]);
+  const summary = run.results.targets[0].summary;
+  assert.equal(summary.engines.axe.status, "not-testable");
+  assert.match(summary.notTestable[0], /Canvas output exposes nothing/);
+  assert.match(run.report, /\| canvas-only\.html \| not-testable \| not-testable \|/);
+  assert.match(run.report, /Not testable: Canvas output exposes nothing to rule checks\./);
+  assert.doesNotMatch(run.report, /No automated violations found by axe-core/);
+});
+
+test("a canvas with a label, or a table beside it, is tested, and the report says the drawing isn't", { skip }, async () => {
+  for (const page of ["canvas-labelled", "canvas-table"]) {
+    const run = await audit(["audit", `${fixtures}${page}.html`, "--tiers", "rules"]);
+    const { axe, ibm } = tiersOf(run.results).rules.engines;
+    assert.equal(axe.status, "ran", page);
+    assert.equal(ibm.status, "ran", page);
+    assert.match(axe.notes[0], /canvas drawing itself isn't checked/, page);
+  }
+});

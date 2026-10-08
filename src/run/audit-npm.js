@@ -64,10 +64,10 @@ async function discover({ browser, workDir, flavor, pkg, buildDir }) {
   }
 }
 
-/** Open one fixture page, check it follows the contract, and run the rules tier in each state. */
-async function auditFixture({ browser, url, archetype, plan }) {
+/** Open one fixture page, check it follows the contract, and run the tiers in each state. `libA11y` is `on`, `off`, or `n/a`. */
+async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
   const errors = [];
-  const opened = await openPage(browser, url, { beforeGoto: watchErrors(errors) });
+  const opened = await openPage(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, { beforeGoto: watchErrors(errors) });
   try {
     const trigger = opened.page.locator("[data-a11y-trigger]");
     try {
@@ -111,16 +111,33 @@ async function auditFixture({ browser, url, archetype, plan }) {
           tiers.rules = await runRules(opened.page, { engines: plan.options.engines, wcag: plan.options.wcag, level: plan.options.level, scope: index === 0 ? "#root" : ["#root", "[data-a11y-root]"] });
         }
       }
-      configs.push({ libA11y: "n/a", state, tiers });
+      configs.push({ libA11y, state, tiers });
       if (errors.length) return { gap: `The fixture logged errors in the ${state} state: ${errors[0]}` };
     }
     const hidden = notTestableEntries(await closedShadowHosts(opened.page));
     // The checks open their own fresh pages, so run them after this page's rules results are in.
-    if (plan.options.tiers.includes("interactions")) configs[0].tiers.interactions = await runInteractions(browser, url, archetype);
+    if (plan.options.tiers.includes("interactions")) configs[0].tiers.interactions = await runInteractions(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, archetype);
     return { configs, hidden };
   } finally {
     await opened.close();
   }
+}
+
+/**
+ * Audit one fixture. A library that ships opt-in accessibility features runs once for each `--lib-a11y` value, and each result carries its label.
+ * @param {{ browser: any, url: string, archetype: string, plan: any, toggle: boolean }} options
+ */
+async function auditFixture({ browser, url, archetype, plan, toggle }) {
+  const values = toggle ? plan.options.libA11y : ["n/a"];
+  const configs = [];
+  const hidden = [];
+  for (const libA11y of values) {
+    const outcome = await auditFixturePage({ browser, url, archetype, plan, libA11y });
+    if (outcome.gap) return { gap: toggle ? `With library accessibility ${libA11y}: ${outcome.gap}` : outcome.gap };
+    configs.push(...outcome.configs);
+    hidden.push(...outcome.hidden);
+  }
+  return { configs, hidden };
 }
 
 /**
@@ -217,7 +234,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       servers.push(live);
       for (const [archetype, path] of Object.entries(runnable)) {
         /** @type {any} */
-        const outcome = await auditFixture({ browser, url: `${live.origin}${path}`, archetype, plan }).catch((error) => ({ gap: firstLine(error) }));
+        const outcome = await auditFixture({ browser, url: `${live.origin}${path}`, archetype, plan, toggle: mapping[archetype].libA11y === true }).catch((error) => ({ gap: firstLine(error) }));
         if (outcome.gap) {
           archetypes[archetype] = { status: "gap", reason: outcome.gap, configs: [] };
           gaps.push(`archetype:${archetype}`);

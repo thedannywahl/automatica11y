@@ -3,7 +3,8 @@
 /** Loads the package so its custom elements get defined, then calls the fixture's default export, `mount(container)`. */
 export const entry = (fixturePath, pkg) => `import ${JSON.stringify(pkg)};
 import mount from ${JSON.stringify(fixturePath)};
-await mount(document.getElementById("root"));
+const libA11y = new URLSearchParams(location.search).get("libA11y") === "on";
+await mount(document.getElementById("root"), { libA11y });
 `;
 
 /** Loads the whole package. The page's init script records every custom element the package defines. */

@@ -4,7 +4,8 @@
 export const entry = (fixturePath, _pkg) => `import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 import Fixture from ${JSON.stringify(fixturePath)};
-createRoot(document.getElementById("root")).render(createElement(Fixture));
+const libA11y = new URLSearchParams(location.search).get("libA11y") === "on";
+createRoot(document.getElementById("root")).render(createElement(Fixture, { libA11y }));
 `;
 
 /** Loads the whole package, lists its exports, and records compound parts such as Dialog.Trigger. */

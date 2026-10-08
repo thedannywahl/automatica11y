@@ -49,10 +49,16 @@ export function matchArchetypes(story) {
  * @param {{ archetypes?: string[] | null, max: number }} options
  */
 export function selectStories(stories, { archetypes = null, max }) {
+  /** Every archetype each story suggests. The comparison matrix uses this even when no filter is set. */
   /** @type {Record<string, string[]>} */
-  const matchedByArchetype = {};
+  const all = {};
+  for (const story of stories) for (const a of matchArchetypes(story)) (all[a] ??= []).push(story.id);
+  const filtered = Boolean(archetypes?.length);
   let pool = stories;
-  if (archetypes?.length) {
+  /** @type {Record<string, string[]>} */
+  let matchedByArchetype = all;
+  if (filtered) {
+    matchedByArchetype = {};
     pool = stories.filter((story) => {
       const hits = matchArchetypes(story).filter((a) => archetypes.includes(a));
       for (const a of hits) (matchedByArchetype[a] ??= []).push(story.id);
@@ -70,7 +76,7 @@ export function selectStories(stories, { archetypes = null, max }) {
     }
   }
   selected.sort((a, b) => a.id.localeCompare(b.id));
-  return { selected, total: stories.length, matched: pool.length, truncated: pool.length > selected.length, matchedByArchetype };
+  return { selected, total: stories.length, matched: pool.length, truncated: pool.length > selected.length, matchedByArchetype, filtered };
 }
 
 /** The URL that renders one story on its own. `base` must end with a slash. */

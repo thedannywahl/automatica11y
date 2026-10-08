@@ -21,6 +21,12 @@ export function summarize(archetypes, engines, gaps = []) {
     }
     summary.engines[engine] = entry;
   }
+  for (const [name, archetype] of Object.entries(archetypes)) {
+    for (const config of archetype.configs) {
+      const rules = config.tiers.rules;
+      if (rules?.status === "not-testable") summary.notTestable.push(`${name === "page" ? "" : `${name}: `}${rules.reason}`);
+    }
+  }
   const checks = Object.values(archetypes).flatMap((a) => a.configs.flatMap((c) => c.tiers.interactions?.checks ?? []));
   if (checks.length) {
     summary.interactions = { pass: 0, fail: 0, notApplicable: 0, error: 0 };
