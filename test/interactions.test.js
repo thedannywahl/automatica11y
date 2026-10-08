@@ -124,3 +124,23 @@ test("the focus indicator check says which method found the change", { skip }, a
   assert.equal(focus.method, "screenshot");
   assert.match(focus.detail, /computed styles first, then a screenshot/);
 });
+
+test("focus indicator: only changes a person could see count", async () => {
+  const { focusIndicatorChanges } = await import("../src/tiers/interactions/focus-indicator.js");
+  const base = { outlineStyle: "none", outlineWidth: "0px", outlineColor: "rgb(0, 0, 0)", boxShadow: "none", borderTopStyle: "none", borderTopColor: "rgb(0, 0, 0)", borderTopWidth: "0px", backgroundColor: "rgba(0, 0, 0, 0)", color: "rgb(0, 0, 0)", textDecorationLine: "none", rendered: true };
+  const parts = (over, extra = {}) => ({ "the element": { ...base, ...over }, ...extra });
+  assert.deepEqual(focusIndicatorChanges(parts({}), parts({})), []);
+  assert.deepEqual(focusIndicatorChanges(parts({ outlineStyle: "solid", outlineWidth: "2px" }), parts({})), ["the element: outline"]);
+  // An outline offset alone, or an outline with no width or no color, shows nothing.
+  assert.deepEqual(focusIndicatorChanges(parts({ outlineWidth: "2px" }), parts({})), []);
+  assert.deepEqual(focusIndicatorChanges(parts({ outlineStyle: "solid", outlineWidth: "2px", outlineColor: "rgba(0, 0, 0, 0)" }), parts({})), []);
+  assert.deepEqual(focusIndicatorChanges(parts({ boxShadow: "rgb(0, 0, 255) 0px 0px 0px 3px" }), parts({})), ["the element: box-shadow"]);
+  assert.deepEqual(focusIndicatorChanges(parts({ backgroundColor: "rgb(200, 200, 200)" }), parts({})), ["the element: background color"]);
+  // A ring drawn on a child or a pseudo-element counts, and so does an element that appears inside.
+  const ring = { ...base, boxShadow: "rgb(0, 0, 255) 0px 0px 0px 3px" };
+  assert.deepEqual(focusIndicatorChanges(parts({}, { "its ::after": ring }), parts({}, { "its ::after": base })), ["its ::after: box-shadow"]);
+  assert.deepEqual(focusIndicatorChanges(parts({}, { "inner element 1 (span)": base }), parts({})), ["inner element 1 (span): appeared on focus"]);
+  assert.deepEqual(focusIndicatorChanges(parts({}, { "inner element 1 (span)": { ...base, rendered: false } }), parts({})), []);
+  // A ripple that stays in the page but only renders while focused.
+  assert.deepEqual(focusIndicatorChanges(parts({}, { "inner element 3 (span)": base }), parts({}, { "inner element 3 (span)": { ...base, rendered: false } })), ["inner element 3 (span): appeared on focus"]);
+});

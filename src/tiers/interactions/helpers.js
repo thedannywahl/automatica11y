@@ -12,6 +12,28 @@ export function installHelpers() {
     return uids.get(el);
   };
 
+  const FOCUS_PROPS = ["outlineStyle", "outlineWidth", "outlineColor", "boxShadow", "borderTopStyle", "borderTopColor", "borderTopWidth", "backgroundColor", "color", "textDecorationLine"];
+  const snapshotOf = (el) => {
+    if (!el) return null;
+    const read = (node, pseudo) => {
+      const s = getComputedStyle(node, pseudo);
+      if (pseudo && (s.content === "none" || s.content === "normal")) return null;
+      const box = node.getBoundingClientRect();
+      return { ...Object.fromEntries(FOCUS_PROPS.map((key) => [key, s[key]])), rendered: s.display !== "none" && s.visibility !== "hidden" && Number(s.opacity) > 0 && box.width > 0 && box.height > 0 };
+    };
+    const parts = {};
+    const add = (key, node, pseudo) => {
+      const part = read(node, pseudo);
+      if (part) parts[key] = part;
+    };
+    add("the element", el);
+    add("its ::before", el, "::before");
+    add("its ::after", el, "::after");
+    [...el.querySelectorAll("*")].slice(0, 30).forEach((child, index) => add(`inner element ${index + 1} (${child.tagName.toLowerCase()})`, child));
+    const box = el.getBoundingClientRect();
+    return { parts, box: { x: box.x, y: box.y, width: box.width, height: box.height } };
+  };
+
   /** All matches in the document and in every open shadow root. */
   const queryAllDeep = (selector, root = /** @type {Document | ShadowRoot} */ (document)) => {
     const found = [...root.querySelectorAll(selector)];
@@ -116,26 +138,19 @@ export function installHelpers() {
       const live = [...root.querySelectorAll('[role="alert"], [aria-live="assertive"], [aria-live="polite"], [role="status"]')].map(text).filter(Boolean);
       return { invalid: control.getAttribute("aria-invalid") === "true" || control.matches(":invalid"), ariaInvalid: control.getAttribute("aria-invalid") === "true", linked, live };
     },
-    /** Computed style properties that can show a focus indicator. */
-    focusStyle() {
-      const el = deepActive();
-      if (!el) return null;
-      const s = getComputedStyle(el);
-      const pick = ["outlineStyle", "outlineWidth", "outlineColor", "outlineOffset", "boxShadow", "borderTopColor", "borderTopWidth", "backgroundColor", "color", "textDecorationLine"];
-      const style = Object.fromEntries(pick.map((key) => [key, s[key]]));
-      const box = el.getBoundingClientRect();
-      return { style, box: { x: box.x, y: box.y, width: box.width, height: box.height } };
+    /**
+     * The resolved styles that can show a focus indicator, for the focused element, its ::before and ::after,
+     * and the elements inside it (a library may draw its ring on a child, such as a ripple).
+     */
+    focusSnapshot() {
+      return snapshotOf(deepActive());
     },
-    /** Remember the focused element, so its style can be read after it loses focus. */
+    /** Remember the focused element, so its snapshot can be taken after it loses focus. */
     remember() {
       window.__a11yLast = deepActive();
     },
-    lastStyle() {
-      const el = window.__a11yLast;
-      if (!el) return null;
-      const s = getComputedStyle(el);
-      const pick = ["outlineStyle", "outlineWidth", "outlineColor", "outlineOffset", "boxShadow", "borderTopColor", "borderTopWidth", "backgroundColor", "color", "textDecorationLine"];
-      return Object.fromEntries(pick.map((key) => [key, s[key]]));
+    lastSnapshot() {
+      return snapshotOf(window.__a11yLast);
     },
     inputValue() {
       const el = queryDeep("[data-a11y-trigger]");

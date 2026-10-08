@@ -11,7 +11,7 @@ import { parseResults } from "../src/schema.js";
 import { makeIo, makeTree } from "./helpers/fixtures.js";
 import { installPackage, npmView } from "./helpers/npm-fakes.js";
 import { installPackage as realInstall, installOptionalPeers, declaredOptionalPeers } from "../src/harness/npm-install.js";
-import { unresolvedPackages } from "../src/harness/bundle.js";
+import { bundleEntries, unresolvedPackages } from "../src/harness/bundle.js";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 
 // Other test files run at the same time and make their own temporary folders. Give this file its own, so counting leftovers is exact.
@@ -114,6 +114,16 @@ function fakeInstall(packages) {
   }
   return dir;
 }
+
+test("the harness page puts the fixture inside a main landmark with a language and a title", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "a11y-shell-"));
+  writeFileSync(join(dir, "entry.js"), "document.getElementById('root').textContent = 'x';");
+  await bundleEntries({ entries: { demo: join(dir, "entry.js") }, outdir: join(dir, "out"), workDir: dir });
+  const html = readFileSync(join(dir, "out", "demo.html"), "utf8");
+  assert.match(html, /<html lang="en">/);
+  assert.match(html, /<title>demo<\/title>/);
+  assert.match(html, /<main><div id="root"><\/div><\/main>/);
+});
 
 test("unresolvedPackages names each missing package once and ignores relative paths", () => {
   const text = (name) => ({ text: `Could not resolve "${name}"` });
@@ -304,7 +314,7 @@ test("--lib-a11y runs a library's accessibility options both ways and labels eac
   assert.deepEqual(violations(configs[0], "axe"), []);
   assert.deepEqual(violations(configs[1], "axe"), ["button-name"]);
   assert.deepEqual(violations(configs[1], "ibm"), ["input_label_exists"]);
-  assert.deepEqual(configs.map((c) => c.tiers.vsr.log[0].announcements), [["document", "button, Save", "end of document"], ["document", "button", "end of document"]]);
+  assert.deepEqual(configs.map((c) => c.tiers.vsr.log[0].announcements), [["document", "main", "button, Save", "end of main", "end of document"], ["document", "main", "button", "end of main", "end of document"]]);
   assert.match(both.report, /#### button \(initial state, library accessibility on\)\./);
   assert.match(both.report, /#### button \(initial state, library accessibility off\)\./);
   assert.match(both.report, /\| button \| ran \| initial \| library accessibility on and off \|/);

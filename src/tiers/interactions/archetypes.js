@@ -5,6 +5,8 @@
  * Checks only use the two hooks (`data-a11y-trigger`, `data-a11y-root`) and ARIA roles.
  */
 
+import { focusIndicatorChanges } from "./focus-indicator.js";
+
 const pass = (detail, extra = {}) => ({ result: "pass", detail, ...extra });
 const fail = (detail, extra = {}) => ({ result: "fail", detail, ...extra });
 const na = (detail) => ({ result: "not-applicable", detail });
@@ -28,15 +30,15 @@ const COMMON = [
     criteria: ["2.4.7"],
     async run(ctx) {
       if ((await ctx.tabToTrigger()) === null) return na("The trigger can't be reached with Tab, so its focus indicator wasn't checked.");
-      const focused = await ctx.page.evaluate(() => window.__a11y.focusStyle());
+      const focused = await ctx.page.evaluate(() => window.__a11y.focusSnapshot());
       await ctx.page.evaluate(() => window.__a11y.remember());
       const clip = ctx.clipAround(focused.box);
       const shotFocused = await ctx.page.screenshot({ clip });
       await ctx.page.evaluate(() => /** @type {any} */ (window).__a11yLast?.blur());
       await ctx.settle();
-      const unfocused = await ctx.page.evaluate(() => window.__a11y.lastStyle());
-      const changed = Object.keys(focused.style).filter((key) => focused.style[key] !== unfocused?.[key]);
-      if (changed.length) return pass(`Computed style changed on focus: ${changed.join(", ")}.`, { method: "computed-style" });
+      const unfocused = await ctx.page.evaluate(() => window.__a11y.lastSnapshot());
+      const changed = focusIndicatorChanges(focused.parts, unfocused?.parts);
+      if (changed.length) return pass(`Computed style changed on focus: ${changed.join("; ")}.`, { method: "computed-style" });
       const shotBlurred = await ctx.page.screenshot({ clip });
       if (!shotFocused.equals(shotBlurred)) return pass("The pixels around the trigger changed on focus, though no style property did.", { method: "screenshot" });
       return fail("Nothing visible changed when the trigger got keyboard focus. Checked computed styles first, then a screenshot comparison.", { method: "screenshot" });

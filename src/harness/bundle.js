@@ -55,7 +55,7 @@ export async function bundleEntries({ entries, outdir, workDir, react = false })
     const css = existsSync(join(outdir, `${name}.css`)) ? `<link rel="stylesheet" href="./${name}.css">` : "";
     writeFileSync(
       join(outdir, `${name}.html`),
-      `<!doctype html>\n<html lang="en">\n<head><meta charset="utf-8"><title>${name}</title><link rel="icon" href="data:,">${css}</head>\n<body><div id="root"></div><script type="module" src="./${name}.js"></script></body>\n</html>\n`,
+      `<!doctype html>\n<html lang="en">\n<head><meta charset="utf-8"><title>${name}</title><link rel="icon" href="data:,">${css}</head>\n<body><main><div id="root"></div></main><script type="module" src="./${name}.js"></script></body>\n</html>\n`,
     );
     pages[name] = `/${name}.html`;
   }

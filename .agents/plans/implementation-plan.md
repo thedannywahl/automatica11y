@@ -408,3 +408,8 @@ MUI failed to bundle because Emotion is an optional peer dependency that npm lea
 - A `button` or `link` is no longer treated as compound just because exports like `ButtonBase` and `ButtonGroup` share its prefix. Only real parts (such as `Button.Root`) count.
 
 Result with both fixes: MUI Button and InstUI Button each ran all three tiers with no automated violations. IBM listed items to review only (`aria_content_in_landmark` on both, `style_focus_visible` on MUI).
+
+### Harness page and focus indicator check.
+
+- The harness page now wraps the fixture in `<main>`, so IBM no longer reports `aria_content_in_landmark` on a lone component. The virtual screen reader log gains `main` and `end of main`.
+- `focus-indicator-visible` reads resolved styles for the trigger, its `::before` and `::after`, and up to 30 inner elements. Only changes a person could see count (outline with width and color, box shadow, border, colors, text decoration, an element that renders only on focus). An outline offset alone doesn't count. The screenshot comparison stays as the fallback. MUI draws its ring on a child ripple, so it used to fall through to the screenshot.
