@@ -63,6 +63,21 @@ export function installHelpers() {
   const byId = (el, id) => (el.getRootNode().getElementById ? el.getRootNode().getElementById(id) : document.getElementById(id));
   const text = (el) => (el?.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 80);
 
+  /** The text a person sees in an element, following slots to the text assigned to them. */
+  const flatText = (el) => {
+    if (!el) return "";
+    let out = "";
+    const walk = (node) => {
+      if (node.nodeType === 3) out += node.nodeValue;
+      else if (node.nodeType === 1 && node.localName === "slot") {
+        const assigned = node.assignedNodes({ flatten: true });
+        (assigned.length ? assigned : [...node.childNodes]).forEach(walk);
+      } else if (node.nodeType === 1) node.childNodes.forEach(walk);
+    };
+    walk(el);
+    return out.trim().replace(/\s+/g, " ").slice(0, 80);
+  };
+
   /** The element ARIA says is active: the focused element, or the descendant it points to. */
   const activeTarget = () => {
     const active = deepActive();
@@ -143,7 +158,7 @@ export function installHelpers() {
         ancestorUids: chain,
         present: Boolean(root),
         visible: visible(root),
-        text: text(root),
+        text: flatText(root),
         named: Boolean(root && (root.getAttribute("aria-label") || root.getAttribute("aria-labelledby"))),
         region: region ? { uid: uid(region), role: region.getAttribute("role"), ariaLive: region.getAttribute("aria-live"), politeness: politeness(region), isMessage: region === root } : null,
         regionUids: queryAllDeep("[role], [aria-live]").filter(isLiveElement).map(uid),

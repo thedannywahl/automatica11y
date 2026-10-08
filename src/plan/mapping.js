@@ -30,8 +30,9 @@ function score(archetype, name) {
   const compact = name.replace(/[-_\s]/g, "").toLowerCase();
   const last = words(name).toLowerCase().split(" ").pop();
   const bases = BASE_NAMES[archetype];
-  if (bases.includes(compact)) return 4;
-  if (bases.includes(last)) return 3;
+  // Names listed first are closer to the archetype itself, so `tooltip` beats `popover` when both are there.
+  if (bases.includes(compact)) return 4 - bases.indexOf(compact) * 0.1;
+  if (bases.includes(last)) return 3 - bases.indexOf(last) * 0.1;
   if (bases.some((base) => compact.startsWith(base))) return 2;
   return 1;
 }

@@ -26,6 +26,7 @@ const OPTION_DEFS = /** @type {const} */ ({
   "lib-a11y": { type: "string" },
   mapping: { type: "string" },
   plan: { type: "boolean" },
+  "no-generate": { type: "boolean" },
   out: { type: "string" },
   "max-stories": { type: "string" },
   "fail-on-axe": { type: "string" },
@@ -110,6 +111,7 @@ export function parseRunArgs(command, argv) {
     archetypes: /** @type {any} */ (archetypes),
     mapping: values.mapping ?? null,
     maxStories,
+    generate: !values["no-generate"],
     out: values.out ?? "./a11y-report",
     fail,
   };
@@ -243,6 +245,7 @@ const FLAGS = `Options:
   --lib-a11y <list>           on, off. Default both.
   --mapping <file>            Archetype mapping file.
   --max-stories <n>           Storybook story cap. Default 200.
+  --no-generate               Don't build fixtures for npm packages. Only authored fixtures and the button and link templates run.
   --plan                      Resolve and print the plan, then stop.
   --out <dir>                 Output directory. Default ./a11y-report.
   --fail-on-axe <impact>      minor, moderate, serious, or critical.

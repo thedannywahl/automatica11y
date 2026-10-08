@@ -228,9 +228,12 @@ export async function runPlan(plan, io) {
     }
     const targets = [];
     const mappings = {};
+    /** Fixtures the tool generated, by path under the output folder. */
+    const generatedFiles = {};
     for (const planTarget of plan.targets) {
-      const { result, mapping } = await runTarget(browser, planTarget, plan, io);
+      const { result, mapping, files } = await runTarget(browser, planTarget, plan, io);
       targets.push(result);
+      if (files) Object.assign(generatedFiles, files);
       if (mapping) {
         mappings[planTarget.id] = mapping;
         planTarget.mapping = mapping;
@@ -251,6 +254,11 @@ export async function runPlan(plan, io) {
     mkdirSync(outDir, { recursive: true });
     writeFileSync(resolve(outDir, "results.json"), `${JSON.stringify(results, null, 2)}\n`);
     writeFileSync(resolve(outDir, "report.md"), renderReport({ plan, results }));
+    for (const [relative, text] of Object.entries(generatedFiles)) {
+      const file = resolve(outDir, relative);
+      mkdirSync(dirname(file), { recursive: true });
+      writeFileSync(file, text);
+    }
     if (Object.keys(mappings).length > 0) {
       // The candidate mapping, in the shape --mapping reads, so it can be edited and passed back in.
       writeFileSync(resolve(outDir, "mapping.json"), `${JSON.stringify(mappings, null, 2)}\n`);

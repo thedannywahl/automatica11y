@@ -63,6 +63,7 @@ Options you can set, and nothing else:
 | `--archetypes a,b` | all | The user cares about some components. Choose from button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, live-region, chart. |
 | `--lib-a11y on,off` | both | Only for libraries with opt-in accessibility features. |
 | `--mapping <file>` | none | You wrote or edited a mapping file. |
+| `--no-generate` | off | The user wants only authored fixtures and the `button` and `link` templates, with no generated ones. |
 | `--max-stories <n>` | 200 | A large Storybook. |
 | `--out <dir>` | `./a11y-report` | The user names a folder. |
 | `--plan` | off | You want to see how targets classify without running anything. |
@@ -80,13 +81,19 @@ Don't set the fail flags unless the user asks for gating. They change the exit c
 
 ## 4. npm packages need fixtures
 
-A package's components can't be guessed from its name. The first run installs the package, loads it in the browser, finds its exports (or custom elements), and writes a candidate mapping to `<out>/mapping.json`. It tests `button` and `link` from a template. Every other archetype needs a **fixture**, a small file that assembles the component the way the library intends.
+A package's components can't be guessed from its name alone. The first run installs the package, loads it in the browser, finds its exports (or custom elements), and writes a candidate mapping to `<out>/mapping.json`. It then fills each archetype from the first source that applies:
 
-1. Run the audit once. Read `<out>/mapping.json` and the report's **Archetypes** table.
+- **Authored.** A **fixture** you write: a small file that assembles the component the way the library intends. It always wins.
+- **Template.** The tool builds `button` and `link` from the export name.
+- **Generated.** For dialog, menu, tooltip, tabs, accordion, combobox, form-field, and live-region, the tool builds candidates from the package's compound parts (or from what a custom element says about itself), runs each in the browser, and keeps the first that behaves: one trigger, no errors, a root that appears with a fitting role. The `--no-generate` option turns this off.
+- **Gap.** If none of those worked, the report lists what was tried and why each attempt failed.
+
+1. Run the audit once. Read `<out>/mapping.json` and the report's **Archetypes** table, which has a **Fixture** column.
 2. Treat the mapping as a guess. Check each `export` or `tag` against what the user asked about.
-3. Each archetype in `mapping.json` has a status. `needs-fixture` means the tool found the component but can't build it from a template. `no-match` means no export or custom element looks like that archetype. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow the contract and the examples below. `references/fixtures.md` has more: the mapping file, states, and library accessibility options. It should sit next to this file. If you can't open it, run `npx --yes automatica11y@latest guide fixtures` to print it. The contract here is enough for the first fixture.
+3. Each archetype in `mapping.json` has a status. `generated` means the tool built a fixture that passed its checks, and the source is in `<out>/generated/`. `needs-fixture` means the tool found the component but couldn't build a working fixture. `no-match` means no export or custom element looks like that archetype. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow the contract and the examples below. `references/fixtures.md` has more: the mapping file, states, and library accessibility options. It should sit next to this file. If you can't open it, run `npx --yes automatica11y@latest guide fixtures` to print it. The contract here is enough for the first fixture.
 4. Run the same command again. The tool finds fixtures in that folder without `--mapping`.
-5. Don't invent fixtures for archetypes the user didn't ask about. For a `no-match` archetype, write a fixture only if the library's documentation names a component, or a documented way, to make it. Otherwise leave it as a gap. A gap is an honest result.
+5. For an archetype that matters, read the generated source before you rely on it. If it looks wrong for the library, write an authored fixture from the documentation. To keep a generated one, copy it from `<out>/generated/<target id>/` into `fixtures/<target id>/`.
+6. Don't invent fixtures for archetypes the user didn't ask about. For a `no-match` archetype, write a fixture only if the library's documentation names a component, or a documented way, to make it. Otherwise leave it as a gap. A gap is an honest result.
 
 **The fixture contract, in brief.**
 
@@ -165,8 +172,9 @@ Write the narrative from `results.json`. Never write from memory, and never repe
 11. Label every rule finding with its engine. Report axe-core and IBM Equal Access separately. Never add their counts together. Impact is axe-core's own label. IBM Toolkit level is IBM's staged adoption scale (1 is essential, high-impact requirements). Don't convert one into the other.
 12. Report computed checks (contrast measured from resolved styles) in their own section. Give the measured ratio next to the ratio the criterion needs, and name the state or the method. Never add them to axe-core or IBM counts. Treat `undetermined` as a gap, never as a pass. When a control has visible text and a pale edge, the result is `not-applicable`, because the text identifies the control. Say that, and leave it for a person to confirm.
 13. Report conditions checks (reduced motion, dark mode, more and less contrast, reduced transparency, forced colors, reflow at 320 pixels, text spacing) in their own section, with the numbers from `results.json`. Never add them to axe-core or IBM counts. "Not applicable" means the page doesn't use the feature, such as a page with no dark theme, so don't list it as a failure or a pass. Say what each check can't see: JavaScript-driven motion, overlapping text, and two-dimensional content that WCAG exempts from reflow.
-14. When you name a WCAG criterion, use the number and name exactly as `report.md` prints them, and keep its "WCAG data" credit to the W3C. Don't write criterion names or levels from memory.
-15. End with a plain method note. Say what automated tools can't catch: whether alt text is meaningful, whether link and heading text make sense in context, cognitive load, real focus and reading order in use, and how real screen readers behave. Those need a person.
+14. Say which results come from generated fixtures. A generated fixture is a guess about how the library is assembled, so a failure may come from the wiring and not from the library. Call those results lower evidence than an authored fixture, name the recipe from the **Fixture** column, and don't compare a generated result with an authored one as if they were equal. If the user wants a result to stand on its own, write an authored fixture for it.
+15. When you name a WCAG criterion, use the number and name exactly as `report.md` prints them, and keep its "WCAG data" credit to the W3C. Don't write criterion names or levels from memory.
+16. End with a plain method note. Say what automated tools can't catch: whether alt text is meaningful, whether link and heading text make sense in context, cognitive load, real focus and reading order in use, and how real screen readers behave. Those need a person.
 
 Use the structure of `report.md`. Quote selectors and rule IDs exactly as `results.json` has them.
 

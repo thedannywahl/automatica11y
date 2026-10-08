@@ -21,6 +21,12 @@ To keep a fixture somewhere else, name it in a mapping file and pass `--mapping`
 
 The keys are target ids, then archetypes. `export` (React) or `tag` (web components) changes which export or element a template uses.
 
+## Start from a generated fixture
+
+You often don't need to write a fixture from nothing. For dialog, menu, tooltip, tabs, accordion, combobox, form-field, and live-region, the tool tries to build one from the package's exports and keeps it only if it works. The source is written to `<out>/generated/<target id>/<archetype>.jsx` (`.js` for web components). To make one an authored fixture, copy it to `fixtures/<target id>/` and edit it. It will carry a block of marking code at the top (`startMarking`). That code marks the trigger and root by role, because a generated fixture can't know how the library forwards props. In an authored fixture you can drop it and put `data-a11y-trigger` and `data-a11y-root` on the right elements yourself, which is clearer and doesn't depend on timing.
+
+If the tool couldn't build a working fixture, the report's **Archetypes** table says what it tried and why each attempt failed. That's a good place to start reading.
+
 ## The contract
 
 1. The file's default export renders the archetype in its **initial state**.

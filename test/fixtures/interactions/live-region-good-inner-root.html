@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>live-region-good-inner-root</title>
+<style>button { min-width: 44px; min-height: 44px; } [hidden] { display: none !important; } </style>
+</head>
+<body>
+<button type="button" id="go" data-a11y-trigger>Save</button>
+<x-banner id="note"></x-banner>
+<script>
+// The role sits on a wrapper inside the shadow root, and the message text arrives through its slot.
+customElements.define('x-banner', class extends HTMLElement {
+  constructor() { super(); this.attachShadow({ mode: 'open' }).innerHTML = '<div role="status" data-a11y-root><slot></slot></div>'; }
+});
+document.getElementById('go').addEventListener('click', () => { document.getElementById('note').textContent = 'Saved.'; });
+</script>
+</body>
+</html>

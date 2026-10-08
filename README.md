@@ -70,10 +70,11 @@ Every result says what it ran, or why it didn't. A gap, a failure, or a result t
 | `--wcag 2.0\|2.1\|2.2` | `2.2` | The WCAG version. |
 | `--level A\|AA\|AAA` | `AA` | The conformance level. IBM Equal Access has no AAA rules, so it runs its AA rules and says so. |
 | `--engine axe,ibm` | both | Which rule engines run. |
-| `--tiers rules,interactions,computed,vsr` | all | Which tiers run. |
+| `--tiers rules,interactions,computed,conditions,vsr` | all | Which tiers run. |
 | `--archetypes a,b` | all | Limit npm and Storybook targets to these archetypes. |
 | `--lib-a11y on,off` | both | For libraries with opt-in accessibility features. See [the fixture guide](skills/automatica11y-runner/references/fixtures.md). |
 | `--mapping <file>` | none | A mapping file for npm targets. |
+| `--no-generate` | off | Don't build fixtures for npm packages. Only authored fixtures and the `button` and `link` templates run. |
 | `--max-stories <n>` | `200` | The Storybook story cap. The cap spreads over components. |
 | `--out <dir>` | `./a11y-report` | Where results go. |
 | `--plan` | off | Classify the targets and write `plan.json`, then stop. Nothing installs and no browser launches. |
@@ -106,7 +107,14 @@ One failing target doesn't stop a comparison. It's recorded with its reason, and
 
 The tool installs each package into its own temporary folder (with install scripts turned off), loads it in the browser, and finds its exports or custom elements. It writes its guesses to `mapping.json`.
 
-It builds `button` and `link` tests on its own. Every other archetype is built from parts that differ by library (`Dialog.Root`, `Dialog.Trigger`, and so on), so it needs a **fixture**: a small file you or your agent write, following [the fixture guide](skills/automatica11y-runner/references/fixtures.md). Put fixtures at `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) and run again. An archetype without a fixture is a gap in the report.
+Each archetype's fixture comes from the first of these that applies:
+
+1. **Authored.** A file you or your agent write at `fixtures/<target id>/<archetype>.jsx` (`.js` for web components), following [the fixture guide](skills/automatica11y-runner/references/fixtures.md). It always wins.
+2. **Template.** The tool builds `button` and `link` tests from the export name alone.
+3. **Generated.** For dialog, menu, tooltip, tabs, accordion, combobox, form-field, and live-region, the tool builds candidate fixtures from what the package exports. It looks for compound parts by common names (a root, a trigger, a content part, a title, a close part, and so on), either as `Dialog.Root` or as `DialogRoot`, and it tries the usual ways of switching a component on (an `open` prop and a close handler). For web components it reads what each element says about itself: its observed attributes, its members, and its slots. It then bundles each candidate, loads it, and checks that exactly one element is the trigger, that nothing logged an error, that activating the trigger shows a root, and that the root carries a role that fits. The first candidate that passes is used. If none does, the archetype is a gap, and the report lists what was tried and why each attempt failed.
+4. **Gap.** Anything else is a gap in the report.
+
+A generated fixture is a guess about how the library is meant to be assembled, so a failure may come from how it was wired and not from the library. Reports mark generated results and treat them as lower evidence than an authored fixture. The source of each generated fixture is written to `generated/<target id>/<archetype>.jsx` beside the report. Copy one to `fixtures/<target id>/` and edit it to make it an authored fixture. Use `--no-generate` to turn generation off, for example when you want a strict comparison of authored fixtures only.
 
 Fixtures are code that the tool bundles and runs in a browser on your machine. Write them from the library's documentation, and read ones you didn't write.
 

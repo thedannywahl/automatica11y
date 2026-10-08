@@ -3,11 +3,13 @@ import { num, plural } from "../text.js";
 import {
   ENGINE_NAMES,
   FINDINGS_NOTE,
+  GENERATED_NOTE,
   TIER_NAMES,
   cell,
   code,
   configLabel,
   finish,
+  hasGenerated,
   notTestableLines,
   reportFooter,
   reportHeader,
@@ -67,7 +69,9 @@ function coverageTable(plan, results, tier, keys) {
       // Name the configuration only when there's more than one to tell apart, or the row stands for several stories.
       const withTier = rows.filter((r) => r.configs?.some((c) => c.tiers[tier]));
       const labels = withTier.length > 1 || withTier[0]?.always ? withTier.map((r) => r.label).filter((l) => l && l !== "-") : [];
-      return labels.length ? `${status} (${labels.join("; ")})` : status;
+      const generated = target.archetypes?.[key]?.fixture?.source === "generated" && String(status).startsWith("ran");
+      const base = labels.length ? `${status} (${labels.join("; ")})` : status;
+      return generated ? `${base} (generated fixture)` : base;
     });
     lines.push(`| ${key} | ${cells.join(" | ")} |`);
   }
@@ -180,6 +184,7 @@ export function renderComparison({ plan, results }) {
     lines.push(`### ${TIER_NAMES[tier]}${tier === "vsr" ? " (simulated)" : ""}.`, "", ...coverageTable(plan, results, tier, keys), "");
   }
   lines.push(...notTestableLines(results));
+  if (hasGenerated(results)) lines.push(GENERATED_NOTE, "");
 
   lines.push("## Findings.", "", FINDINGS_NOTE, "", ...(o.tiers.includes("rules") ? impactTables(results, o.engines) : []));
   for (const key of keys) {
@@ -187,7 +192,7 @@ export function renderComparison({ plan, results }) {
   }
 
   lines.push("## Details by target.", "", "Every finding, with its elements, rule help, and logs, for each target in turn.", "");
-  for (const target of results.targets) lines.push(targetSection(plan.targets.find((t) => t.id === target.id), target));
+  for (const target of results.targets) lines.push(targetSection(plan.targets.find((t) => t.id === target.id), target, { generatedNote: false }));
   lines.push(...reportFooter(results));
   return finish(lines);
 }

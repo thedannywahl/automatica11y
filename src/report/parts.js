@@ -241,17 +241,33 @@ export function configLabel(config) {
   return parts.length ? ` (${parts.join(", ")})` : "";
 }
 
-export function archetypeTable(target) {
-  const rows = Object.entries(target.archetypes).map(([name, archetype]) => {
-    if (archetype.status === "gap") return `| ${name} | gap | - | ${cell(sentence(archetype.reason ?? "No fixture."))} |`;
-    const states = [...new Set(archetype.configs.map((c) => c.state).filter(Boolean))].join(", ") || "-";
-    const libs = [...new Set(archetype.configs.map((c) => c.libA11y).filter((l) => l && l !== "n/a"))];
-    return `| ${name} | ran | ${states} | ${libs.length ? `library accessibility ${libs.join(" and ")}` : ""} |`;
-  });
-  return ["| Archetype | Status | States | Note |", "| --- | --- | --- | --- |", ...rows];
+/** What the Fixture column says about where a fixture came from. */
+function fixtureLabel(archetype) {
+  const f = archetype.fixture;
+  if (!f || f.source === "none") return "-";
+  return f.source === "generated" ? `generated (${f.recipe})` : f.source;
 }
 
-export function targetSection(planTarget, target) {
+export function archetypeTable(target) {
+  const rows = Object.entries(target.archetypes).map(([name, archetype]) => {
+    if (archetype.status === "gap") return `| ${name} | gap | ${fixtureLabel(archetype)} | - | ${cell(sentence(archetype.reason ?? "No fixture."))} |`;
+    const states = [...new Set(archetype.configs.map((c) => c.state).filter(Boolean))].join(", ") || "-";
+    const libs = [...new Set(archetype.configs.map((c) => c.libA11y).filter((l) => l && l !== "n/a"))];
+    const notes = [libs.length ? `library accessibility ${libs.join(" and ")}` : "", archetype.fixture?.source === "generated" ? `${sentence(archetype.fixture.summary ?? "")}, from ${(archetype.fixture.used ?? []).join(", ")}. Source: ${archetype.fixture.file}` : ""].filter(Boolean);
+    return `| ${name} | ran | ${fixtureLabel(archetype)} | ${states} | ${cell(notes.join(". "))} |`;
+  });
+  return ["| Archetype | Status | Fixture | States | Note |", "| --- | --- | --- | --- | --- |", ...rows];
+}
+
+/** True when any archetype in the results ran from a fixture the tool generated. */
+export function hasGenerated(results) {
+  return results.targets.some((t) => Object.values(t.archetypes ?? {}).some((a) => a.fixture?.source === "generated"));
+}
+
+/** What "generated" means, for any report that has one. */
+export const GENERATED_NOTE = "**Generated fixtures.** Where no fixture was written, the tool built one from the parts the package exports (or from what a custom element says about itself) and ran it only after it checked that the trigger and root behaved. A generated fixture is a guess about how the library is meant to be assembled, so a failure may come from how it was wired and not from the library. Treat generated results as lower evidence than an authored fixture. The source of each is in the `generated` folder beside this report. Copy one to `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) and edit it to make it an authored fixture.";
+
+export function targetSection(planTarget, target, { generatedNote = true } = {}) {
   if (target.status === "ran" && target.storybook) return storybookSection(planTarget, target);
   const lines = [`### ${planTarget.label}.`, ""];
   lines.push(`Target ${code(planTarget.input)}, ${planTarget.kind ?? "unclassified"}${planTarget.evidenceLevel ? `, ${planTarget.evidenceLevel} evidence` : ""}.`, "");
@@ -268,6 +284,7 @@ export function targetSection(planTarget, target) {
     lines.push(`This target failed: ${sentence(target.reason)}. A failed target is a gap in coverage. It isn't a pass.`, "");
   }
   if (target.npm) lines.push("**Archetypes.** A gap means the archetype wasn't tested, so it counts against coverage and never as a pass.", "", ...archetypeTable(target), "");
+  if (generatedNote && target.npm && hasGenerated({ targets: [target] })) lines.push(GENERATED_NOTE, "");
   /** @type {Set<string>} */
   const skipped = new Set();
   for (const [name, archetype] of Object.entries(target.archetypes)) {

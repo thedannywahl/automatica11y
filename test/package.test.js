@@ -49,8 +49,8 @@ test("every dependency the code imports is a real dependency", () => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) walk(path);
-      // These two write code for fixtures to bundle. The imports in their templates belong to the bundle, not to this package.
-      else if (entry.name.endsWith(".js") && !["npm-react.js", "npm-wc.js"].includes(entry.name)) {
+      // These write code for fixtures to bundle. The imports in their templates belong to the bundle, not to this package.
+      else if (entry.name.endsWith(".js") && !["npm-react.js", "npm-wc.js", "react-recipes.js", "wc-recipes.js"].includes(entry.name)) {
         const text = readFileSync(path, "utf8");
         for (const m of text.matchAll(/(?:from|import\()\s*["']([^."'/][^"']*)["']/g)) imports.add(m[1].startsWith("@") ? m[1].split("/").slice(0, 2).join("/") : m[1].split("/")[0]);
       }

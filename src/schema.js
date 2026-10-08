@@ -10,7 +10,7 @@ export const TOOLKIT_LEVELS = [1, 2, 3];
 export const FAIL_MODES = ["any", "all"];
 export const ARCHETYPES = ["button", "link", "dialog", "menu", "tabs", "combobox", "form-field", "accordion", "tooltip", "live-region", "chart"];
 export const FLAVORS = ["react", "wc"];
-export const MAPPING_STATUSES = ["template", "authored", "needs-fixture", "no-match"];
+export const MAPPING_STATUSES = ["template", "authored", "generated", "needs-fixture", "no-match"];
 
 /** What a candidate mapping says about one archetype of one npm target. */
 export const MappingEntrySchema = v.object({
@@ -26,6 +26,11 @@ export const MappingEntrySchema = v.object({
   /** Other packages to install beside the target, such as the token stylesheet or theme the library asks for. A fixture can then import them. */
   install: v.optional(v.array(v.string())),
   status: v.optional(v.picklist(MAPPING_STATUSES)),
+  /** For a generated fixture: which recipe worked, what it was, which parts it used, and where its source was written. */
+  recipe: v.optional(v.string()),
+  summary: v.optional(v.string()),
+  used: v.optional(v.array(v.string())),
+  generatedFile: v.optional(v.string()),
   candidates: v.optional(v.array(v.string())),
   parts: v.optional(v.array(v.string())),
   reason: v.optional(v.string()),
@@ -79,6 +84,8 @@ export const PlanSchema = v.object({
     archetypes: v.nullable(v.array(v.picklist(ARCHETYPES))),
     mapping: nullableString,
     maxStories: v.pipe(v.number(), v.integer(), v.minValue(1)),
+    /** Build fixtures from a package's parts when none is authored. A plan saved before this existed generates. */
+    generate: v.optional(v.boolean(), true),
     out: v.string(),
     fail: v.nullable(FailConfigSchema),
   }),
@@ -202,6 +209,17 @@ export const TargetResultSchema = v.object({
     v.object({
       status: v.picklist(["ran", "gap"]),
       reason: v.optional(v.nullable(v.string())),
+      /** Where the fixture came from, and for a generated one what was tried. */
+      fixture: v.optional(
+        v.object({
+          source: v.picklist(["template", "authored", "generated", "none"]),
+          recipe: v.optional(v.string()),
+          summary: v.optional(v.string()),
+          used: v.optional(v.array(v.string())),
+          file: v.optional(v.nullable(v.string())),
+          attempts: v.optional(v.array(v.object({ recipe: v.string(), summary: v.string(), ok: v.boolean(), reason: v.nullable(v.string()) }))),
+        }),
+      ),
       configs: v.array(v.object({ libA11y: v.picklist(["on", "off", "n/a"]), state: v.optional(v.string()), tiers: v.record(v.string(), TierResultSchema) })),
     }),
   ),

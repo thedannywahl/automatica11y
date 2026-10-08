@@ -2,6 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { bundleEntries } from "../harness/bundle.js";
+import { GENERATABLE } from "../harness/generate/index.js";
+import { generateFixture } from "./generate-fixture.js";
 import { settleAnimations } from "../harness/settle.js";
 import { installExtraPackages, installOptionalPeers, installPackage } from "../harness/npm-install.js";
 import * as react from "../harness/npm-react.js";
@@ -77,8 +79,31 @@ async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
     }
     const exportsList = await opened.page.evaluate(() => /** @type {any} */ (window).__a11yExports);
     const tags = await opened.page.evaluate(() => [.../** @type {any} */ (window).__a11yDefined ?? []]);
+    // What each element says about itself, so a fixture can be built around it: observed attributes, class members, slots.
+    const facts = await opened.page.evaluate((names) => {
+      const out = {};
+      for (const name of names.slice(0, 80)) {
+        const Element = customElements.get(name);
+        if (!Element) continue;
+        const members = new Set();
+        for (let proto = Element.prototype; proto && proto !== HTMLElement.prototype && proto !== Object.prototype; proto = Object.getPrototypeOf(proto)) {
+          for (const key of Object.getOwnPropertyNames(proto)) if (!key.startsWith("_") && key !== "constructor") members.add(key);
+        }
+        let slots = [];
+        try {
+          const el = document.createElement(name);
+          document.body.append(el);
+          slots = [...(el.shadowRoot?.querySelectorAll("slot") ?? [])].map((slot) => slot.getAttribute("name") ?? "");
+          el.remove();
+        } catch {
+          // An element that can't be created on its own has no slots to report.
+        }
+        out[name] = { attributes: [.../** @type {any} */ (Element).observedAttributes ?? []], members: [...members], slots: slots.filter(Boolean) };
+      }
+      return out;
+    }, tags);
     await opened.close();
-    return { exports: exportsList, tags };
+    return { exports: exportsList, tags, facts };
   } finally {
     await server.close();
   }
@@ -170,7 +195,7 @@ async function auditFixture({ browser, url, archetype, plan, toggle }) {
 /**
  * Audit an npm package: install it on its own, find what it exports, and audit each archetype that has a fixture.
  * An archetype without a usable fixture is a gap with a reason, never a pass.
- * @returns {Promise<{ result: any, mapping: Record<string, any> | null }>}
+ * @returns {Promise<{ result: any, mapping: Record<string, any> | null, files?: Record<string, string> }>}
  */
 export async function auditNpm({ browser, planTarget, plan, cwd, install = installPackage }) {
   install ??= installPackage;
@@ -214,6 +239,20 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     const gaps = [];
     const hidden = [];
     const helper = flavor === "react" ? react : wc;
+    /** Files to write beside the report: the fixtures the tool generated, so they can be reviewed and adopted. */
+    const files = {};
+    /** Where each archetype's fixture came from, for the results. */
+    const sources = {};
+    /** One server for the probes, started when the first one is needed. */
+    let probeServer = null;
+    const getServer = async () => {
+      if (!probeServer) {
+        mkdirSync(buildDir, { recursive: true });
+        probeServer = await serveStatic(buildDir);
+        servers.push(probeServer);
+      }
+      return probeServer;
+    };
 
     // Decide where each archetype's fixture comes from, then bundle each one on its own so one bad fixture can't break the rest.
     const runnable = {};
@@ -239,10 +278,37 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
           writeFileSync(fixture, source);
         }
       }
+      /** @type {any} */
+      let source = fixture ? { source: entry.status === "authored" ? "authored" : "template" } : null;
+      let attempts = [];
+      let generationTried = false;
+      // Nothing authored and no template: build candidates from what the package exports, and keep one only if it works.
+      if (!fixture && !user.fixture && plan.options.generate !== false && GENERATABLE.has(archetype) && !(entry.status === "no-match" && flavor === "wc")) {
+        const generated = await generateFixture({ browser, flavor: kindFlavor, archetype, entry, found, pkg: resolved.name, tmp, workDir, buildDir, helper, getServer, bundle: (options) => bundleWithPeers(options, warnings) });
+        attempts = generated.attempts;
+        generationTried = attempts.length > 0;
+        if (generated.ok && generated.winner) {
+          const { winner } = generated;
+          const relative = `generated/${planTarget.id}/${archetype}.${winner.extension}`;
+          files[relative] = winner.source;
+          fixture = winner.file;
+          entry.status = "generated";
+          entry.recipe = winner.recipe;
+          entry.summary = winner.summary;
+          entry.used = winner.used;
+          entry.generatedFile = relative;
+          delete entry.reason;
+          source = { source: "generated", recipe: winner.recipe, summary: winner.summary, used: winner.used, file: relative, attempts };
+        } else if (generated.reason && (generationTried || entry.status !== "no-match")) {
+          entry.reason = `${entry.status === "no-match" ? "" : `${entry.reason ?? `The ${archetype} archetype needs a fixture someone writes.`} `}Generating one didn't work. ${generated.reason}`.trim();
+        }
+      }
       mapping[archetype] = entry;
       if (!fixture) {
-        const reason = entry.status === "no-match" ? entry.reason : entry.reason ?? `The ${archetype} archetype needs a fixture someone writes.`;
-        archetypes[archetype] = { status: "gap", reason: archetype && entry.status !== "no-match" ? `${reason} Write fixtures/${planTarget.id}/${archetype}.${flavor === "react" ? "jsx" : "js"}.` : reason, configs: [] };
+        // A no-match archetype has no component to write a fixture for, unless a generator looked and said why it couldn't build one.
+        const writable = entry.status !== "no-match" || generationTried;
+        const reason = entry.reason ?? `The ${archetype} archetype needs a fixture someone writes.`;
+        archetypes[archetype] = { status: "gap", reason: writable ? `${reason} Write fixtures/${planTarget.id}/${archetype}.${flavor === "react" ? "jsx" : "js"}.` : reason, configs: [], ...(attempts.length ? { fixture: { source: "none", attempts } } : {}) };
         gaps.push(`archetype:${archetype}`);
         continue;
       }
@@ -252,8 +318,9 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       try {
         await bundleWithPeers({ entries: { [archetype]: entryFile }, outdir: buildDir, workDir, react: flavor === "react" }, warnings);
         runnable[archetype] = `/${archetype}.html`;
+        sources[archetype] = source;
       } catch (error) {
-        archetypes[archetype] = { status: "gap", reason: `The fixture didn't bundle. ${firstLine(error)}`, configs: [] };
+        archetypes[archetype] = { status: "gap", reason: `The fixture didn't bundle. ${firstLine(error)}`, configs: [], ...(attempts.length ? { fixture: { source: "none", attempts } } : {}) };
         gaps.push(`archetype:${archetype}`);
         entry.status = "needs-fixture";
         entry.reason = firstLine(error);
@@ -266,13 +333,14 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       for (const [archetype, path] of Object.entries(runnable)) {
         /** @type {any} */
         const outcome = await auditFixture({ browser, url: `${live.origin}${path}`, archetype, plan, toggle: mapping[archetype].libA11y === true }).catch((error) => ({ gap: firstLine(error) }));
+        const fixtureInfo = sources[archetype];
         if (outcome.gap) {
-          archetypes[archetype] = { status: "gap", reason: outcome.gap, configs: [] };
+          archetypes[archetype] = { status: "gap", reason: outcome.gap, configs: [], ...(fixtureInfo?.attempts?.length ? { fixture: { source: "none", attempts: fixtureInfo.attempts } } : {}) };
           gaps.push(`archetype:${archetype}`);
           mapping[archetype].status = "needs-fixture";
           mapping[archetype].reason = outcome.gap;
         } else {
-          archetypes[archetype] = { status: "ran", configs: outcome.configs };
+          archetypes[archetype] = { status: "ran", configs: outcome.configs, ...(fixtureInfo ? { fixture: fixtureInfo } : {}) };
           hidden.push(...outcome.hidden.map((h) => `${archetype}: ${h}`));
         }
       }
@@ -302,6 +370,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
         warnings,
       },
       mapping: Object.fromEntries(Object.entries(mapping).map(([k, v]) => [k, { ...v, fixture: v.fixture ?? null }])),
+      files,
     };
   } finally {
     for (const s of servers) await s.close();

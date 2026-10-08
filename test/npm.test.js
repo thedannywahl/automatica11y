@@ -271,7 +271,7 @@ test("React: a template covers the button, an authored fixture covers the dialog
   assert.match(result.mapping.ui.dialog.fixture, /fixtures\/ui\/dialog\.jsx$/);
   assert.equal(result.mapping.ui.dialog.reason, undefined);
   assert.equal(result.plan.targets[0].mapping.dialog.status, "authored");
-  assert.match(result.report, /\| dialog \| ran \| closed, open \|/);
+  assert.match(result.report, /\| dialog \| ran \| authored \| closed, open \|/);
   assert.match(result.report, /\| tabs \| gap \|/);
 });
 
@@ -341,7 +341,7 @@ test("--lib-a11y runs a library's accessibility options both ways and labels eac
   assert.deepEqual(configs.map((c) => c.tiers.vsr.log[0].announcements), [["document", "main", "button, Save", "end of main", "end of document"], ["document", "main", "button", "end of main", "end of document"]]);
   assert.match(both.report, /#### button \(initial state, library accessibility on\)\./);
   assert.match(both.report, /#### button \(initial state, library accessibility off\)\./);
-  assert.match(both.report, /\| button \| ran \| initial \| library accessibility on and off \|/);
+  assert.match(both.report, /\| button \| ran \| (template|authored) \| initial \| library accessibility on and off \|/);
 
   const onlyOn = await run(["audit", "ui=npm:fake-ui", "--mapping", "map.json", "--archetypes", "button", "--lib-a11y", "on", "--tiers", "rules"], { files });
   assert.deepEqual(archetype(onlyOn, "button").configs.map((c) => c.libA11y), ["on"]);
@@ -484,4 +484,10 @@ test("the same npm audit twice gives the same findings", { skip }, async () => {
   const two = await run(["audit", "ui=npm:fake-ui", "--archetypes", "button,dialog", "--tiers", "rules"], { files });
   const strip = (r) => ({ ...r, runAt: null });
   assert.deepEqual(strip(two.results), strip(one.results));
+});
+
+test("candidateMapping: the archetype's own name beats a looser one, so a tooltip is chosen over a popover", () => {
+  const map = candidateMapping({ flavor: "wc", tags: ["acme-popover", "acme-tooltip"] });
+  assert.equal(map.tooltip.tag, "acme-tooltip");
+  assert.deepEqual(map.tooltip.candidates, ["acme-tooltip", "acme-popover"]);
 });

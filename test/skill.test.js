@@ -99,7 +99,12 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(runner, /Do sections 1 and 2 before you run an audit\. A question to the user about a missing target or an unsupported setting \(section 3\) can come before or after them/);
   assert.match(runner, /ask them together in one message, then go on/);
   assert.match(runner, /even when they're different kinds, such as a live page and an npm package/);
-  assert.match(runner, /`needs-fixture` means the tool found the component but can't build it from a template\. `no-match` means no export or custom element looks like that archetype/);
+  assert.match(runner, /`needs-fixture` means the tool found the component but couldn't build a working fixture\. `no-match` means no export or custom element looks like that archetype/);
+  assert.match(runner, /`generated` means the tool built a fixture that passed its checks, and the source is in `<out>\/generated\/`/);
+  assert.match(runner, /\*\*Generated\.\*\* For dialog, menu, tooltip, tabs, accordion, combobox, form-field, and live-region, the tool builds candidates/);
+  assert.match(runner, /read the generated source before you rely on it/);
+  assert.match(runner, /Say which results come from generated fixtures\. A generated fixture is a guess about how the library is assembled/);
+  assert.match(runner, /\| `--no-generate` \| off \|/);
   assert.match(runner, /For a `no-match` archetype, write a fixture only if the library's documentation names a component, or a documented way, to make it/);
   assert.match(runner, /A target that failed while others ran still exits 0, and the failure is in the results/);
   assert.match(runner, /order axe-core findings by impact and IBM findings by Toolkit level/);
