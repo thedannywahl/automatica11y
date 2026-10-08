@@ -4,7 +4,7 @@ Instructions for AI agents working in this repository or asked to use this tool.
 
 ## If you're asked to check or compare accessibility.
 
-Read the full steps and follow them exactly. They cover the version check, `doctor`, turning a request into an `audit` or `compare` command, writing fixtures for npm packages, and writing the report from `results.json`:
+Keep the user's request as they gave it, including the target and any settings they named, and carry it into the steps. Don't ask again for what they've already said. Read the full steps and follow them exactly. They cover the version check, `doctor`, turning a request into an `audit` or `compare` command, writing fixtures for npm packages, and writing the report from `results.json`:
 
 ```bash
 npx --yes automatica11y@latest guide skill

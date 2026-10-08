@@ -9,7 +9,8 @@ description: Test and compare web accessibility. Use when someone asks how acces
 automatica11y tests and compares web accessibility. This skill only gets you started. The full steps ship with the tool, so they always match its version.
 
 1. Check `node --version`. It must be 20 or newer. If it isn't, tell the user and stop. If the command fails or prints no version number, tell the user that Node.js 20 or newer couldn't be verified, include the error text, and stop.
-2. Run this, read all of what it prints, and follow it:
+2. Keep the user's request as they gave it: the target or targets, and any settings they named, such as a WCAG version or level. Apply them as you follow the guide. Don't ask again for anything they've already said.
+3. Run this, read all of what it prints, and follow it:
 
    ```bash
    npx --yes automatica11y@latest guide
@@ -17,4 +18,4 @@ automatica11y tests and compares web accessibility. This skill only gets you sta
 
    If the command exits with an error or prints no usable output, tell the user it failed, include the error text, and stop. Don't continue with partial instructions.
 
-3. If you can't run shell commands, or `npx` can't reach the npm registry, tell the user and stop. Don't guess at results.
+4. If you can't run shell commands, or `npx` can't reach the npm registry, tell the user and stop. Don't guess at results.

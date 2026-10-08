@@ -68,7 +68,7 @@ Options you can set, and nothing else:
 | `--fail-on-ibm <1\|2\|3>` | off | Gating on IBM Toolkit level. |
 | `--fail-mode any\|all` | `any` | How to combine the two fail flags. |
 
-If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one before you run anything. Don't pick a target for them.
+Use the target and the settings the user already gave, and ask only for what's missing. If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one before you run anything. Don't pick a target for them.
 
 Show the user the exact command before you run it. If a target is ambiguous, ask one question, then go on.
 
