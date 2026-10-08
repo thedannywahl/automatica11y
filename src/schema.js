@@ -9,13 +9,13 @@ export const IMPACTS = ["minor", "moderate", "serious", "critical"];
 export const TOOLKIT_LEVELS = [1, 2, 3];
 export const FAIL_MODES = ["any", "all"];
 export const ARCHETYPES = ["button", "link", "dialog", "menu", "tabs", "combobox", "form-field", "accordion", "tooltip", "live-region", "chart"];
-export const FLAVORS = ["react", "wc"];
+export const FLAVORS = ["react", "vue", "wc"];
 export const MAPPING_STATUSES = ["template", "authored", "generated", "needs-fixture", "no-match"];
 
 /** What a candidate mapping says about one archetype of one npm target. */
 export const MappingEntrySchema = v.object({
   flavor: v.optional(v.picklist(FLAVORS)),
-  /** Export name (React) the fixture or template uses. */
+  /** Export name (React or Vue) the fixture or template uses. */
   export: v.optional(v.string()),
   /** Custom element tag (web components) the fixture or template uses. */
   tag: v.optional(v.string()),
@@ -49,7 +49,7 @@ export function parseMappingFile(input) {
   return result.output;
 }
 
-export const TARGET_KINDS = ["npm", "npm-react", "npm-wc", "npm-unsupported", "npm-non-ui", "storybook", "url", "html-file", "static-dir"];
+export const TARGET_KINDS = ["npm", "npm-react", "npm-vue", "npm-wc", "npm-unsupported", "npm-non-ui", "storybook", "url", "html-file", "static-dir"];
 
 const nullableString = v.nullable(v.string());
 
@@ -232,6 +232,7 @@ export const TargetResultSchema = v.object({
       framework: nullableString,
       react: nullableString,
       reactDom: nullableString,
+      vue: v.optional(nullableString),
       tags: v.array(v.string()),
     }),
   ),

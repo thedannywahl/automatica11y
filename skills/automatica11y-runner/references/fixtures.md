@@ -6,7 +6,7 @@ Write fixtures from the library's public documentation. Don't copy from memory w
 
 ## Where fixtures go
 
-`fixtures/<target id>/<archetype>.jsx` for React, in the working folder: the folder where you run `automatica11y audit` or `automatica11y compare`. Use `.js` for web components. The target id is the label (`radix=npm:@radix-ui/react-dialog` has the id `radix`), or the package name with `/` turned into `-`, such as `radix-ui-react-dialog`. The report's **Targets** list shows each id.
+`fixtures/<target id>/<archetype>.jsx` for React and Vue 3, in the working folder: the folder where you run `automatica11y audit` or `automatica11y compare`. Use `.js` for web components. The target id is the label (`radix=npm:@radix-ui/react-dialog` has the id `radix`), or the package name with `/` turned into `-`, such as `radix-ui-react-dialog`. The report's **Targets** list shows each id.
 
 To keep a fixture somewhere else, name it in a mapping file and pass `--mapping`:
 
@@ -43,6 +43,8 @@ The attributes have to reach the DOM. Pass `data-a11y-trigger` to the component 
 A React example and a web component example are in `SKILL.md`, in the section on npm packages. They follow the contract above.
 
 For React, JSX works without importing React. Import the library from its package name. The tool installs it for you.
+
+For Vue 3, a fixture is also JSX, and the default export is a component: a function that returns JSX is a functional component, or you can export a component object. The tool turns JSX into `h()` calls and supplies `h` and `Fragment` itself, so don't import them. Importing `h` fails the bundle with "symbol already declared". JSX children become the default slot. Vue's reactivity works, so `import { ref } from "vue"` for state, and wrap the JSX in `defineComponent({ setup() { ... return () => (<jsx/>) } })`. A library that needs a plugin, a theme, or global components can export a function named `setup(app)`, which runs before the app mounts, for example `export function setup(app) { app.use(plugin) }`. Named slots and `v-model` aren't JSX syntax. Pass a slots object as the children, or set `modelValue` and `onUpdate:modelValue` with a spread, for example `{...{ "onUpdate:open": (next) => (open.value = next) }}`.
 
 For web components, make `mount(container)` the file's default export. It adds the archetype to the container. The tool imports the package first, so its elements are defined before `mount` runs. The `data-a11y-trigger` and `data-a11y-root` attributes can sit on a host element, a slotted child, or an element inside an **open** shadow root. A **closed** shadow root hides its content from every tool, so the report lists it as not testable.
 

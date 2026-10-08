@@ -6,8 +6,7 @@ import { GENERATABLE } from "../harness/generate/index.js";
 import { generateFixture } from "./generate-fixture.js";
 import { settleAnimations } from "../harness/settle.js";
 import { installExtraPackages, installOptionalPeers, installPackage } from "../harness/npm-install.js";
-import * as react from "../harness/npm-react.js";
-import * as wc from "../harness/npm-wc.js";
+import { adapterFor, adapterForKind } from "../frameworks/index.js";
 import { closedShadowHosts, notTestableEntries } from "../harness/shadow.js";
 import { serveStatic } from "../harness/static-serve.js";
 import { openPage } from "../harness/url.js";
@@ -64,10 +63,10 @@ async function bundleWithPeers(options, warnings) {
 
 /** Load the whole package in a page to list its exports and the custom elements it defines. */
 async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
-  const helper = flavor === "react" ? react : wc;
+  const adapter = adapterFor(flavor);
   const entryFile = join(workDir, "discover.js");
-  writeFileSync(entryFile, helper.discoverEntry(pkg));
-  await bundleWithPeers({ entries: { discover: entryFile }, outdir: buildDir, workDir, react: flavor === "react" }, warnings);
+  writeFileSync(entryFile, adapter.discoverEntry(pkg));
+  await bundleWithPeers({ entries: { discover: entryFile }, outdir: buildDir, workDir, framework: adapter }, warnings);
   const server = await serveStatic(buildDir);
   const errors = [];
   try {
@@ -202,7 +201,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
   const base = { id: planTarget.id, reason: null, archetypes: {}, summary: { engines: {}, gaps: [], notTestable: [] }, warnings: [] };
   const resolved = planTarget.resolved ?? {};
   if (planTarget.kind === "npm-unsupported") {
-    return { result: { ...base, status: "unsupported", reason: `${resolved.framework ?? "This framework"} packages aren't supported. v1 covers React and web components.` }, mapping: null };
+    return { result: { ...base, status: "unsupported", reason: `${resolved.framework ?? "This framework"} packages aren't supported. This version covers React, Vue 3, and web components.` }, mapping: null };
   }
   const tmp = mkdtempSync(join(tmpdir(), "automatica11y-npm-"));
   const workDir = join(tmp, "install");
@@ -211,8 +210,9 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
   mkdirSync(fixtureDir, { recursive: true });
   const servers = [];
   try {
-    /** @type {"react" | "wc" | "unknown"} */
-    let flavor = planTarget.kind === "npm-react" ? "react" : planTarget.kind === "npm-wc" ? "wc" : "unknown";
+    /** The framework's id (react, vue, or wc), or "unknown" when the metadata couldn't say. */
+    /** @type {any} */
+    let flavor = adapterForKind(planTarget.kind)?.id ?? "unknown";
     const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor });
     const warnings = [...installed.warnings];
 
@@ -220,17 +220,17 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     const extras = await installExtraPackages({ dir: workDir, specs: Object.values(planTarget.mapping ?? {}).flatMap((entry) => entry.install ?? []) });
     warnings.push(...extras.warnings);
 
-    const found = await discover({ browser, workDir, flavor: flavor === "react" ? "react" : "wc", pkg: resolved.name, buildDir, warnings });
+    const found = await discover({ browser, workDir, flavor: flavor === "unknown" ? "wc" : flavor, pkg: resolved.name, buildDir, warnings });
     if (flavor === "unknown") {
       if (found.tags.length > 0) flavor = "wc";
       else if (installed.react && found.exports.some((e) => /^[A-Z]/.test(e.name))) flavor = "react";
     }
     if (flavor === "unknown" || (flavor === "wc" && found.tags.length === 0)) {
-      return { result: { ...base, status: "not-applicable", reason: "The package has no rendering surface. It exports no React components and defines no custom elements.", warnings }, mapping: null };
+      return { result: { ...base, status: "not-applicable", reason: "The package has no rendering surface. It exports no components for a supported framework and defines no custom elements.", warnings }, mapping: null };
     }
 
     const candidates = candidateMapping({ flavor, exports: found.exports, tags: found.tags });
-    const kindFlavor = /** @type {"react" | "wc"} */ (flavor);
+    const adapter = adapterFor(flavor);
     const wanted = plan.options.archetypes ?? ARCHETYPES;
     /** @type {Record<string, any>} */
     const mapping = {};
@@ -238,7 +238,6 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     const archetypes = {};
     const gaps = [];
     const hidden = [];
-    const helper = flavor === "react" ? react : wc;
     /** Files to write beside the report: the fixtures the tool generated, so they can be reviewed and adopted. */
     const files = {};
     /** Where each archetype's fixture came from, for the results. */
@@ -270,11 +269,11 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
         entry.status = "needs-fixture";
         entry.reason = `The mapping names ${user.fixture}, but that file doesn't exist.`;
       } else if (entry.status === "template" || (user.export || user.tag) && ["button", "link"].includes(archetype)) {
-        const source = flavor === "react" ? react.template(archetype, resolved.name, entry.export) : wc.template(archetype, entry.tag);
+        const source = adapter.template(archetype, resolved.name, flavor === "wc" ? entry.tag : entry.export);
         if (source) {
           entry.status = "template";
           delete entry.reason;
-          fixture = join(fixtureDir, `${archetype}.${flavor === "react" ? "jsx" : "js"}`);
+          fixture = join(fixtureDir, `${archetype}.${adapter.extension}`);
           writeFileSync(fixture, source);
         }
       }
@@ -284,7 +283,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       let generationTried = false;
       // Nothing authored and no template: build candidates from what the package exports, and keep one only if it works.
       if (!fixture && !user.fixture && plan.options.generate !== false && GENERATABLE.has(archetype) && !(entry.status === "no-match" && flavor === "wc")) {
-        const generated = await generateFixture({ browser, flavor: kindFlavor, archetype, entry, found, pkg: resolved.name, tmp, workDir, buildDir, helper, getServer, bundle: (options) => bundleWithPeers(options, warnings) });
+        const generated = await generateFixture({ browser, adapter, archetype, entry, found, explicit: Boolean(user.export), pkg: resolved.name, tmp, workDir, buildDir, getServer, bundle: (options) => bundleWithPeers(options, warnings) });
         attempts = generated.attempts;
         generationTried = attempts.length > 0;
         if (generated.ok && generated.winner) {
@@ -308,15 +307,15 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
         // A no-match archetype has no component to write a fixture for, unless a generator looked and said why it couldn't build one.
         const writable = entry.status !== "no-match" || generationTried;
         const reason = entry.reason ?? `The ${archetype} archetype needs a fixture someone writes.`;
-        archetypes[archetype] = { status: "gap", reason: writable ? `${reason} Write fixtures/${planTarget.id}/${archetype}.${flavor === "react" ? "jsx" : "js"}.` : reason, configs: [], ...(attempts.length ? { fixture: { source: "none", attempts } } : {}) };
+        archetypes[archetype] = { status: "gap", reason: writable ? `${reason} Write fixtures/${planTarget.id}/${archetype}.${adapter.extension}.` : reason, configs: [], ...(attempts.length ? { fixture: { source: "none", attempts } } : {}) };
         gaps.push(`archetype:${archetype}`);
         continue;
       }
       const entryFile = join(tmp, "entries", `${archetype}-entry.js`);
       mkdirSync(join(tmp, "entries"), { recursive: true });
-      writeFileSync(entryFile, helper.entry(fixture, resolved.name));
+      writeFileSync(entryFile, adapter.entry(fixture, resolved.name));
       try {
-        await bundleWithPeers({ entries: { [archetype]: entryFile }, outdir: buildDir, workDir, react: flavor === "react" }, warnings);
+        await bundleWithPeers({ entries: { [archetype]: entryFile }, outdir: buildDir, workDir, framework: adapter }, warnings);
         runnable[archetype] = `/${archetype}.html`;
         sources[archetype] = source;
       } catch (error) {
@@ -361,6 +360,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
           framework: resolved.framework ?? null,
           react: installed.react,
           reactDom: installed.reactDom,
+          vue: installed.vue ?? null,
           tags: flavor === "wc" ? found.tags : [],
         },
         summary: (() => {

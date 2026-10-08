@@ -18,6 +18,7 @@ import { runRules, selfTest } from "../tiers/rules/index.js";
 import { evaluateFailCheck } from "./fail-check.js";
 import { mapPool } from "./pool.js";
 import { auditNpm } from "./audit-npm.js";
+import { adapterFor } from "../frameworks/index.js";
 import { failedTarget, summarize } from "./summary.js";
 
 /** How many stories to audit at once. */
@@ -25,7 +26,7 @@ const STORY_CONCURRENCY = 4;
 
 const EXIT = { OK: 0, FAIL_THRESHOLD: 1, ENVIRONMENT: 3, ALL_TARGETS_FAILED: 4 };
 
-const NPM_KINDS = new Set(["npm", "npm-react", "npm-wc", "npm-unsupported"]);
+const NPM_KINDS = new Set(["npm", "npm-react", "npm-vue", "npm-wc", "npm-unsupported"]);
 const UNSUPPORTED_KIND = (kind) => `${kind} targets aren't supported.`;
 
 /** Audit one page and return its target result. */
@@ -238,7 +239,7 @@ export async function runPlan(plan, io) {
         mappings[planTarget.id] = mapping;
         planTarget.mapping = mapping;
       }
-      if (result.npm) planTarget.kind = result.npm.flavor === "react" ? "npm-react" : "npm-wc";
+      if (result.npm) planTarget.kind = adapterFor(result.npm.flavor).kind;
     }
 
     const results = parseResults({

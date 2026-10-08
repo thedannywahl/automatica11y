@@ -35,7 +35,8 @@
     "@types/node": "^26.6.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vue": "^3.5.43"
   },
   "publishConfig": {
     "access": "public"

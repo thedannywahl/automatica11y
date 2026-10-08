@@ -22,10 +22,12 @@ export function unresolvedPackages(errors) {
 /**
  * Bundle fixture entries into one folder of browser-ready ES modules, plus one HTML shell per entry.
  * esbuild loads here and only here. It doesn't type-check, and fixtures don't need it to.
- * @param {{ entries: Record<string, string>, outdir: string, workDir: string, react?: boolean }} options
+ * @param {{ entries: Record<string, string>, outdir: string, workDir: string, framework?: import("../frameworks/index.js").Adapter | null }} options
+ *   `framework` is the adapter whose bundle settings apply: which packages to keep to one copy, how JSX is turned into calls, and what to define.
  * @returns {Promise<Record<string, string>>} Entry name to page path, for example `{ dialog: "/dialog.html" }`.
  */
-export async function bundleEntries({ entries, outdir, workDir, react = false }) {
+export async function bundleEntries({ entries, outdir, workDir, framework = null }) {
+  const settings = framework?.bundle(workDir) ?? { alias: {}, esbuild: { jsx: "automatic" } };
   const esbuild = await import("esbuild");
   mkdirSync(outdir, { recursive: true });
   try {
@@ -36,13 +38,12 @@ export async function bundleEntries({ entries, outdir, workDir, react = false })
       format: "esm",
       platform: "browser",
       target: "es2022",
-      jsx: "automatic",
+      ...settings.esbuild,
       absWorkingDir: workDir,
       nodePaths: [join(workDir, "node_modules")],
-      // One copy of React for the library and the fixture, or hooks break.
-      alias: react ? { react: join(workDir, "node_modules", "react"), "react-dom": join(workDir, "node_modules", "react-dom") } : {},
+      alias: settings.alias,
       loader: ASSET_LOADERS,
-      define: { "process.env.NODE_ENV": '"development"' },
+      define: { "process.env.NODE_ENV": '"development"', ...(settings.define ?? {}) },
       logLevel: "silent",
     });
   } catch (error) {

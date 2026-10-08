@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { generateCandidates } from "../src/harness/generate/index.js";
+import { familyBases } from "../src/harness/generate/jsx.js";
 import { buildKit } from "../src/harness/generate/kit.js";
 import { parseResults } from "../src/schema.js";
 import { makeIo, makeTree } from "./helpers/fixtures.js";
@@ -52,9 +53,11 @@ test("kit: parts are found on a namespaced export, on flat exports that share a 
 });
 
 test("candidates: the recipes need the parts they use, and a package named for the archetype can be the component", () => {
-  const none = generateCandidates({ flavor: "react", archetype: "dialog", pkg: "some-lib", entry: { export: "Missing" }, exports: exportsOf(["Dialog", ["Content"]]), facts: {} });
-  assert.deepEqual(none.candidates, []);
+  const none = generateCandidates({ flavor: "react", archetype: "dialog", pkg: "some-lib", entry: { export: "Missing" }, explicit: true, exports: exportsOf(["Dialog", ["Content"]]), facts: {} });
+  assert.deepEqual(none.candidates, [], "a component a person named is the only one tried");
   assert.match(none.reason, /don't have the parts a dialog recipe needs \(looked at Missing/);
+  const found = generateCandidates({ flavor: "react", archetype: "dialog", pkg: "some-lib", entry: { export: "Missing" }, exports: exportsOf(["Dialog", ["Content"]]), facts: {} });
+  assert.equal(found.candidates[0].id, "dialog-controlled-open-onClose", "otherwise the exports are searched for the family that fits");
   const controlled = generateCandidates({ flavor: "react", archetype: "dialog", pkg: "some-lib", entry: { export: "Dialog" }, exports: exportsOf(["Dialog", ["Content"]]), facts: {} });
   assert.equal(controlled.candidates[0].id, "dialog-controlled-open-onClose", "a Dialog with no Root part can be the controlled root itself");
   const compound = generateCandidates({ flavor: "react", archetype: "dialog", pkg: "some-lib", entry: { export: "Dialog" }, exports: exportsOf(["Dialog", ["Root", "Trigger", "Content", "Title", "Close"]]), facts: {} });
@@ -66,6 +69,15 @@ test("candidates: the recipes need the parts they use, and a package named for t
   const unnamed = generateCandidates({ flavor: "react", archetype: "dialog", pkg: "@scope/react-things", entry: {}, exports: exportsOf(["Root"], ["Trigger"], ["Content"]), facts: {} });
   assert.deepEqual(unnamed.candidates, [], "a package that doesn't say what it is isn't guessed at");
   assert.deepEqual(generateCandidates({ flavor: "react", archetype: "chart", pkg: "x", entry: { export: "Chart" }, exports: [], facts: {} }).candidates, []);
+});
+
+test("families: the one named like the archetype comes first, and a family needs two or more exports", () => {
+  const names = (list) => list.map((name) => ({ name, type: "object", parts: [] }));
+  const menus = names(["ContextMenuRoot", "ContextMenuItem", "DropdownMenuRoot", "DropdownMenuTrigger", "DropdownMenuItem", "DropdownMenuContent", "MenubarMenu", "MenubarRoot", "Other"]);
+  assert.ok(familyBases("menu", menus).includes("DropdownMenu"), "a dropdown menu is among the families tried");
+  const tooltips = names(["PopoverRoot", "PopoverTrigger", "PopoverContent", "PopoverArrow", "TooltipRoot", "TooltipTrigger", "TooltipContent", "TooltipProvider"]);
+  assert.equal(familyBases("tooltip", tooltips)[0], "Tooltip", "a tooltip family beats a popover family, though Popover sorts first");
+  assert.deepEqual(familyBases("dialog", names(["Button", "Card"])), []);
 });
 
 test("candidates: a web component recipe needs evidence on the element", () => {

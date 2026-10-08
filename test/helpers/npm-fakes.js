@@ -16,7 +16,10 @@ export const REGISTRY = {
   "closed-wc": { name: "closed-wc", version: "2.0.0" },
   "quiet-wc": { name: "quiet-wc", version: "1.0.0" },
   "plain-utils": { name: "plain-utils", version: "3.0.0" },
-  "vue-lib": { name: "vue-lib", version: "1.0.0", peerDependencies: { vue: "^3" } },
+  "fake-vue-ui": { name: "fake-vue-ui", version: "1.0.0", peerDependencies: { vue: "^3.4.0" } },
+  "fake-vue-controlled": { name: "fake-vue-controlled", version: "1.0.0", peerDependencies: { vue: "^3.4.0" } },
+  "vue-two-lib": { name: "vue-two-lib", version: "1.0.0", peerDependencies: { vue: "^2.7.0" } },
+  "svelte-lib": { name: "svelte-lib", version: "1.0.0", peerDependencies: { svelte: "^5" } },
 };
 
 export const npmView = async (spec) => {
@@ -34,7 +37,11 @@ export async function installPackage({ dir, name, version, flavor }) {
   if (flavor === "react") {
     for (const dep of ["react", "react-dom", "scheduler"]) if (existsSync(join(repoModules, dep))) symlinkSync(join(repoModules, dep), join(dir, "node_modules", dep));
   }
+  if (flavor === "vue") {
+    for (const dep of ["vue", "@vue"]) if (existsSync(join(repoModules, dep))) symlinkSync(join(repoModules, dep), join(dir, "node_modules", dep));
+  }
   const react = flavor === "react" ? JSON.parse(readFileSync(join(repoModules, "react", "package.json"), "utf8")).version : null;
-  return { dir, warnings: [], react, reactDom: react, version };
+  const vue = flavor === "vue" ? JSON.parse(readFileSync(join(repoModules, "vue", "package.json"), "utf8")).version : null;
+  return { dir, warnings: [], react, reactDom: react, vue, version };
 }
 

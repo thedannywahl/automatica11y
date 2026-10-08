@@ -36,7 +36,7 @@ A target is `[label=]<spec>`. The label is optional, and names the target in the
 | A live page | `https://example.com/page` |
 | A local page or site | `./page.html` or `./dist`. A path with no prefix is relative to the working folder, so `dist` means `./dist`. Prefixes `../`, `/`, `~`, and `file:` work too. |
 | A Storybook | Its URL, or a local folder with `index.json` or `stories.json`. |
-| An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. React and web component libraries work. |
+| An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. React, Vue 3, and web component libraries work. |
 
 A bare word such as `button` is a path: the folder or file `./button`. Write `npm:button` to pick the package. The prefix is what chooses a package, so a folder with the same name never gets in the way. A bare word that isn't a path fails with a hint, such as "If you meant the npm package, write npm:react."
 
@@ -109,7 +109,7 @@ The tool installs each package into its own temporary folder (with install scrip
 
 Each archetype's fixture comes from the first of these that applies:
 
-1. **Authored.** A file you or your agent write at `fixtures/<target id>/<archetype>.jsx` (`.js` for web components), following [the fixture guide](skills/automatica11y-runner/references/fixtures.md). It always wins.
+1. **Authored.** A file you or your agent write at `fixtures/<target id>/<archetype>.jsx` (`.js` for web components). The same `.jsx` works for React and for Vue 3, following [the fixture guide](skills/automatica11y-runner/references/fixtures.md). It always wins.
 2. **Template.** The tool builds `button` and `link` tests from the export name alone.
 3. **Generated.** For dialog, menu, tooltip, tabs, accordion, combobox, form-field, and live-region, the tool builds candidate fixtures from what the package exports. It looks for compound parts by common names (a root, a trigger, a content part, a title, a close part, and so on), either as `Dialog.Root` or as `DialogRoot`, and it tries the usual ways of switching a component on (an `open` prop and a close handler). For web components it reads what each element says about itself: its observed attributes, its members, and its slots. It then bundles each candidate, loads it, and checks that exactly one element is the trigger, that nothing logged an error, that activating the trigger shows a root, and that the root carries a role that fits. The first candidate that passes is used. If none does, the archetype is a gap, and the report lists what was tried and why each attempt failed.
 4. **Gap.** Anything else is a gap in the report.
@@ -139,7 +139,7 @@ The guidance ships with the tool, so it always matches the version you run. Tell
 - Automated rules find only part of what WCAG covers. They can't judge whether alt text is meaningful, whether link and heading text make sense in context, cognitive load, real focus and reading order in use, or how real screen readers behave. A person has to check those.
 - Components are tested in the states a fixture shows. Dialogs, menus, tooltips, and comboboxes run closed and open, and live regions run before and after the message. Other states aren't visited.
 - Content on a canvas with no alternative, or inside a closed shadow root, can't be tested, and the report says so. The virtual screen reader can't read inside shadow roots at all.
-- Vue, Svelte, Angular, and other frameworks report "unsupported framework."
+- Svelte, Angular, Vue 2, and other frameworks report "unsupported framework." Their Storybooks work, because a Storybook renders stories in a page whatever the framework.
 - Native screen readers aren't part of this version.
 - Results are a snapshot. The tools run at their latest versions, and the report records them.
 

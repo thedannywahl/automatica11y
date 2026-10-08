@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { detectFlavor } from "../src/plan/resolve-npm.js";
-import { entry as wcEntry } from "../src/harness/npm-wc.js";
+import { entry as wcEntry } from "../src/frameworks/wc.js";
 import { candidateMapping } from "../src/plan/mapping.js";
 import { parseMappingFile, parseResults } from "../src/schema.js";
 import { makeIo, makeTree } from "./helpers/fixtures.js";
@@ -61,14 +61,15 @@ const leftovers = () => readdirSync(tmpdir()).filter((name) => name.startsWith("
 const archetype = (run, name, index = 0) => run.results.targets[index].archetypes[name];
 const violations = (config, engine) => config.tiers.rules.engines[engine].violations.map((v) => v.ruleId).sort();
 
-test("detectFlavor: React wins, then web components, then other frameworks, then unknown", () => {
+test("detectFlavor: React wins, then web components, then Vue, then other frameworks, then unknown", () => {
   assert.equal(detectFlavor({ peerDependencies: { react: "^18" } }).kind, "npm-react");
   assert.equal(detectFlavor({ peerDependencies: { react: "^18" }, customElements: "x.json" }).kind, "npm-react");
   assert.equal(detectFlavor({ customElements: "custom-elements.json" }).kind, "npm-wc");
   assert.equal(detectFlavor({ dependencies: { lit: "^3" } }).kind, "npm-wc");
-  const vue = detectFlavor({ peerDependencies: { vue: "^3" } });
-  assert.equal(vue.kind, "npm-unsupported");
-  assert.equal(vue.framework, "Vue");
+  const svelte = detectFlavor({ peerDependencies: { svelte: "^5" } });
+  assert.equal(svelte.kind, "npm-unsupported");
+  assert.equal(svelte.framework, "Svelte");
+  assert.equal(detectFlavor({ peerDependencies: { vue: "^3" } }).kind, "npm-vue");
   assert.equal(detectFlavor({ peerDependencies: { "@angular/core": "*" } }).framework, "Angular");
   assert.equal(detectFlavor({}).kind, "npm");
 });
@@ -228,12 +229,12 @@ test("candidateMapping: matches by name, marks compound parts, and leaves the re
 });
 
 test("--plan resolves versions and frameworks from the registry without installing", async () => {
-  const result = await run(["compare", "ui=npm:fake-ui", "wc=npm:fake-wc", "npm:vue-lib", "npm:ghost", "--plan"]);
+  const result = await run(["compare", "ui=npm:fake-ui", "wc=npm:fake-wc", "npm:svelte-lib", "npm:ghost", "--plan"]);
   assert.equal(result.code, 0, result.stderr);
-  const [ui, wc, vue, ghost] = result.plan.targets;
+  const [ui, wc, svelte, ghost] = result.plan.targets;
   assert.deepEqual([ui.kind, ui.resolved.version, ui.resolved.framework], ["npm-react", "1.0.0", "React"]);
   assert.deepEqual([wc.kind, wc.resolved.framework], ["npm-wc", "Web components"]);
-  assert.deepEqual([vue.kind, vue.resolved.framework], ["npm-unsupported", "Vue"]);
+  assert.deepEqual([svelte.kind, svelte.resolved.framework], ["npm-unsupported", "Svelte"]);
   assert.equal(ghost.status, "failed");
   assert.match(ghost.reason, /wasn't found on npm/);
   assert.equal(leftovers().length, 0);
@@ -458,10 +459,10 @@ test("a package that neither renders React nor defines custom elements is not ap
 
 test("an unsupported framework is named, and nothing is installed", { skip }, async () => {
   const before = leftovers().length;
-  const result = await run(["audit", "npm:vue-lib", "--tiers", "rules"]);
+  const result = await run(["audit", "npm:svelte-lib", "--tiers", "rules"]);
   assert.equal(result.code, 4);
   assert.equal(result.results.targets[0].status, "unsupported");
-  assert.match(result.results.targets[0].reason, /Vue packages aren't supported/);
+  assert.match(result.results.targets[0].reason, /Svelte packages aren't supported\. This version covers React, Vue 3, and web components\./);
   assert.equal(leftovers().length, before);
 });
 

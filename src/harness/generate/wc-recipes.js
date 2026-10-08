@@ -4,6 +4,7 @@
  * A candidate is a guess until the probe has seen it behave (see probe.js). None of this names a library.
  */
 import { markingSource } from "./marking.js";
+import { ATTEMPT_LIMIT, GENERATABLE } from "./shared.js";
 
 /** The module around every candidate: the marking code and a mount function that starts it. */
 function frame(archetype, body) {
@@ -113,4 +114,19 @@ function fields(tagName, facts) {
 export function wcCandidates({ archetype, tag, facts }) {
   const build = { dialog: dialogs, tooltip: tooltips, "live-region": messages, "form-field": fields }[archetype];
   return build ? build(tag, facts) : [];
+}
+
+/**
+ * Candidates for a web component package, from what the element the mapping found says about itself.
+ * @param {{ archetype: string, entry: { tag?: string }, facts: Record<string, { attributes: string[], members: string[], slots: string[] }> }} input
+ * @returns {{ candidates: Array<{ id: string, summary: string, source: string, used: string[] }>, reason: string | null }}
+ */
+export function generateWc({ archetype, entry, facts }) {
+  if (!GENERATABLE.has(archetype)) return { candidates: [], reason: `Nothing is generated for the ${archetype} archetype.` };
+  const tag = entry.tag;
+  if (!tag || !facts[tag]) return { candidates: [], reason: "No custom element looks like this archetype, so there's nothing to build a fixture around." };
+  const candidates = wcCandidates({ archetype, tag, facts: facts[tag] }).slice(0, ATTEMPT_LIMIT);
+  return candidates.length
+    ? { candidates, reason: null }
+    : { candidates: [], reason: `${tag} doesn't show a way to wire a ${archetype} (for example, an open attribute or a tip attribute), and no recipe covers a web component ${archetype} without one.` };
 }

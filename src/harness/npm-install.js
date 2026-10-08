@@ -33,9 +33,9 @@ export function installedVersion(dir, name) {
 
 /**
  * Install a package into its own directory, never next to another target's install.
- * npm adds the peer dependencies. A React package also needs react-dom, so add it when the peers left it out.
+ * npm adds the peer dependencies. A React package also needs react-dom, and a Vue package needs vue, so add them when the peers left them out.
  * Install scripts stay off, because the code is untrusted until it runs in the browser sandbox.
- * @param {{ dir: string, name: string, version: string, flavor: "react" | "wc" | "unknown", run?: typeof runNpm }} options
+ * @param {{ dir: string, name: string, version: string, flavor: "react" | "vue" | "wc" | "unknown", run?: typeof runNpm }} options
  */
 export async function installPackage({ dir, name, version, flavor, run = runNpm }) {
   mkdirSync(dir, { recursive: true });
@@ -72,12 +72,16 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
       await npm(["install", `react-dom@${react}`, ...NPM_FLAGS, "--legacy-peer-deps"]);
     }
   }
-  return { dir, warnings, react: installedVersion(dir, "react"), reactDom: installedVersion(dir, "react-dom"), version: installedVersion(dir, name) };
+  if (flavor === "vue" && !installedVersion(dir, "vue")) {
+    await npm(["install", "vue", ...NPM_FLAGS, "--legacy-peer-deps"]);
+    warnings.push(`${name} didn't bring in vue, so the latest vue was added.`);
+  }
+  return { dir, warnings, react: installedVersion(dir, "react"), reactDom: installedVersion(dir, "react-dom"), vue: installedVersion(dir, "vue"), version: installedVersion(dir, name) };
 }
 
-/** The installed React and React DOM, named again so a loose install can't prune them. */
-function pinnedReact(dir) {
-  return ["react", "react-dom"].flatMap((name) => (installedVersion(dir, name) ? [`${name}@${installedVersion(dir, name)}`] : []));
+/** The installed framework runtimes (React, React DOM, Vue), named again so a loose install can't prune them. */
+function pinnedRuntime(dir) {
+  return ["react", "react-dom", "vue"].flatMap((name) => (installedVersion(dir, name) ? [`${name}@${installedVersion(dir, name)}`] : []));
 }
 
 const PACKAGE_SPEC = /^(@[a-z0-9~][\w.~-]*\/)?[a-z0-9~][\w.~-]*(@[\w.^~<>=*|-]+)?$/i;
@@ -93,7 +97,7 @@ export async function installExtraPackages({ dir, specs, run = runNpm }) {
   if (wanted.length === 0) return { installed: [], warnings: [] };
   for (const spec of wanted) if (!PACKAGE_SPEC.test(spec)) throw new Error(`The mapping's install list has "${spec}", which isn't a package name with an optional version.`);
   try {
-    await run(["install", ...wanted, ...pinnedReact(dir), "--legacy-peer-deps", ...NPM_FLAGS], dir);
+    await run(["install", ...wanted, ...pinnedRuntime(dir), "--legacy-peer-deps", ...NPM_FLAGS], dir);
   } catch (error) {
     throw new Error(`npm couldn't install ${wanted.join(", ")}: ${firstLine(error.message)}`);
   }
@@ -139,8 +143,8 @@ export async function installOptionalPeers({ dir, unresolved, run = runNpm }) {
   const declared = declaredOptionalPeers(dir);
   const wanted = unresolved.filter((name) => declared.has(name) && !installedVersion(dir, name));
   if (wanted.length === 0) return { installed: [], warnings: [] };
-  // A loose install prunes packages that only arrived as peers, so name React again to keep it.
-  const keep = pinnedReact(dir);
+  // A loose install prunes packages that only arrived as peers, so name the framework again to keep it.
+  const keep = pinnedRuntime(dir);
   const specs = [...wanted.map((name) => `${name}@${declared.get(name)}`), ...keep];
   try {
     await run(["install", ...specs, "--legacy-peer-deps", ...NPM_FLAGS], dir);

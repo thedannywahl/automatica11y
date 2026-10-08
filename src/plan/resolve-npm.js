@@ -1,8 +1,8 @@
 import { execFile } from "node:child_process";
+import { ADAPTERS } from "../frameworks/index.js";
 
 const FIELDS = ["name", "version", "peerDependencies", "dependencies", "keywords", "customElements", "deprecated"];
 const OTHER_FRAMEWORKS = {
-  vue: "Vue",
   "@angular/core": "Angular",
   svelte: "Svelte",
   "solid-js": "Solid",
@@ -44,19 +44,19 @@ export function npmView(spec, { timeoutMs = 60_000 } = {}) {
 }
 
 /**
- * Guess how a package renders from its metadata alone. React wins when both signals appear.
+ * Guess how a package renders from its metadata alone. React wins when both signals appear, then a custom elements manifest, then Vue.
  * `npm` means the metadata can't say, so the run decides after it installs and loads the package.
  * @param {any} meta
- * @returns {{ kind: "npm-react" | "npm-wc" | "npm-unsupported" | "npm", framework: string | null, reason: string }}
+ * @returns {{ kind: "npm-react" | "npm-vue" | "npm-wc" | "npm-unsupported" | "npm", framework: string | null, reason: string }}
  */
 export function detectFlavor(meta) {
   const peers = meta.peerDependencies ?? {};
   const deps = meta.dependencies ?? {};
-  if ("react" in peers || "react-dom" in peers || "react" in deps) {
-    const how = "react" in peers || "react-dom" in peers ? "peer dependency" : "dependency";
-    return { kind: "npm-react", framework: "React", reason: `The package lists react as a ${how}.` };
-  }
+  const react = /** @type {any} */ (ADAPTERS.react.detect(meta));
+  if (react) return react;
   if (meta.customElements) return { kind: "npm-wc", framework: "Web components", reason: "The package has a customElements manifest." };
+  const vue = /** @type {any} */ (ADAPTERS.vue.detect(meta));
+  if (vue) return vue;
   for (const [name, label] of Object.entries(OTHER_FRAMEWORKS)) {
     if (name in peers) return { kind: "npm-unsupported", framework: label, reason: `The package needs ${label}.` };
   }

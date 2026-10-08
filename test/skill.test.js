@@ -189,6 +189,13 @@ test("the archetypes the runner lists match the tool's", async () => {
   assert.deepEqual(line, ARCHETYPES);
 });
 
+test("the runner carries a Vue example too, and says not to import h", () => {
+  const fixtures = referenceFiles.find((f) => f.name === "references/fixtures.md").text;
+  assert.match(runner, /A Vue 3 fixture\. It's also JSX[\s\S]*\*\*don't import `h`\*\*[\s\S]*```jsx\nimport \{ DialogClose[\s\S]*from "reka-ui";[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);
+  assert.match(runner, /React, Vue 3, or web components\. Name it, and say which version is unsupported \(Vue 2, for example\)/);
+  assert.match(fixtures, /For Vue 3, a fixture is also JSX[\s\S]*don't import them[\s\S]*export a function named `setup\(app\)`/);
+});
+
 test("the runner carries a React example and a web component example, so it works without its references", () => {
   assert.match(runner, /```jsx[\s\S]*export default function Fixture\(\)[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);
   assert.match(runner, /```js\nexport default function mount\(container\)[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);

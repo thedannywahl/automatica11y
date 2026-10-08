@@ -25,7 +25,7 @@ export const TEMPLATED = new Set(["button", "link"]);
 const words = (name) => name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[-_]/g, " ");
 
 /** How well a name fits an archetype. 0 means it doesn't. */
-function score(archetype, name) {
+export function score(archetype, name) {
   if (!ARCHETYPE_PATTERNS[archetype].test(words(name))) return 0;
   const compact = name.replace(/[-_\s]/g, "").toLowerCase();
   const last = words(name).toLowerCase().split(" ").pop();
@@ -33,14 +33,15 @@ function score(archetype, name) {
   // Names listed first are closer to the archetype itself, so `tooltip` beats `popover` when both are there.
   if (bases.includes(compact)) return 4 - bases.indexOf(compact) * 0.1;
   if (bases.includes(last)) return 3 - bases.indexOf(last) * 0.1;
-  if (bases.some((base) => compact.startsWith(base))) return 2;
+  const starts = bases.findIndex((base) => compact.startsWith(base));
+  if (starts !== -1) return 2 - starts * 0.1;
   return 1;
 }
 
 /**
- * Guess which exports (React) or tags (web components) stand for each archetype.
+ * Guess which exports (React or Vue) or tags (web components) stand for each archetype.
  * The result is a starting point. A person or the skill checks it before trusting it.
- * @param {{ flavor: "react" | "wc", exports?: Array<{ name: string, type: string, parts: string[] }>, tags?: string[] }} input
+ * @param {{ flavor: "react" | "vue" | "wc", exports?: Array<{ name: string, type: string, parts: string[] }>, tags?: string[] }} input
  * @returns {Record<string, any>}
  */
 export function candidateMapping({ flavor, exports = [], tags = [] }) {
@@ -61,7 +62,7 @@ export function candidateMapping({ flavor, exports = [], tags = [] }) {
     const parts = info?.parts ?? [];
     // Flat compound libraries (DialogRoot, DialogTrigger, DialogContent) have sibling exports that share a prefix.
     // A button or link usually sits beside ButtonBase, ButtonGroup, and the like, which aren't its parts, so only real parts (Button.Root) count there.
-    const siblings = flavor === "react" && !TEMPLATED.has(archetype) ? names.filter((n) => n !== best && n.startsWith(best) && n.length > best.length) : [];
+    const siblings = flavor !== "wc" && !TEMPLATED.has(archetype) ? names.filter((n) => n !== best && n.startsWith(best) && n.length > best.length) : [];
     const compound = parts.length > 0 || siblings.length >= 2;
     const templated = TEMPLATED.has(archetype) && !compound;
     mapping[archetype] = {

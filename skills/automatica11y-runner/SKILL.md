@@ -125,6 +125,28 @@ export default function Fixture() {
 }
 ```
 
+A Vue 3 fixture. It's also JSX, and a function default export is a functional component. The tool turns JSX into `h()` calls and supplies `h` and `Fragment`, so **don't import `h`**. Children become the default slot. A fixture that needs a plugin or global setup can also export `setup(app)`, which runs before the app mounts. Import the library from its package name, and the tool installs it along with Vue:
+
+```jsx
+import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogTrigger } from "reka-ui";
+
+export default function Fixture() {
+  return (
+    <DialogRoot>
+      <DialogTrigger data-a11y-trigger>Open dialog</DialogTrigger>
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogContent data-a11y-root>
+          <DialogTitle>Edit profile</DialogTitle>
+          <DialogDescription>Update your details.</DialogDescription>
+          <DialogClose>Close</DialogClose>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
+  );
+}
+```
+
 A web component fixture. The tool imports the package first, so its elements are defined before `mount` runs. The `data-a11y-trigger` and `data-a11y-root` attributes can sit on a host, a slotted child, or an element inside an open shadow root. A closed shadow root hides its content from every tool:
 
 ```js
@@ -182,7 +204,7 @@ Use the structure of `report.md`. Quote selectors and rule IDs exactly as `resul
 
 Say these things plainly. Don't soften them, and don't fill in a result.
 
-- **Unsupported framework.** The package needs a framework other than React or web components. Name it. v1 covers React and web components.
+- **Unsupported framework.** The package needs a framework other than React, Vue 3, or web components. Name it, and say which version is unsupported (Vue 2, for example). This version covers React, Vue 3, and web components. A Storybook for the library still works, whatever the framework.
 - **Not applicable.** The package has no rendering surface, such as a utility library. There's nothing to test.
 - **Not testable.** The content is a canvas with no alternative, or sits in a closed shadow root. The rule engines can't see it, so the result is untested, not clean. The virtual screen reader also can't read open shadow roots.
 - **Gap.** The archetype has no usable fixture or no matching export. Say what the archetype needs.

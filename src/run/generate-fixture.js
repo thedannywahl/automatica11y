@@ -1,7 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { bundleEntries } from "../harness/bundle.js";
-import { generateCandidates } from "../harness/generate/index.js";
 import { probeFixture } from "../harness/generate/probe.js";
 
 const firstLine = (error) => (error instanceof Error ? error.message : String(error)).split("\n").find((l) => l.trim()) ?? "unknown error";
@@ -13,25 +11,25 @@ const firstLine = (error) => (error instanceof Error ? error.message : String(er
  *
  * @param {{
  *   browser: import("playwright-core").Browser,
- *   flavor: "react" | "wc",
+ *   adapter: import("../frameworks/index.js").Adapter,
  *   archetype: string,
  *   entry: { export?: string, tag?: string },
  *   found: { exports: any[], tags: string[], facts: Record<string, any> },
  *   pkg: string,
+ *   explicit?: boolean,
  *   tmp: string,
  *   workDir: string,
  *   buildDir: string,
- *   helper: { entry: (fixturePath: string, pkg: string) => string },
  *   getServer: () => Promise<{ origin: string }>,
  *   bundle: (options: any) => Promise<unknown>,
  * }} input
  * @returns {Promise<{ ok: boolean, reason: string | null, attempts: Array<{ recipe: string, summary: string, ok: boolean, reason: string | null }>, winner?: { recipe: string, summary: string, used: string[], source: string, file: string, extension: string } }>}
  */
-export async function generateFixture({ browser, flavor, archetype, entry, found, pkg, tmp, workDir, buildDir, helper, getServer, bundle }) {
-  const { candidates, reason } = generateCandidates({ flavor, archetype, pkg, entry, exports: found.exports, facts: found.facts });
+export async function generateFixture({ browser, adapter, archetype, entry, found, explicit = false, pkg, tmp, workDir, buildDir, getServer, bundle }) {
+  const { candidates, reason } = adapter.generate({ archetype, pkg, entry, exports: found.exports, facts: found.facts, explicit });
   if (candidates.length === 0) return { ok: false, reason, attempts: [] };
 
-  const extension = flavor === "react" ? "jsx" : "js";
+  const extension = adapter.extension;
   mkdirSync(join(tmp, "generated"), { recursive: true });
   mkdirSync(join(tmp, "entries"), { recursive: true });
   const prepared = candidates.map((candidate, index) => {
@@ -39,18 +37,18 @@ export async function generateFixture({ browser, flavor, archetype, entry, found
     const file = join(tmp, "generated", `${archetype}-${index}.${extension}`);
     writeFileSync(file, candidate.source);
     const entryFile = join(tmp, "entries", `${name}.js`);
-    writeFileSync(entryFile, helper.entry(file, pkg));
+    writeFileSync(entryFile, adapter.entry(file, pkg));
     return { candidate, name, file, entryFile, bundled: null };
   });
 
   // One build for every candidate. If a single bad one breaks it, build them one by one so the rest still get a chance.
   try {
-    await bundle({ entries: Object.fromEntries(prepared.map((p) => [p.name, p.entryFile])), outdir: buildDir, workDir, react: flavor === "react" });
+    await bundle({ entries: Object.fromEntries(prepared.map((p) => [p.name, p.entryFile])), outdir: buildDir, workDir, framework: adapter });
     for (const p of prepared) p.bundled = true;
   } catch {
     for (const p of prepared) {
       try {
-        await bundle({ entries: { [p.name]: p.entryFile }, outdir: buildDir, workDir, react: flavor === "react" });
+        await bundle({ entries: { [p.name]: p.entryFile }, outdir: buildDir, workDir, framework: adapter });
         p.bundled = true;
       } catch (error) {
         p.bundled = firstLine(error);

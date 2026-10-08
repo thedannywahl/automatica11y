@@ -1,3 +1,4 @@
+import { adapterFor } from "../frameworks/index.js";
 import { criterion, criterionName, wcagAttribution } from "../wcag/index.js";
 import { cap, num, plural } from "../text.js";
 
@@ -277,7 +278,7 @@ export function targetSection(planTarget, target, { generatedNote = true } = {})
   }
   if (target.npm) {
     const n = target.npm;
-    lines.push(`Installed ${code(`${n.name}@${n.version}`)} on its own, as ${n.flavor === "react" ? `React${n.react ? ` (react ${n.react})` : ""}` : `web components (${n.tags.length ? n.tags.slice(0, 6).join(", ") : "no tags found"})`}.`, "");
+    lines.push(`Installed ${code(`${n.name}@${n.version}`)} on its own, as ${adapterFor(n.flavor).describe(n)}.`, "");
   }
   for (const warning of target.warnings) lines.push(`Warning: ${warning}`, "");
   if (target.status === "failed") {
