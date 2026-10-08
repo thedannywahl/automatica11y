@@ -12,6 +12,7 @@ import { candidateMapping, findAuthoredFixture } from "../plan/mapping.js";
 import { ARCHETYPES } from "../schema.js";
 import { runInteractions } from "../tiers/interactions/index.js";
 import { runRules } from "../tiers/rules/index.js";
+import { failedVsr, runVsr } from "../tiers/vsr.js";
 import { num } from "../text.js";
 import { summarize } from "./summary.js";
 
@@ -22,9 +23,6 @@ const STATES = {
   tooltip: ["closed", "open"],
   combobox: ["closed", "open"],
   accordion: ["collapsed", "expanded"],
-};
-const NOT_BUILT = {
-  vsr: "The virtual screen reader tier isn't built yet (M6).",
 };
 
 const firstLine = (error) => (error instanceof Error ? error.message : String(error)).split("\n").find((l) => l.trim()) ?? "unknown error";
@@ -107,7 +105,7 @@ async function auditFixture({ browser, url, archetype, plan }) {
       const tiers = {};
       for (const tier of plan.options.tiers) {
         if (tier === "interactions") continue;
-        if (tier !== "rules") tiers[tier] = { status: "skipped", reason: NOT_BUILT[tier] };
+        if (tier === "vsr") tiers.vsr = failure ? { status: "skipped", simulated: true, reason: failure } : await runVsr(opened.page, { scope: "body", state }).catch(failedVsr);
         else if (failure) tiers.rules = { status: "failed", reason: failure, engines: Object.fromEntries(plan.options.engines.map((e) => [e, { status: "failed", reason: failure }])) };
         else {
           tiers.rules = await runRules(opened.page, { engines: plan.options.engines, wcag: plan.options.wcag, level: plan.options.level, scope: index === 0 ? "#root" : ["#root", "[data-a11y-root]"] });
@@ -249,7 +247,10 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
           reactDom: installed.reactDom,
           tags: flavor === "wc" ? found.tags : [],
         },
-        summary: { ...summarize(ordered, plan.options.engines, gaps), notTestable: hidden },
+        summary: (() => {
+          const base = summarize(ordered, plan.options.engines, gaps);
+          return { ...base, notTestable: [...base.notTestable, ...hidden] };
+        })(),
         warnings,
       },
       mapping: Object.fromEntries(Object.entries(mapping).map(([k, v]) => [k, { ...v, fixture: v.fixture ?? null }])),

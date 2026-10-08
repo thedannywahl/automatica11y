@@ -26,6 +26,8 @@ function engineCell(summary, engine) {
 
 function tierCell(target, tier) {
   const counts = target.summary?.interactions;
+  const vsr = target.summary?.vsr;
+  if (tier === "vsr" && vsr) return `ran (simulated), ${vsr.flagged ? `${num(vsr.flagged)} flagged` : "none flagged"}`;
   if (tier === "interactions" && counts) {
     const parts = [counts.fail && plural(counts.fail, "failed", "failed"), counts.error && plural(counts.error, "error"), counts.pass && `${num(counts.pass)} passed`, counts.notApplicable && `${num(counts.notApplicable)} not applicable`].filter(Boolean);
     return `ran, ${parts.join(", ")}`;
@@ -150,6 +152,46 @@ function storybookSection(planTarget, target) {
     lines.push("", "**Needs review by rule.**", "", ...ruleTable(review.rows, engine));
     lines.push("", "Element-level detail for every story is in results.json.", "");
   }
+  const walks = Object.entries(target.archetypes).map(([key, a]) => ({ id: key.replace(/^story:/, ""), vsr: a.configs[0]?.tiers.vsr })).filter((w) => w.vsr?.status === "ran");
+  if (walks.length) {
+    /** @type {Map<string, { flag: any, stories: string[] }>} */
+    const byFlag = new Map();
+    for (const { id, vsr } of walks) for (const flag of vsr.flags) {
+      const key = `${flag.type}|${flag.phrase}`;
+      const entry = byFlag.get(key) ?? { flag, stories: [] };
+      entry.stories.push(id);
+      byFlag.set(key, entry);
+    }
+    lines.push("#### Virtual screen reader (simulated).", "", `Simulated output from @guidepup/virtual-screen-reader${walks[0].vsr.version ? ` ${walks[0].vsr.version}` : ""}. It isn't a real screen reader. ${cap(num(walks.length))} ${walks.length === 1 ? "story was" : "stories were"} walked. The flags only mark a phrase that is a bare role or a generic role, for a person to check. Full announcement logs are in results.json.`, "");
+    if (byFlag.size === 0) lines.push("No phrases flagged.", "");
+    else {
+      lines.push("| Phrase | Why it's flagged | Stories | Examples |", "| --- | --- | --- | --- |");
+      for (const { flag, stories } of [...byFlag.values()].sort((a, b) => b.stories.length - a.stories.length)) {
+        lines.push(`| ${cell(code(flag.phrase))} | ${FLAG_TEXT[flag.type] ?? flag.type} | ${stories.length} | ${cell(stories.slice(0, 3).join(", "))}${stories.length > 3 ? ", and more" : ""} |`);
+      }
+      lines.push("");
+    }
+  }
+  return lines.join("\n");
+}
+
+const FLAG_TEXT = {
+  "unnamed-control": "announced as only its role, with no name",
+  "generic-role": "announced with a generic role",
+};
+
+function vsrSection(result, nested) {
+  const lines = [`${nested ? "#####" : "####"} Virtual screen reader (simulated).`, ""];
+  lines.push(`Simulated output from @guidepup/virtual-screen-reader${result.version ? ` ${result.version}` : ""}. It isn't a real screen reader, and real ones announce things differently. The log is data. The flags only mark a phrase that is a bare role or a generic role, for a person to check.`, "");
+  for (const note of result.notes ?? []) lines.push(`Note: ${note}`, "");
+  for (const entry of result.notTestable ?? []) lines.push(`Not testable: ${entry}.`, "");
+  lines.push("**Flagged phrases.**", "");
+  if (result.flags.length === 0) lines.push("None.");
+  else for (const flag of result.flags) lines.push(`- ${code(flag.phrase)} at position ${flag.index + 1}: ${FLAG_TEXT[flag.type] ?? flag.type}.`);
+  for (const entry of result.log) {
+    const shown = entry.announcements.slice(0, 40);
+    lines.push("", `**Announcement log${entry.state ? ` (${entry.state} state)` : ""}.**`, "", "```text", ...shown, ...(entry.announcements.length > shown.length ? [`... and ${num(entry.announcements.length - shown.length)} more in results.json`] : []), "```");
+  }
   return lines.join("\n");
 }
 
@@ -196,6 +238,8 @@ function targetSection(planTarget, target) {
       for (const [tier, result] of Object.entries(config.tiers)) {
         if (tier === "rules") {
           for (const [engine, engineResult] of Object.entries(result.engines ?? {})) lines.push(engineSection(engine, engineResult, name !== "page"), "");
+        } else if (tier === "vsr" && result.status === "ran") {
+          lines.push(vsrSection(result, name !== "page"), "");
         } else if (tier === "interactions" && result.status === "ran") {
           lines.push(interactionsSection(result, name !== "page"), "");
         } else if (result.status !== "ran") {

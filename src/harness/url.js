@@ -8,7 +8,7 @@ const NETWORK_IDLE_MS = 30_000;
  * The returned `warnings` hold anything the report should mention, such as a network that never went idle.
  * @param {import("playwright-core").Browser} browser
  * @param {string} url
- * @param {{ viewport?: { width: number, height: number }, forcedColors?: boolean, beforeGoto?: (page: import("playwright-core").Page) => void, waitUntil?: "load" | "networkidle" }} [options]
+ * @param {{ viewport?: { width: number, height: number }, forcedColors?: boolean, beforeGoto?: (page: import("playwright-core").Page) => void | Promise<unknown>, waitUntil?: "load" | "networkidle" }} [options]
  *   `beforeGoto` runs before navigation, so a caller can attach console listeners that see the first messages.
  *   `waitUntil` defaults to `networkidle`. Local fixture pages don't need to wait for the network.
  */
@@ -21,7 +21,7 @@ export async function openPage(browser, url, { viewport = VIEWPORT, forcedColors
   try {
     const page = await context.newPage();
     page.setDefaultTimeout(30_000);
-    beforeGoto?.(page);
+    await beforeGoto?.(page);
     let response;
     try {
       response = await page.goto(url, { waitUntil, timeout: NETWORK_IDLE_MS });

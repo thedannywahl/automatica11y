@@ -26,6 +26,15 @@ export function summarize(archetypes, engines, gaps = []) {
     summary.interactions = { pass: 0, fail: 0, notApplicable: 0, error: 0 };
     for (const check of checks) summary.interactions[check.result === "not-applicable" ? "notApplicable" : check.result] += 1;
   }
+  const walks = Object.entries(archetypes).flatMap(([name, a]) => a.configs.map((c) => ({ name, vsr: c.tiers.vsr })).filter((x) => x.vsr?.status === "ran"));
+  if (walks.length) {
+    summary.vsr = { walks: walks.length, flagged: walks.reduce((n, w) => n + w.vsr.flags.length, 0) };
+    const seen = new Set();
+    for (const { name, vsr } of walks) for (const entry of vsr.notTestable ?? []) {
+      const line = name === "page" ? entry : `${name}: ${entry}`;
+      if (!seen.has(line)) { seen.add(line); summary.notTestable.push(line); }
+    }
+  }
   return summary;
 }
 

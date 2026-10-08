@@ -272,7 +272,7 @@ Exit (met): `audit` on one non-compound React library (button, tabs), one compou
 
 Exit: the full check table in spec section 7 has a test per row.
 
-**Results.** All nine archetypes with checks are built. `npm test` runs 140 tests in about two minutes, and `npm run lint` is clean. One full run failed a single test in 174 ms (the missing-page error check) and passed on rerun and in isolation. The cause is unknown, so watch for it.
+**Results.** All nine archetypes with checks are built. `npm test` runs 140 tests in about two minutes, and `npm run lint` is clean. That test failed twice in full runs (about 170 ms, "context has been closed"), and passed alone and on rerun. A likely cause was an unawaited `addInitScript` racing the context close on a 404 page, so `openPage` now awaits its `beforeGoto` hook. Three full runs since have passed, but the race was never reproduced on demand, so watch for it.
 
 - **Shape.** `tiers/interactions/archetypes.js` is the table: each check has a name, the WCAG criteria it speaks to, and a function that returns `pass`, `fail`, or `not-applicable` with a detail. `index.js` is the one runner. It gives every check its own fresh page and context, with a timeout, so no check inherits another's state. `helpers.js` installs a small kit into the page (`window.__a11y`) that reaches through open shadow roots.
 - **Checks.** Every archetype gets `trigger-reachable-by-tab`, `focus-indicator-visible`, and `no-focus-trap`. Then:
@@ -293,12 +293,23 @@ Exit: the full check table in spec section 7 has a test per row.
 - **Tests.** Each archetype has a good page and at least one bad page in `test/fixtures/interactions/` (22 pages), and a test pins every check's result on every page. A test fails if a check exists that no page exercises. Tests also cover the error and timeout paths.
 - **Not covered.** Keyboard behavior for stateful widgets beyond what the table lists, mouse-only interaction, touch, and focus order across several widgets. Anything that needs a human to judge meaning stays in the method note.
 
-### M6. vsr tier (one day).
+### M6. vsr tier (done).
 
-- [ ] `tiers/vsr.js`, ported from chartty, using the `page.evaluate` injection from `spike-vsr.md` (Finding 2). Cap the walk at 150 steps and report truncation.
-- [ ] Record the announcement log per state. Label every result `simulated: true`.
-- [ ] Flag unnamed controls and generic roles as data. No automatic judgment of the log.
-- [ ] Method note says the run used the live page, or a DOM snapshot if the fallback fired.
+- [x] `tiers/vsr.js`, ported from chartty, using the `page.evaluate` injection from `spike-vsr.md` (Finding 2). Cap the walk at 150 steps and report truncation.
+- [x] Record the announcement log per state. Label every result `simulated: true`.
+- [x] Flag unnamed controls and generic roles as data. No automatic judgment of the log.
+- [x] Method note says the run used the live page, or a DOM snapshot if the fallback fired.
+
+**Results.** `src/tiers/vsr.js` runs in the live page, as the M0 spike found. `npm run lint` is clean.
+
+- **Injection.** The browser build is one ES module. The tier turns its `export` line into `window.__vsr` and runs it with `page.evaluate`, which a strict CSP doesn't block.
+- **Every result is simulated.** The tier result carries `simulated: true` and the package version, and the report says it isn't a real screen reader.
+- **Where it runs.** Page targets walk `body`. Storybook stories walk `#storybook-root`. npm fixtures walk `body` in each state, so a dialog gets a closed log and an open log. A state that never appeared is `skipped` with the reason.
+- **Wrap-around.** Inside a container that isn't the whole document, the reader loops back to the start instead of ending, and a first version of the walk ran to the cap and produced hundreds of false flags. The walk now stops when the log starts repeating (`repeatLength`). The repeating part can begin a step or two in, because the reader announces a dialog container twice at the start. A long document with no repeat stops at 150 steps, and the result says it was truncated.
+- **Flags.** The tier marks only two patterns: a control announced as only its role (`button`, `link`, `image`, `textbox`, and similar), and a role announced as generic. The report calls them phrases for a person to check. It doesn't judge the log.
+- **Shadow DOM.** Open shadow roots inside the walked container are listed as not testable, with their host tags, in the tier result and in the target's not-testable list. The unnamed button inside a shadow root isn't flagged, because the reader never reads it.
+- **Storybook report.** It groups flags by phrase with story counts, because 200 per-story logs would drown the report. Full logs stay in `results.json`.
+- **Not built.** Comparing the log against the rules findings, and `chart`-specific handling, which belongs to M7.
 
 ### M7. Comparison reporting (two days).
 

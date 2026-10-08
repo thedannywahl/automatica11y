@@ -320,7 +320,11 @@ Use `@guidepup/virtual-screen-reader`. Record the announcement sequence for each
 
 - **Label every vsr result "simulated."** It's not real screen reader output.
 - Store the announcement log as data. The report highlights obvious problems (an unnamed control, a role announced as generic) and doesn't judge the log automatically.
-- **Spike result (M0):** the virtual screen reader runs against the live page, including under strict CSP, through `page.evaluate` injection. The jsdom fallback isn't needed. The original spike question was whether it could run in the live page or only against a jsdom snapshot. A snapshot loses CSS-driven visibility and changes what's announced. If it needs jsdom, serialize the rendered DOM from Playwright and say so in the report's method note.
+- **Spike result (M0):** the virtual screen reader runs against the live page, including under strict CSP, through `page.evaluate` injection. The jsdom fallback isn't needed.
+- **Where it walks.** Page targets walk `body`, Storybook stories walk `#storybook-root`, and npm fixtures walk `body` in each state, so the closed and open logs differ.
+- **Wrap-around.** Inside a container that isn't the whole document, the reader loops back to the start. The walk stops when the log starts repeating, or at 150 steps, and the result says which.
+- **Flags.** The tier flags only a phrase that is a bare role (a control with no name) or a generic role. They're for a person to check.
+- **Shadow DOM.** The virtual screen reader reads no shadow roots. Open shadow roots inside the walked container are listed as not testable, never as clean.
 
 ## 8. Results schema.
 

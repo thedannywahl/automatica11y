@@ -197,6 +197,27 @@ test("the interactions tier runs on each fixture and lands in the results and th
   assert.match(result.report, /\| ui \|[^\n]*ran, \w+ failed/);
 });
 
+test("the virtual screen reader walks each state, and the logs differ between closed and open", { skip }, async () => {
+  const result = await run(["audit", "ui=fake-ui", "--archetypes", "dialog", "--tiers", "rules,vsr"], { files: { "fixtures/ui/dialog.jsx": REACT_DIALOG } });
+  const [closed, open] = archetype(result, "dialog").configs;
+  assert.equal(closed.tiers.vsr.log[0].state, "closed");
+  assert.equal(open.tiers.vsr.log[0].state, "open");
+  const said = (config) => config.tiers.vsr.log[0].announcements.join("|");
+  assert.doesNotMatch(said(closed), /Edit profile/);
+  assert.match(said(open), /\|dialog\b/);
+  assert.match(said(open), /Edit profile/);
+  assert.equal(closed.tiers.vsr.simulated, true);
+  assert.match(result.report, /\*\*Announcement log \(open state\)\.\*\*/);
+});
+
+test("web components: shadow content the virtual screen reader can't read is listed as not testable", { skip }, async () => {
+  const fixture = `export default function mount(c) { c.innerHTML = '<fake-button data-a11y-trigger data-a11y-root>Save</fake-button>'; }\n`;
+  const result = await run(["audit", "wc=fake-wc", "--archetypes", "button", "--tiers", "rules,vsr"], { files: { "fixtures/wc/button.js": fixture } });
+  const vsr = archetype(result, "button").configs[0].tiers.vsr;
+  assert.match(vsr.notTestable[0], /open shadow root in <fake-button> \(1\)/);
+  assert.match(result.results.targets[0].summary.notTestable.join("\n"), /button: open shadow root in <fake-button>/);
+});
+
 test("--archetypes limits which archetypes run and which gaps show", { skip }, async () => {
   const result = await run(["audit", "ui=fake-ui", "--archetypes", "button,tabs", "--tiers", "rules"]);
   assert.deepEqual(Object.keys(result.results.targets[0].archetypes), ["button", "tabs"]);

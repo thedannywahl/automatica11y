@@ -7,6 +7,7 @@ import { serveStatic } from "../harness/static-serve.js";
 import { listStories, readIndex, selectStories, storyUrl, waitForStory } from "../harness/storybook.js";
 import { closedShadowHosts, notTestableEntries } from "../harness/shadow.js";
 import { NOT_APPLICABLE_FOR_PAGES } from "../tiers/interactions/index.js";
+import { failedVsr, runVsr } from "../tiers/vsr.js";
 import { openPage } from "../harness/url.js";
 import { renderReport } from "../report/single.js";
 import { num } from "../text.js";
@@ -21,10 +22,6 @@ import { failedTarget, summarize } from "./summary.js";
 const STORY_CONCURRENCY = 4;
 
 const EXIT = { OK: 0, FAIL_THRESHOLD: 1, ENVIRONMENT: 3, ALL_TARGETS_FAILED: 4 };
-
-const NOT_BUILT = {
-  vsr: "The virtual screen reader tier isn't built yet (M6).",
-};
 
 const NPM_KINDS = new Set(["npm", "npm-react", "npm-wc", "npm-unsupported"]);
 const UNSUPPORTED_KIND = (kind) => `${kind} targets aren't supported.`;
@@ -41,13 +38,13 @@ async function auditPage(browser, url, planTarget, plan, extraWarnings) {
       } else if (tier === "interactions") {
         tiers.interactions = NOT_APPLICABLE_FOR_PAGES;
       } else {
-        tiers[tier] = { status: "skipped", reason: NOT_BUILT[tier] };
+        tiers.vsr = await runVsr(opened.page, { scope: "body" }).catch(failedVsr);
       }
     }
     const archetypes = { page: { status: "ran", configs: [{ libA11y: "n/a", tiers }] } };
     const hidden = notTestableEntries(await closedShadowHosts(opened.page));
     const summary = summarize(archetypes, plan.options.engines);
-    summary.notTestable = hidden;
+    summary.notTestable = [...summary.notTestable, ...hidden];
     return {
       id: planTarget.id,
       status: "ran",
@@ -74,7 +71,7 @@ async function auditStory(browser, base, story, plan) {
           ? await runRules(opened.page, { engines: plan.options.engines, wcag: plan.options.wcag, level: plan.options.level, scope: "#storybook-root" })
           : tier === "interactions"
             ? NOT_APPLICABLE_FOR_PAGES
-            : { status: "skipped", reason: NOT_BUILT[tier] };
+            : await runVsr(opened.page, { scope: "#storybook-root" }).catch(failedVsr);
     }
     const hidden = notTestableEntries(await closedShadowHosts(opened.page));
     return { id: story.id, ok: true, archetype: { status: "ran", configs: [{ libA11y: "n/a", tiers }] }, hidden };
@@ -140,7 +137,10 @@ async function auditStorybook(browser, planTarget, plan, servers) {
       archetypeMatches: picked.matchedByArchetype,
       failedStories,
     },
-    summary: { ...summarize(archetypes, plan.options.engines, gaps), notTestable: audited.flatMap((item) => (item.ok ? item.hidden.map((h) => `${item.id}: ${h}`) : [])) },
+    summary: (() => {
+      const base = summarize(archetypes, plan.options.engines, gaps);
+      return { ...base, notTestable: [...base.notTestable, ...audited.flatMap((item) => (item.ok ? item.hidden.map((h) => `${item.id}: ${h}`) : []))] };
+    })(),
     warnings,
   };
 }

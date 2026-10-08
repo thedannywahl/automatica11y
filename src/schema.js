@@ -142,7 +142,21 @@ const TierResultSchema = v.object({
     ),
   ),
   simulated: v.optional(v.boolean()),
-  log: v.optional(v.array(v.unknown())),
+  version: v.optional(v.nullable(v.string())),
+  log: v.optional(
+    v.array(
+      v.object({
+        state: v.nullable(v.optional(v.string())),
+        announcements: v.array(v.string()),
+        reachedEnd: v.boolean(),
+        truncated: v.boolean(),
+      }),
+    ),
+  ),
+  /** Phrases a person should look at: a control announced as only its role, or a role announced as generic. */
+  flags: v.optional(v.array(v.object({ type: v.string(), phrase: v.string(), index: v.number(), state: v.nullable(v.optional(v.string())) }))),
+  notTestable: v.optional(v.array(v.string())),
+  notes: v.optional(v.array(v.string())),
 });
 
 const EngineSummarySchema = v.object({
@@ -199,6 +213,7 @@ export const TargetResultSchema = v.object({
     gaps: v.array(v.string()),
     notTestable: v.array(v.string()),
     interactions: v.optional(v.object({ pass: v.number(), fail: v.number(), notApplicable: v.number(), error: v.number() })),
+    vsr: v.optional(v.object({ walks: v.number(), flagged: v.number() })),
   }),
   warnings: v.array(v.string()),
 });
