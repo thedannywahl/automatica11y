@@ -198,8 +198,14 @@ test("the fixture guide says what to do when the documentation falls short, name
   assert.match(runner, /don't guess, and don't stand in a plain element for the library's component/);
   assert.match(fixtures, /in the working folder: the folder where you run `automatica11y audit` or `automatica11y compare`/);
   assert.match(fixtures, /If nothing in the archetype can be activated, as with a chart, put `data-a11y-trigger` and `data-a11y-root` on the same element/);
-  assert.match(runner, /If nothing can be activated, as with a chart, put both hooks on the same outermost element/);
+  assert.match(runner, /If nothing can be activated, as with a chart, put both attributes on the same outermost element/);
   assert.match(fixtures, /Include every part the library's documentation marks as required/);
+  assert.match(fixtures, /make `mount\(container\)` the file's default export\. It adds the archetype to the container/);
+  assert.match(runner, /For web components, the default export is the function `mount\(container\)`/);
+  assert.match(fixtures, /The tool activates the trigger by clicking it\. For a tooltip it focuses the trigger instead, so a tooltip has to open on focus\. If it opens only on pointer hover, the open state never appears/);
+  assert.match(fixtures, /If it isn't, the open state is reported as failed, with the reason/);
+  // "Hooks" reads as React hooks, so the docs name the attributes.
+  for (const { name, text } of agentDocs) assert.doesNotMatch(text, /\bhooks?\b/i, `${name} says attributes, not hooks`);
   // The contract says one trigger, so no example may leave it out.
   for (const [, code] of fixtures.matchAll(/```jsx\n([\s\S]*?)```/g)) assert.match(code, /data-a11y-trigger/, "every example in the guide marks a trigger");
   for (const [, code] of runner.matchAll(/```jsx\n([\s\S]*?)```/g)) assert.match(code, /data-a11y-trigger/, "every example in the runner marks a trigger");

@@ -38,7 +38,7 @@ A React example and a web component example are in `SKILL.md`, in the section on
 
 For React, JSX works without importing React. Import the library from its package name. The tool installs it for you.
 
-For web components, export a function, `mount(container)`, that adds the archetype to the container. The tool imports the package first, so its elements are defined before `mount` runs. Hooks can sit on a host element, a slotted child, or an element inside an **open** shadow root. A **closed** shadow root hides its content from every tool, so the report lists it as not testable.
+For web components, make `mount(container)` the file's default export. It adds the archetype to the container. The tool imports the package first, so its elements are defined before `mount` runs. The `data-a11y-trigger` and `data-a11y-root` attributes can sit on a host element, a slotted child, or an element inside an **open** shadow root. A **closed** shadow root hides its content from every tool, so the report lists it as not testable.
 
 ## Library accessibility options
 
@@ -52,7 +52,7 @@ export default function Fixture({ libA11y }) {
 
 ## States
 
-For a dialog, menu, tooltip, or combobox, the tool tests the closed state, then activates the trigger and tests the open state. For an accordion it tests collapsed, then expanded. Make sure activating the trigger really opens the surface, and that `data-a11y-root` is visible then. Otherwise the open state fails, and the report says why.
+For a dialog, menu, tooltip, or combobox, the tool tests the closed state, then activates the trigger and tests the open state. For an accordion it tests collapsed, then expanded. The tool activates the trigger by clicking it. For a tooltip it focuses the trigger instead, so a tooltip has to open on focus. If it opens only on pointer hover, the open state never appears. Make sure activating the trigger really opens the surface, and that `data-a11y-root` is visible then. If it isn't, the open state is reported as failed, with the reason. The interaction checks also press keys and hover, but they don't change how the open state is reached.
 
 ## Check your fixture
 

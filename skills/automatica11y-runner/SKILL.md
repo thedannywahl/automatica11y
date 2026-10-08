@@ -88,8 +88,8 @@ A package's components can't be guessed from its name. The first run installs th
 
 **The fixture contract, in brief.**
 
-- The default export renders the archetype in its starting state. For web components it's a function, `mount(container)`.
-- Mark **exactly one** element `data-a11y-trigger`. It's what a person would focus and activate. If nothing can be activated, as with a chart, put both hooks on the same outermost element.
+- The default export renders the archetype in its starting state. For web components, the default export is the function `mount(container)`.
+- Mark **exactly one** element `data-a11y-trigger`. It's what a person would focus and activate. If nothing can be activated, as with a chart, put both attributes on the same outermost element.
 - Mark the main surface `data-a11y-root`, on the element that carries the role (`dialog`, `menu`, `tooltip`), not on an overlay or portal wrapper. It may appear only after the trigger fires, and it may render in a portal.
 - Mount without console errors. Don't import CSS.
 - The attributes have to reach the DOM. If a wrapper drops unknown props, put them on a plain element inside it.
@@ -116,7 +116,7 @@ export default function Fixture() {
 }
 ```
 
-A web component fixture. The tool imports the package first, so its elements are defined before `mount` runs. Hooks can sit on a host, a slotted child, or an element inside an open shadow root. A closed shadow root hides its content from every tool:
+A web component fixture. The tool imports the package first, so its elements are defined before `mount` runs. The `data-a11y-trigger` and `data-a11y-root` attributes can sit on a host, a slotted child, or an element inside an open shadow root. A closed shadow root hides its content from every tool:
 
 ```js
 export default function mount(container) {
