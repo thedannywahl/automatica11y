@@ -100,7 +100,7 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(runner, /Where an engine reports zero violations for a target, say "no automated violations found" for that engine\. Where it reports violations, list them as the tool reports them/);
   assert.match(runner, /Use "no automated violations found" only for an engine that reported none for that target/);
   assert.doesNotMatch(runner, /Say "no automated violations found\."/, "no unconditional instruction to say the phrase");
-  assert.ok(agents.includes(`(\`${stated[1]}.x\`)`), "AGENTS.md names the same series");
+  assert.doesNotMatch(agents, /matches the version of the tool you're running/, "AGENTS.md doesn't claim a match that @latest can't promise");
   assert.doesNotMatch(runner, /\{\{[A-Z]+\}\}/, "no placeholders are left in the file");
 });
 
@@ -166,6 +166,9 @@ test("AGENTS.md bridges to the runner, and tells contributors what to run", () =
   assert.match(agents, /npm test/);
   assert.match(agents, /npm run lint/);
   assert.match(agents, /ships in the npm package/);
+  assert.match(agents, /print the copy that comes with the latest release, and the steps they print check that the tool's version matches/);
+  assert.match(agents, /If either guide command fails, stop\. Report the exact error to the user, and don't produce an audit or compare result from memory/);
+  assert.match(agents, /Update the series named in `skills\/automatica11y-runner\/SKILL\.md` \(written like `0\.2\.x`\) whenever the version in `package\.json` moves to a new series/);
 });
 
 test("the fixture reference mentions both hooks and both flavors", () => {

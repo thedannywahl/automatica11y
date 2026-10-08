@@ -1,6 +1,6 @@
 # automatica11y.
 
-Instructions for AI agents working in this repository or asked to use this tool. This file ships in the npm package, so it matches the version of the tool you're running.
+Instructions for AI agents working in this repository or asked to use this tool. This file ships in the npm package. The guide commands below print the copy that comes with the latest release, and the steps they print check that the tool's version matches the version those steps were written for.
 
 ## If you're asked to check or compare accessibility.
 
@@ -16,6 +16,8 @@ When the steps tell you to write a fixture, read the fixture guide:
 npx --yes automatica11y@latest guide fixtures
 ```
 
+If either guide command fails, stop. Report the exact error to the user, and don't produce an audit or compare result from memory. If the steps report a problem themselves, such as `doctor` finding no browser, follow what they say.
+
 Both print files that live in `skills/automatica11y-runner/` in the repository and in the package. If you can read those files directly, you can read them instead. Don't work from memory or from this file alone. The steps are the single source for what to run and for how to word results.
 
 ## If you're changing the code (in a checkout of the repository).
@@ -26,5 +28,5 @@ Both print files that live in `skills/automatica11y-runner/` in the repository a
 - Heavy dependencies (Playwright, esbuild, the rule engines) load only when a command needs them. A test checks that `--version`, `doctor`, `guide`, and `--plan` never import them.
 - Keep findings from axe-core and IBM Equal Access separate. Never add their counts together or convert one engine's scale into the other's.
 - A gap, an error, a failed target, or a result that isn't testable is a finding. It never counts as a pass. A report says "no automated violations found" only where an engine found none, and never says "accessible."
-- There are two skills. `skills/automatica11y/` is a tiny bootstrap that people copy. It sends an agent to `guide`. `skills/automatica11y-runner/` holds the full steps and ships with the tool. The runner names the version series it works with (`0.2.x`). Change it when the series in `package.json` changes. A test fails if they disagree.
+- There are two skills. `skills/automatica11y/` is a tiny bootstrap that people copy. It sends an agent to `guide`. `skills/automatica11y-runner/` holds the full steps and ships with the tool. The runner names the version series it works with. Update the series named in `skills/automatica11y-runner/SKILL.md` (written like `0.2.x`) whenever the version in `package.json` moves to a new series. A test fails if they disagree.
 - Plans and notes live in `.agents/`.
