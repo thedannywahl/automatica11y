@@ -79,6 +79,17 @@ test("detectFlavor says whether react is a peer dependency or a dependency", () 
   assert.equal(detectFlavor({ dependencies: { react: "^18" } }).reason, "The package lists react as a dependency.");
 });
 
+test("a package that peers on react but not react-dom gets react-dom without losing react", async () => {
+  // The package's install left react behind as a peer. Adding react-dom loosely would prune it, so the call names both.
+  const dir = makeTree({ "node_modules/react/package.json": JSON.stringify({ name: "react", version: "19.1.0" }) });
+  const calls = [];
+  const result = await realInstall({ dir, name: "pkg", version: "1.0.0", flavor: "react", run: async (args) => void calls.push(args) });
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1].slice(0, 3), ["install", "react@19.1.0", "react-dom@19.1.0"]);
+  assert.ok(calls[1].includes("--legacy-peer-deps"));
+  assert.equal(result.react, "19.1.0");
+});
+
 test("an install that says a version doesn't exist is retried once with fresh package data", async () => {
   const calls = [];
   const stale = async (args) => {

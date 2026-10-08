@@ -69,7 +69,8 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
       await npm(["install", "react", "react-dom", ...NPM_FLAGS, "--legacy-peer-deps"]);
       warnings.push(`${name} didn't bring in react, so the latest react and react-dom were added.`);
     } else if (!installedVersion(dir, "react-dom")) {
-      await npm(["install", `react-dom@${react}`, ...NPM_FLAGS, "--legacy-peer-deps"]);
+      // Name react too. A loose install prunes a package that only arrived as a peer, and react did.
+      await npm(["install", `react@${react}`, `react-dom@${react}`, ...NPM_FLAGS, "--legacy-peer-deps"]);
     }
   }
   if (flavor === "vue" && !installedVersion(dir, "vue")) {
