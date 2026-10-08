@@ -425,3 +425,12 @@ A fourth tier, `computed`, measures resolved styles in the browser for each arch
 - Earlier wording said "2.4.11" for focus contrast. 2.4.11 in WCAG 2.2 is Focus Not Obscured. Focus contrast is 1.4.11, and 2.4.13 is Focus Appearance.
 
 First real run (MUI Button and InstUI Button): MUI's text dips below 4.5:1 in hover and pressed, and its focus ripple changes pixels by only 1.5:1. InstUI's focus outline is 4.55:1.
+
+### WCAG data from the W3C.
+
+Criterion numbers, names, levels, and versions now come from the W3C's published WCAG 2.2 JSON, shipped unchanged in `src/data/wcag-2.2.json` (a test checks its SHA-256 against `wcag-2.2.source.json`). `src/wcag/index.js` reads it. Its terms say to credit the source with a link and not change the content, so the credit sits in the README, `src/data/README.md`, and every report's closing "WCAG data" paragraph. Links to each criterion are ours and are labeled as added. `npm run update-wcag` refreshes the file.
+
+- Reports show each criterion as a linked name (for example "1.4.3 Contrast (Minimum)"), and axe-core finding lines show names too.
+- axe-core's compact tags (`wcag1410`) resolve through the W3C list. Sentences that cite a criterion take its name and level from the data.
+- A test checks that every criterion any check cites exists in WCAG 2.2.
+- Left as is: axe-core's tag names (`wcag22aa`) and IBM's ruleset ids. They're those tools' own vocabularies, not WCAG data.

@@ -31,7 +31,7 @@ test("the package is ready to publish: public, MIT, ESM, Node 20 or newer", () =
 test("the tarball holds the tool, the skill, the docs, and the license, and nothing else", () => {
   const { files } = packed();
   const names = files.map((f) => f.path);
-  for (const must of ["package.json", "README.md", "LICENSE", "AGENTS.md", "skills/automatica11y/SKILL.md", "skills/automatica11y-runner/SKILL.md", "skills/automatica11y-runner/references/fixtures.md", "bin/automatica11y.js", "src/cli.js", "src/tiers/rules/index.js", "src/tiers/interactions/archetypes.js", "src/tiers/vsr.js", "src/report/comparison.js"]) {
+  for (const must of ["package.json", "README.md", "LICENSE", "AGENTS.md", "skills/automatica11y/SKILL.md", "skills/automatica11y-runner/SKILL.md", "skills/automatica11y-runner/references/fixtures.md", "bin/automatica11y.js", "src/cli.js", "src/tiers/rules/index.js", "src/tiers/interactions/archetypes.js", "src/tiers/vsr.js", "src/report/comparison.js", "src/wcag/index.js", "src/data/wcag-2.2.json", "src/data/wcag-2.2.source.json", "src/data/README.md"]) {
     assert.ok(names.includes(must), `${must} is in the tarball`);
   }
   for (const path of names) {
@@ -39,7 +39,8 @@ test("the tarball holds the tool, the skill, the docs, and the license, and noth
     assert.ok(!path.endsWith(".test.js"), `${path} stays out`);
   }
   const size = files.reduce((n, f) => n + f.size, 0);
-  assert.ok(size < 500_000, `the tarball is small (${size} bytes unpacked)`);
+  // The W3C's WCAG JSON ships unmodified, and it's about half a megabyte of this.
+  assert.ok(size < 1_000_000, `the tarball is small (${size} bytes unpacked)`);
 });
 
 test("every dependency the code imports is a real dependency", () => {

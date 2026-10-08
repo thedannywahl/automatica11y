@@ -19,6 +19,7 @@
   "scripts": {
     "test": "node --test test/*.test.js",
     "lint": "tsc -p jsconfig.json",
+    "update-wcag": "node scripts/update-wcag.js",
     "prepublishOnly": "npm run lint"
   },
   "dependencies": {

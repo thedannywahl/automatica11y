@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { criterionFromDigits } from "../../wcag/index.js";
 
 const require = createRequire(import.meta.url);
 let axeSource = null;
@@ -27,10 +28,10 @@ export function axeTags(wcag, level) {
   return tags;
 }
 
-/** `wcag143` becomes `1.4.3`. Returns null for tags that aren't success criteria. */
+/** `wcag143` becomes `1.4.3`, using the W3C's list of criteria. Returns null for tags that aren't success criteria. */
 function criterionFromTag(tag) {
-  const match = /^wcag(\d)(\d)(\d{1,2})$/.exec(tag);
-  return match ? `${match[1]}.${match[2]}.${match[3]}` : null;
+  const match = /^wcag(\d{3,4})$/.exec(tag);
+  return match ? (criterionFromDigits(match[1])?.num ?? null) : null;
 }
 
 /** An axe target can be nested for iframes and shadow roots. Flatten it to one readable selector. */

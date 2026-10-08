@@ -5,6 +5,7 @@
  * It's a gap and never a pass.
  * These are automatica11y's own measurements. They're reported on their own and never added to axe-core or IBM counts.
  */
+import { criterionRef } from "../../wcag/index.js";
 import { contrastOver, contrastRatio, formatRatio, textThreshold } from "./color.js";
 
 const pass = (detail, extra = {}) => ({ result: "pass", detail, ...extra });
@@ -100,7 +101,7 @@ const BOUNDARY_CONTRAST = {
     if (b.hasText) {
       return best.ratio >= 3
         ? pass(text, { measurements })
-        : { ...na(`${text} The control has visible text that identifies it, so 1.4.11 doesn't require its edge to reach 3:1. A person should confirm the text is enough.`), measurements };
+        : { ...na(`${text} The control has visible text that identifies it, so ${criterionRef("1.4.11")} doesn't require its edge to reach 3:1. A person should confirm the text is enough.`), measurements };
     }
     return best.ratio >= 3 ? pass(`${text} The control has no text, so its icon or edge identifies it.`, { measurements }) : fail(`${text} The control has no text, so its icon or edge has to identify it.`, { measurements });
   },
@@ -135,7 +136,7 @@ const FOCUS_CONTRAST = {
       if (now.border && !same(now.border, rest.border)) found.push({ label: "border", ratio: contrastOver(now.border.color, now.outside), width: now.border.width });
       if (found.length) {
         const best = found.reduce((a, c) => (c.ratio > a.ratio ? c : a));
-        const thin = best.width < 2 ? ` It's ${best.width}px thick, and WCAG 2.4.13 (level AAA) asks for at least 2px.` : "";
+        const thin = best.width < 2 ? ` It's ${best.width}px thick, and ${criterionRef("2.4.13")} asks for at least 2px.` : "";
         const detail = `The ${best.label} has ${formatRatio(best.ratio)} against what's next to it (needs 3:1).${thin}`;
         const measurements = found.map((f) => ({ indicator: f.label, ratio: floor2(f.ratio), widthPx: f.width }));
         return best.ratio >= 3 ? pass(detail, { method: "computed-style", measurements }) : fail(detail, { method: "computed-style", measurements });

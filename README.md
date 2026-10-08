@@ -135,4 +135,12 @@ The run exits 1 when the check trips. Needs-review items never trip it.
 
 ## License.
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). The WCAG data below has its own terms.
+
+## Attribution.
+
+automatica11y reads WCAG criterion numbers, names, levels, and versions from the W3C's published JSON, [wcag.json](https://www.w3.org/WAI/WCAG22/wcag.json). The package ships that file in `src/data/` without changes.
+
+Source: [Web Content Accessibility Guidelines (WCAG) 2.2](https://www.w3.org/TR/WCAG22/), W3C. The JSON is used under the [terms in the W3C WCAG repository](https://github.com/w3c/wcag/blob/main/11ty/json/README.md): the source is credited with a link, and the content isn't changed. See also the [W3C Document License](https://www.w3.org/copyright/document-license/) and [W3C Intellectual Rights](https://www.w3.org/copyright/intellectual-rights/). The links that reports build to each criterion are added by automatica11y and aren't part of the W3C data.
+
+Every report repeats this credit in its closing section. To refresh the data, run `npm run update-wcag`.

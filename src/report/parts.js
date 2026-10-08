@@ -1,3 +1,4 @@
+import { criterion, criterionName, wcagAttribution } from "../wcag/index.js";
 import { cap, num, plural } from "../text.js";
 
 /** Markdown helpers. */
@@ -63,7 +64,7 @@ export function findingBlock(finding, { showImpact, showToolkit }) {
     showImpact && finding.impact ? `impact: ${finding.impact}` : null,
     showToolkit && finding.toolkitLevel != null ? `IBM Toolkit level ${finding.toolkitLevel}` : null,
     finding.kind ? `kind: ${finding.kind}` : null,
-    finding.wcag.length ? `WCAG ${finding.wcag.join(", ")}` : null,
+    finding.wcag.length ? `WCAG ${finding.wcag.map(criterionName).join(", ")}` : null,
     plural(finding.nodeCount, "element"),
   ].filter(Boolean);
   const lines = [`- ${code(finding.ruleId)} (${meta.join("; ")}). ${esc(finding.help)} [Rule help](${finding.helpUrl})`];
@@ -205,16 +206,25 @@ export function interactionsSection(result, nested) {
   const lines = [`${nested ? "#####" : "####"} Interactions.`, "", "Each check ran on a fresh page, using only the trigger and root hooks and ARIA roles. A check that couldn't finish is an error, which counts as a gap and never as a pass.", ""];
   lines.push("| Check | Result | WCAG | Detail |", "| --- | --- | --- | --- |");
   for (const check of result.checks) {
-    lines.push(`| ${code(check.name)} | ${check.result} | ${cell((check.criteria ?? []).join(", ") || "-")} | ${cell(check.detail)}${check.method ? cell(` (method: ${check.method})`) : ""} |`);
+    lines.push(`| ${code(check.name)} | ${check.result} | ${cell(criteriaCell(check.criteria))} | ${cell(check.detail)}${check.method ? cell(` (method: ${check.method})`) : ""} |`);
   }
   return lines.join("\n");
+}
+
+/** Criterion numbers as links to the W3C text, with the W3C's name for each. Unknown numbers stay plain. */
+export function criteriaCell(list) {
+  if (!list || list.length === 0) return "-";
+  return list.map((num) => {
+    const c = criterion(num);
+    return c ? `[${c.num} ${c.handle}](${c.url})` : num;
+  }).join(", ");
 }
 
 export function computedSection(result, nested) {
   const lines = [`${nested ? "#####" : "####"} Computed checks.`, "", "automatica11y's own measurements from resolved styles in the browser, with the numbers WCAG gives. They're reported on their own and never added to the axe-core or IBM Equal Access counts. A check that can't reduce the page to colors (a gradient, an image, transparency) is undetermined, which counts as a gap and never as a pass.", ""];
   lines.push("| Check | Result | WCAG | Detail |", "| --- | --- | --- | --- |");
   for (const check of result.checks) {
-    lines.push(`| ${code(check.name)} | ${check.result} | ${cell((check.criteria ?? []).join(", ") || "-")} | ${cell(check.detail)}${check.method ? cell(` (method: ${check.method})`) : ""} |`);
+    lines.push(`| ${code(check.name)} | ${check.result} | ${cell(criteriaCell(check.criteria))} | ${cell(check.detail)}${check.method ? cell(` (method: ${check.method})`) : ""} |`);
   }
   return lines.join("\n");
 }
@@ -341,6 +351,8 @@ export function reportFooter(results) {
     "A person has to check what these tools can't judge: whether alt text is meaningful, whether link and heading text make sense in context, cognitive load, reading order and focus order in real use, and how real screen readers behave.",
     "",
     "Contrast results depend on how the browser rendered the page, so the browser version is recorded above.",
+    "",
+    `**WCAG data.** ${wcagAttribution()}`,
     "",
   );
   return lines;
