@@ -160,7 +160,26 @@ test("doctor: exits 0 with a browser, 3 without", { skip: !onUnix }, async () =>
   assert.match(missing.stderr, /npx playwright-core install --only-shell chromium/);
 });
 
-test("init-skill is gone: the skill is a file in the repository, not a command", async () => {
+test("guide prints the guidance files, and each topic prints its own file", async () => {
+  const { readFileSync } = await import("node:fs");
+  const file = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+  assert.equal((await run(["guide"])).stdout, file("AGENTS.md"), "no topic prints AGENTS.md");
+  assert.equal((await run(["guide", "agents"])).stdout, file("AGENTS.md"));
+  assert.equal((await run(["guide", "skill"])).stdout, file("skills/automatica11y-runner/SKILL.md"));
+  assert.equal((await run(["guide", "fixtures"])).stdout, file("skills/automatica11y-runner/references/fixtures.md"));
+  const result = await run(["guide", "skill"]);
+  assert.equal(result.code, 0);
+  assert.equal(result.stderr, "");
+});
+
+test("guide rejects an unknown topic, lists the topics, and has help", async () => {
+  await usageError(["guide", "nope"], /Unknown guide topic "nope"[\s\S]*agents[\s\S]*skill[\s\S]*fixtures/);
+  await usageError(["guide", "skill", "fixtures"], /guide takes one topic/);
+  await usageError(["guide", "--bogus"], /bogus/);
+  const help = await run(["guide", "--help"]);
+  assert.equal(help.code, 0);
+  assert.match(help.stdout, /Usage: automatica11y guide \[agents\|skill\|fixtures\]/);
+  assert.match((await run(["--help"])).stdout, /automatica11y guide/);
   await usageError(["init-skill"], /Unknown command "init-skill"/);
 });
 

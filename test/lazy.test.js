@@ -30,9 +30,9 @@ test("the trace helper sees imports", () => {
   assert.ok(seen.some((s) => s.includes("cli.js")), "expected the trace to include cli.js");
 });
 
-test("--version, doctor, and audit --plan never import heavy packages", () => {
+test("--version, doctor, guide, and audit --plan never import heavy packages", () => {
   const env = { AUTOMATICA11Y_CHROME: process.platform === "win32" ? "" : makeFakeBrowser() };
-  for (const args of [["--version"], ["doctor"], ["audit", "./page.html", "--plan"], ["compare", "./page.html", "react", "--plan"]]) {
+  for (const args of [["--version"], ["doctor"], ["guide"], ["guide", "skill"], ["audit", "./page.html", "--plan"], ["compare", "./page.html", "react", "--plan"]]) {
     const heavy = trace(args, env).filter((s) => HEAVY.test(s));
     assert.deepEqual(heavy, [], `${args.join(" ")} imported ${heavy.join(", ")}`);
   }

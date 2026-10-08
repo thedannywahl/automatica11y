@@ -266,6 +266,7 @@ export function usage(command) {
   automatica11y compare <target> <target> [<target>...] [options]
   automatica11y run --plan <plan.json>
   automatica11y doctor
+  automatica11y guide [agents|skill|fixtures]
   automatica11y --version
 
 Run a command with --help for its options.

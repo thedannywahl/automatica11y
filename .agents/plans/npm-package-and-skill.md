@@ -42,12 +42,14 @@ Users invoke it through any AI agent that loads `SKILL.md` and can run shell com
 automatica11y/
   package.json
   README.md
-  AGENTS.md                     # always-on bridge: points agents to the skill, and tells contributors how to work here
+  AGENTS.md                     # ships in the package: points agents to the runner, and tells contributors how to work here
   skills/
-    automatica11y/              # one self-contained folder, named for the skill
-      SKILL.md                  # the agent skill; plain Markdown, not tied to one agent
+    automatica11y/              # the bootstrap skill: one small file people copy
+      SKILL.md                  # advertises the tool, then sends the agent to `automatica11y guide`
+    automatica11y-runner/       # the full steps, shipped with the tool so they match its version
+      SKILL.md
       references/
-        fixtures.md             # loaded only when the skill needs fixture examples
+        fixtures.md             # printed by `automatica11y guide fixtures`
   bin/
     automatica11y.js            # calls main() in src/cli.js
   src/
@@ -57,6 +59,7 @@ automatica11y/
       audit.js
       compare.js
       doctor.js
+      guide.js                  # prints AGENTS.md, the runner skill, or the fixture guide
     plan/
       classify.js               # target classification
       build-plan.js             # classify every target, assemble plan.json
@@ -97,6 +100,7 @@ automatica11y audit <target> [options]
 automatica11y compare <target> <target> [<target>...] [options]
 automatica11y run --plan <plan.json>
 automatica11y doctor
+automatica11y guide [agents|skill|fixtures]
 automatica11y --version
 ```
 
@@ -438,16 +442,28 @@ Each milestone ends with working tests.
 **M8. Skill and packaging.**
 - `SKILL.md` and its references, version handshake, README, a tarball install smoke test, then publish.
 
-## 11. SKILL.md outline.
+## 11. The skills.
 
-1. **Frontmatter.** Name `automatica11y`. Description triggers: accessibility audit, WCAG check, compare accessibility, "how accessible is." The file names no agent, vendor, or agent-specific path, and says it needs an agent that can run shell commands and read and write files.
-2. **Version handshake.** State the version series the skill works with (`0.2.x` while the major version is 0, the major version after that). The file is static, so bump the series by hand when the tool's series changes. A test fails if they disagree. Run `npx automatica11y@latest --version` and stop with a clear message on a mismatch.
+There are two skills and one bridge file. All three ship in the package, and `automatica11y guide` prints them, so any agent that can run `npx` can read them.
+
+**The bootstrap, `skills/automatica11y/SKILL.md`.** One small file a user can copy anywhere.
+
+1. **Frontmatter.** Name `automatica11y`, a `compatibility` line, and a description with the triggers: accessibility audit, WCAG check, compare accessibility, "how accessible is." It's the advertisement.
+2. **Body, under 40 lines.** Check `node --version` is 20 or newer. Run `npx --yes automatica11y@latest guide`, read all of it, and follow it. Stop and tell the user if commands can't run. Say "no automated violations found," never "accessible."
+3. **No version.** It names no version series, so it never goes stale.
+
+**`AGENTS.md`.** For agents that read it but don't load skills, and for the bootstrap's `guide` call. It tells an agent to run `guide skill`, and `guide fixtures` when it needs to write a fixture. A second section tells contributors in a checkout what to run.
+
+**The runner, `skills/automatica11y-runner/SKILL.md`,** with `references/fixtures.md`. The full steps:
+
+1. **Frontmatter.** Name `automatica11y-runner`. The description says it's for when the bootstrap or `AGENTS.md` sends the agent there. The file names no agent, vendor, or agent-specific path.
+2. **Version handshake.** State the version series the runner works with (`0.2.x` while the major version is 0, the major version after that). Bump it by hand when the series changes. A test fails if it disagrees with `package.json`. Run `npx automatica11y@latest --version` and stop on a mismatch, with the command that prints the matching steps.
 3. **Preflight.** Run `automatica11y doctor`. Relay fixes.
 4. **Translate the prompt.** Map free-form text to `audit` or `compare`. Show the command. If a target is ambiguous, ask one question.
-5. **Fixtures for npm targets.** Run once. Review the candidate mapping the run writes, author compound-component fixtures where needed, and run again. The runner finds fixtures in `fixtures/<target id>/`, or takes `--mapping`.
+5. **Fixtures for npm targets.** Run once. Review the candidate mapping the run writes, author compound-component fixtures where needed, and run again. The contract and one example per flavor sit in the file, and the guide has the rest.
 6. **Run and read.** Execute, then read `results.json`.
 7. **Write the report.** Follow section 9. Use the structure of the CLI's `report.md` output.
-8. **Limits.** Short list of what to say when a target is unsupported, not applicable, or not testable.
+8. **Limits.** What to say when a target is unsupported, not applicable, or not testable.
 9. **No setup logic.** Anything about installing or configuring tools belongs in the CLI.
 
 ## 12. Testing plan.

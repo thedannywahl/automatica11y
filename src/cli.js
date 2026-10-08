@@ -2,6 +2,7 @@ import { auditCommand } from "./commands/audit.js";
 import { compareCommand } from "./commands/compare.js";
 import { EXIT, UsageError, runSavedPlan, usage } from "./commands/common.js";
 import { doctorCommand } from "./commands/doctor.js";
+import { guideCommand } from "./commands/guide.js";
 import { ownVersion } from "./env/versions.js";
 
 const COMMANDS = {
@@ -9,6 +10,7 @@ const COMMANDS = {
   compare: compareCommand,
   run: runSavedPlan,
   doctor: doctorCommand,
+  guide: guideCommand,
 };
 
 /**
