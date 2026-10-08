@@ -15,7 +15,7 @@ import {
   targetSection,
 } from "./parts.js";
 
-const TIER_ORDER = ["rules", "interactions", "vsr"];
+const TIER_ORDER = ["rules", "interactions", "computed", "vsr"];
 
 /** The archetype rows: component archetypes in a fixed order, then whole pages, then Storybook stories. */
 function archetypeKeys(results) {
@@ -104,6 +104,16 @@ function interactionsCell(configs) {
   return parts.filter(Boolean).join("; ");
 }
 
+function computedCell(configs) {
+  const checks = configs.flatMap((c) => c.tiers.computed?.checks ?? []);
+  if (checks.length === 0) return configs.map((c) => c.tiers.computed?.status).find(Boolean) ?? "-";
+  const failed = checks.filter((c) => c.result === "fail").map((c) => code(c.name));
+  const unknown = checks.filter((c) => c.result === "undetermined").length;
+  const errors = checks.filter((c) => c.result === "error").length;
+  const parts = [failed.length ? `failed: ${failed.slice(0, 3).join(", ")}${failed.length > 3 ? `, and ${num(failed.length - 3)} more` : ""}` : "no failures", unknown ? `${num(unknown)} undetermined` : null, errors ? plural(errors, "error") : null];
+  return parts.filter(Boolean).join("; ");
+}
+
 function vsrCell(configs) {
   const walks = configs.map((c) => c.tiers.vsr).filter((v) => v?.status === "ran");
   if (walks.length === 0) return configs.map((c) => c.tiers.vsr?.status).find(Boolean) ?? "-";
@@ -113,17 +123,17 @@ function vsrCell(configs) {
 }
 
 function findingsTable(plan, results, key) {
-  const head = ["Target", "Configuration", ENGINE_NAMES.axe, ENGINE_NAMES.ibm, "Interactions", "Virtual screen reader (simulated)"];
+  const head = ["Target", "Configuration", ENGINE_NAMES.axe, ENGINE_NAMES.ibm, "Interactions", "Computed checks", "Virtual screen reader (simulated)"];
   const lines = [`| ${head.join(" | ")} |`, `| ${head.map(() => "---").join(" | ")} |`];
   for (const target of results.targets) {
     const planTarget = plan.targets.find((t) => t.id === target.id);
     for (const row of rowsFor(planTarget, target, key)) {
       if (row.note) {
-        lines.push(`| ${cell(target.id)} | ${cell(row.label)} | ${cell(row.note)} | | | |`);
+        lines.push(`| ${cell(target.id)} | ${cell(row.label)} | ${cell(row.note)} | | | | |`);
         continue;
       }
       const c = row.configs;
-      lines.push(`| ${cell(target.id)} | ${cell(row.label)} | ${cell(ruleCell(c, "axe"))} | ${cell(ruleCell(c, "ibm"))} | ${cell(interactionsCell(c))} | ${cell(vsrCell(c))} |`);
+      lines.push(`| ${cell(target.id)} | ${cell(row.label)} | ${cell(ruleCell(c, "axe"))} | ${cell(ruleCell(c, "ibm"))} | ${cell(interactionsCell(c))} | ${cell(computedCell(c))} | ${cell(vsrCell(c))} |`);
     }
   }
   return lines;

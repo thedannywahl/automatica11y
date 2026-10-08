@@ -59,7 +59,7 @@ Options you can set, and nothing else:
 | `--wcag 2.0\|2.1\|2.2` | `2.2` | The user names a WCAG version. |
 | `--level A\|AA\|AAA` | `AA` | The user names a level. IBM Equal Access has no AAA rules, so it runs its AA rules and says so. |
 | `--engine axe,ibm` | both | The user wants one rule engine. |
-| `--tiers rules,interactions,vsr` | all three | The user wants fewer checks. |
+| `--tiers rules,interactions,computed,vsr` | all four | The user wants fewer checks. |
 | `--archetypes a,b` | all | The user cares about some components. Choose from button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, chart. |
 | `--lib-a11y on,off` | both | Only for libraries with opt-in accessibility features. |
 | `--mapping <file>` | none | You wrote or edited a mapping file. |
@@ -163,7 +163,8 @@ Write the narrative from `results.json`. Never write from memory, and never repe
 9. Treat a gap, a not-testable result, an error, or a failed target as a finding. It never counts as a pass.
 10. If the comparison mixes component targets and page targets, open with a warning that the evidence isn't equivalent.
 11. Label every rule finding with its engine. Report axe-core and IBM Equal Access separately. Never add their counts together. Impact is axe-core's own label. IBM Toolkit level is IBM's staged adoption scale (1 is essential, high-impact requirements). Don't convert one into the other.
-12. End with a plain method note. Say what automated tools can't catch: whether alt text is meaningful, whether link and heading text make sense in context, cognitive load, real focus and reading order in use, and how real screen readers behave. Those need a person.
+12. Report computed checks (contrast measured from resolved styles) in their own section. Give the measured ratio next to the ratio the criterion needs, and name the state or the method. Never add them to axe-core or IBM counts. Treat `undetermined` as a gap, never as a pass. When a control has visible text and a pale edge, the result is `not-applicable`, because the text identifies the control. Say that, and leave it for a person to confirm.
+13. End with a plain method note. Say what automated tools can't catch: whether alt text is meaningful, whether link and heading text make sense in context, cognitive load, real focus and reading order in use, and how real screen readers behave. Those need a person.
 
 Use the structure of `report.md`. Quote selectors and rule IDs exactly as `results.json` has them.
 
@@ -175,7 +176,8 @@ Say these things plainly. Don't soften them, and don't fill in a result.
 - **Not applicable.** The package has no rendering surface, such as a utility library. There's nothing to test.
 - **Not testable.** The content is a canvas with no alternative, or sits in a closed shadow root. The rule engines can't see it, so the result is untested, not clean. The virtual screen reader also can't read open shadow roots.
 - **Gap.** The archetype has no usable fixture or no matching export. Say what the archetype needs.
-- **Error.** An interaction check couldn't finish. It's untested, not failed.
+- **Error.** An interaction or computed check couldn't finish. It's untested, not failed.
+- **Undetermined.** A computed check found a gradient, an image, or transparency behind the control, so it can't reduce the page to one color. It's untested, not clean.
 - **Failed target.** The target can't be reached, isn't a web page, or couldn't be built. The tool records it as failed with a reason. Tell the user which target failed, using the reason from `results.json`. Don't retry with guesses. If an npm target failed with a network or install error (for example `ETARGET`), you may run the same command once more. If it fails again, report it. If every target failed (exit code 4), stop. If others ran, report them, and list the failed target as a gap in coverage.
 
 ## 8. Stay out of setup

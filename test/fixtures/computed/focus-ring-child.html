@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>focus-ring-child</title>
+<style>
+body { margin: 24px; background: #fff; font: 16px/1.4 sans-serif; }
+button, input { font: inherit; min-width: 44px; min-height: 44px; }
+button { position: relative; color: #1a1a1a; background: #fff; border: 2px solid #1a1a1a; margin: 12px; } button:focus-visible { outline: none; } .ring { display: none; position: absolute; inset: -8px; border: 3px solid #0033cc; pointer-events: none; } button:focus-visible .ring { display: block; }
+</style>
+</head>
+<body>
+<button type="button" data-a11y-trigger data-a11y-root>Save<span class="ring"></span></button>
+</body>
+</html>

@@ -8,7 +8,7 @@ export const sentence = (text) => String(text).replace(/\.+$/, "");
 /** Escape angle brackets so rule text like <input> doesn't turn into HTML. */
 export const esc = (text) => String(text ?? "").replace(/</g, "\\<");
 export const ENGINE_NAMES = { axe: "axe-core", ibm: "IBM Equal Access" };
-export const TIER_NAMES = { rules: "Rules", interactions: "Interactions", vsr: "Virtual screen reader" };
+export const TIER_NAMES = { rules: "Rules", interactions: "Interactions", computed: "Computed checks", vsr: "Virtual screen reader" };
 
 export function toolLines(tools) {
   return Object.entries(tools)
@@ -27,6 +27,11 @@ export function engineCell(summary, engine) {
 export function tierCell(target, tier) {
   const counts = target.summary?.interactions;
   const vsr = target.summary?.vsr;
+  const measured = target.summary?.computed;
+  if (tier === "computed" && measured) {
+    const parts = [measured.fail && `${num(measured.fail)} failed`, measured.undetermined && `${num(measured.undetermined)} undetermined`, measured.error && plural(measured.error, "error"), measured.pass && `${num(measured.pass)} passed`, measured.notApplicable && `${num(measured.notApplicable)} not applicable`].filter(Boolean);
+    return `ran, ${parts.join(", ")}`;
+  }
   if (tier === "vsr" && vsr) return `ran (simulated), ${vsr.flagged ? `${num(vsr.flagged)} flagged` : "none flagged"}`;
   if (tier === "interactions" && counts) {
     const parts = [counts.fail && plural(counts.fail, "failed", "failed"), counts.error && plural(counts.error, "error"), counts.pass && `${num(counts.pass)} passed`, counts.notApplicable && `${num(counts.notApplicable)} not applicable`].filter(Boolean);
@@ -205,6 +210,15 @@ export function interactionsSection(result, nested) {
   return lines.join("\n");
 }
 
+export function computedSection(result, nested) {
+  const lines = [`${nested ? "#####" : "####"} Computed checks.`, "", "automatica11y's own measurements from resolved styles in the browser, with the numbers WCAG gives. They're reported on their own and never added to the axe-core or IBM Equal Access counts. A check that can't reduce the page to colors (a gradient, an image, transparency) is undetermined, which counts as a gap and never as a pass.", ""];
+  lines.push("| Check | Result | WCAG | Detail |", "| --- | --- | --- | --- |");
+  for (const check of result.checks) {
+    lines.push(`| ${code(check.name)} | ${check.result} | ${cell((check.criteria ?? []).join(", ") || "-")} | ${cell(check.detail)}${check.method ? cell(` (method: ${check.method})`) : ""} |`);
+  }
+  return lines.join("\n");
+}
+
 /** " (open state, library accessibility on)" for a config. */
 export function configLabel(config) {
   const parts = [config.state ? `${config.state} state` : null, config.libA11y && config.libA11y !== "n/a" ? `library accessibility ${config.libA11y}` : null].filter(Boolean);
@@ -250,6 +264,8 @@ export function targetSection(planTarget, target) {
           lines.push(vsrSection(result, name !== "page"), "");
         } else if (tier === "interactions" && result.status === "ran") {
           lines.push(interactionsSection(result, name !== "page"), "");
+        } else if (tier === "computed" && result.status === "ran") {
+          lines.push(computedSection(result, name !== "page"), "");
         } else if (result.status !== "ran") {
           skipped.add(`${TIER_NAMES[tier] ?? tier}: ${sentence(result.reason ?? result.status)}.`);
         }

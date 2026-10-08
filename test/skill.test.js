@@ -104,6 +104,10 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(runner, /A target that failed while others ran still exits 0, and the failure is in the results/);
   assert.match(runner, /order axe-core findings by impact and IBM findings by Toolkit level/);
   assert.match(runner, /you may run the same command once more\. If it fails again, report it/);
+  // The computed tier.
+  assert.match(runner, /Report computed checks \(contrast measured from resolved styles\) in their own section/);
+  assert.match(runner, /Treat `undetermined` as a gap, never as a pass/);
+  assert.match(runner, /\*\*Undetermined\.\*\* A computed check found a gradient, an image, or transparency/);
   // A request with no target is asked about, and a target that fails is named with its reason.
   assert.match(runner, /If the user doesn't name a target to test \(a URL, a Storybook, a local page or site, or an npm package\), ask for one before you run anything/);
   assert.match(runner, /Tell the user which target failed, using the reason from `results\.json`/);

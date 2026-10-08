@@ -71,7 +71,7 @@ test("--plan writes a valid plan.json and exits 0", async () => {
   const plan = parsePlan(JSON.parse(readFileSync(join(cwd, "a11y-report", "plan.json"), "utf8")));
   assert.equal(plan.command, "compare");
   assert.deepEqual(plan.options.fail, { mode: "all", axe: "serious", ibm: 1 });
-  assert.deepEqual(plan.options.tiers, ["rules", "interactions", "vsr"]);
+  assert.deepEqual(plan.options.tiers, ["rules", "interactions", "computed", "vsr"]);
   assert.deepEqual(plan.options.engines, ["axe", "ibm"]);
   assert.deepEqual(plan.options.libA11y, ["on", "off"]);
   assert.equal(plan.options.maxStories, 200);

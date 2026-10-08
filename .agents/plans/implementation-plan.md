@@ -413,3 +413,15 @@ Result with both fixes: MUI Button and InstUI Button each ran all three tiers wi
 
 - The harness page now wraps the fixture in `<main>`, so IBM no longer reports `aria_content_in_landmark` on a lone component. The virtual screen reader log gains `main` and `end of main`.
 - `focus-indicator-visible` reads resolved styles for the trigger, its `::before` and `::after`, and up to 30 inner elements. Only changes a person could see count (outline with width and color, box shadow, border, colors, text decoration, an element that renders only on focus). An outline offset alone doesn't count. The screenshot comparison stays as the fallback. MUI draws its ring on a child ripple, so it used to fall through to the screenshot.
+
+### Computed tier.
+
+A fourth tier, `computed`, measures resolved styles in the browser for each archetype fixture's trigger. It reports on its own and never joins the axe-core or IBM counts.
+
+- `text-contrast-by-state` (1.4.3): text contrast at rest, hover, keyboard focus, and pressed, against the composited backdrop, with the large-text threshold.
+- `boundary-contrast` (1.4.11): the strongest of the control's border, fill, or icon against its surroundings. A field must reach 3:1. A control with visible text that falls short is `not-applicable`, since the text identifies it. An icon-only control must reach 3:1.
+- `focus-indicator-contrast` (1.4.11, with thickness noted against 2.4.13 at level AAA): exact colors and width for an outline, ring, or border on the control, and a pixel comparison for anything else (a ripple, a background change). The pass bar for pixels is that the pixels reaching 3:1 cover at least the control's perimeter.
+- A gradient, image, blend mode, or partly transparent ancestor gives `undetermined`, which counts as a gap.
+- Earlier wording said "2.4.11" for focus contrast. 2.4.11 in WCAG 2.2 is Focus Not Obscured. Focus contrast is 1.4.11, and 2.4.13 is Focus Appearance.
+
+First real run (MUI Button and InstUI Button): MUI's text dips below 4.5:1 in hover and pressed, and its focus ripple changes pixels by only 1.5:1. InstUI's focus outline is 4.55:1.

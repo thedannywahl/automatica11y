@@ -44,10 +44,11 @@ A local `.html` file is served over `http://localhost`, never `file://`. A stati
 
 ## What it checks.
 
-Three tiers run by default. Use `--tiers` to pick fewer.
+Four tiers run by default. Use `--tiers` to pick fewer.
 
 - **Rules.** axe-core and IBM Equal Access run side by side. They overlap, and each catches things the other misses. Their findings are reported separately and never added together. axe-core reports an impact (`minor` to `critical`). IBM reports its Toolkit level, a staged adoption scale where level 1 is essential, high-impact requirements. The two scales aren't comparable.
 - **Interactions.** Keyboard and focus checks for nine archetypes: button, link, dialog, menu, tabs, combobox, form-field, accordion, and tooltip. Each check runs on a fresh page.
+- **Computed checks.** automatica11y's own measurements from resolved styles in the browser, for the trigger of each archetype fixture: text contrast in rest, hover, keyboard focus, and pressed states (1.4.3), the contrast of the control's edge, fill, or icon (1.4.11), and the contrast and thickness of the focus indicator (1.4.11, and 2.4.13 at level AAA). A page that uses a gradient, an image, or transparency behind the control can't be reduced to one color, so that check reports `undetermined`, which is a gap and never a pass. These results are reported on their own and never added to the rule engines' counts.
 - **Virtual screen reader.** The announcements a simulated screen reader makes, recorded as data. The output is simulated. It isn't a real screen reader, and real ones announce things differently.
 
 Every result says what it ran, or why it didn't. A gap, a failure, or a result that can't be tested is a finding. It never counts as a pass.
@@ -59,7 +60,7 @@ Every result says what it ran, or why it didn't. A gap, a failure, or a result t
 | `--wcag 2.0\|2.1\|2.2` | `2.2` | The WCAG version. |
 | `--level A\|AA\|AAA` | `AA` | The conformance level. IBM Equal Access has no AAA rules, so it runs its AA rules and says so. |
 | `--engine axe,ibm` | both | Which rule engines run. |
-| `--tiers rules,interactions,vsr` | all | Which tiers run. |
+| `--tiers rules,interactions,computed,vsr` | all | Which tiers run. |
 | `--archetypes a,b` | all | Limit npm and Storybook targets to these archetypes. |
 | `--lib-a11y on,off` | both | For libraries with opt-in accessibility features. See [the fixture guide](skills/automatica11y-runner/references/fixtures.md). |
 | `--mapping <file>` | none | A mapping file for npm targets. |

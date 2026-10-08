@@ -7,7 +7,7 @@ const CHECK_TIMEOUT_MS = 25_000;
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 /** Everything a check can do, bound to one fresh page. */
-function makeContext(page) {
+export function makeContext(page) {
   const ctx = {
     page,
     trigger: page.locator("[data-a11y-trigger]").first(),
@@ -66,11 +66,11 @@ function makeContext(page) {
 }
 
 /** Run one check on a fresh page, so no check inherits another's state. */
-export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_MS } = {}) {
+export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_MS, kits = [installHelpers] } = {}) {
   /** @type {Awaited<ReturnType<typeof openPage>> | null} */
   let opened = null;
   try {
-    opened = await openPage(browser, url, { beforeGoto: (page) => page.addInitScript(installHelpers), waitUntil: "load" });
+    opened = await openPage(browser, url, { beforeGoto: async (page) => { for (const kit of kits) await page.addInitScript(kit); }, waitUntil: "load" });
     const ctx = makeContext(opened.page);
     await ctx.trigger.waitFor({ state: "attached", timeout: 3000 });
     const outcome = await Promise.race([

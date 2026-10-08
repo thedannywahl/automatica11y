@@ -2,7 +2,7 @@ import * as v from "valibot";
 
 export const WCAG_VERSIONS = ["2.0", "2.1", "2.2"];
 export const LEVELS = ["A", "AA", "AAA"];
-export const TIERS = ["rules", "interactions", "vsr"];
+export const TIERS = ["rules", "interactions", "computed", "vsr"];
 export const ENGINES = ["axe", "ibm"];
 export const LIB_A11Y = ["on", "off"];
 export const IMPACTS = ["minor", "moderate", "serious", "critical"];
@@ -136,10 +136,12 @@ const TierResultSchema = v.object({
       v.object({
         name: v.string(),
         criteria: v.optional(v.array(v.string())),
-        result: v.picklist(["pass", "fail", "not-applicable", "error"]),
+        result: v.picklist(["pass", "fail", "undetermined", "not-applicable", "error"]),
         detail: v.string(),
         /** How the focus indicator was detected: computed-style or screenshot. */
         method: v.optional(v.string()),
+        /** The numbers behind a computed check, for example contrast ratios by state. */
+        measurements: v.optional(v.array(v.record(v.string(), v.unknown()))),
       }),
     ),
   ),
@@ -218,6 +220,7 @@ export const TargetResultSchema = v.object({
     gaps: v.array(v.string()),
     notTestable: v.array(v.string()),
     interactions: v.optional(v.object({ pass: v.number(), fail: v.number(), notApplicable: v.number(), error: v.number() })),
+    computed: v.optional(v.object({ pass: v.number(), fail: v.number(), undetermined: v.number(), notApplicable: v.number(), error: v.number() })),
     vsr: v.optional(v.object({ walks: v.number(), flagged: v.number() })),
   }),
   warnings: v.array(v.string()),

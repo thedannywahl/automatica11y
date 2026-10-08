@@ -134,7 +134,7 @@ Rules:
 |---|---|---|
 | `--wcag` | `2.2` | WCAG version. |
 | `--level` | `AA` | `A`, `AA`, or `AAA`. Maps to axe tag sets and to the IBM WCAG ruleset and checkpoint levels. |
-| `--tiers` | `rules,interactions,vsr` | Which tiers to run. |
+| `--tiers` | `rules,interactions,computed,vsr` | Which tiers to run. |
 | `--engine` | `axe,ibm` | Which rule engines the `rules` tier runs: `axe`, `ibm`, or `axe,ibm`. |
 | `--archetypes` | all | Limit npm and Storybook targets to named archetypes. |
 | `--lib-a11y` | `on,off` | Test library accessibility options on, off, or both. |
