@@ -31,25 +31,31 @@ after(async () => {
 const P = "pass";
 const F = "fail";
 const N = "not-applicable";
-const NAMES = ["reduced-motion-respected", "dark-mode-contrast", "forced-colors-focus-visible", "reflow-at-320px", "text-spacing-no-clipping"];
+const NAMES = ["reduced-motion-respected", "dark-mode-contrast", "more-contrast-respected", "less-contrast-stays-readable", "reduced-transparency-respected", "forced-colors-focus-visible", "reflow-at-320px", "text-spacing-no-clipping"];
 
-/** One page per row: the archetype, then the result of each check in order. */
+/** One page per row: the archetype, then the result of each check in order (motion, dark mode, more contrast, less contrast, transparency, forced colors, reflow, spacing). */
 /** @type {Record<string, [string, string[]]>} */
 const PAGES = {
-  base: ["button", [N, N, P, P, P]],
-  "motion-good": ["button", [P, N, P, P, P]],
-  "motion-bad": ["button", [F, N, P, P, P]],
-  "motion-fade-only": ["button", [P, N, P, P, P]],
-  "motion-transition-bad": ["button", [F, N, P, P, P]],
-  "motion-transition-good": ["button", [P, N, P, P, P]],
-  "scheme-good": ["button", [N, P, P, P, P]],
-  "scheme-bad": ["button", [N, F, P, P, P]],
-  "forced-bad": ["button", [N, N, F, P, P]],
-  "reflow-bad": ["button", [N, N, P, F, P]],
-  "reflow-scroll-ok": ["button", [N, N, P, P, P]],
-  "spacing-bad": ["button", [N, N, P, P, F]],
-  "spacing-sr-only": ["button", [N, N, P, P, P]],
-  "whole-page": ["page", [N, N, P, P, P]],
+  base: ["button", [N, N, N, N, N, P, P, P]],
+  "motion-good": ["button", [P, N, N, N, N, P, P, P]],
+  "motion-bad": ["button", [F, N, N, N, N, P, P, P]],
+  "motion-fade-only": ["button", [P, N, N, N, N, P, P, P]],
+  "motion-transition-bad": ["button", [F, N, N, N, N, P, P, P]],
+  "motion-transition-good": ["button", [P, N, N, N, N, P, P, P]],
+  "scheme-good": ["button", [N, P, N, N, N, P, P, P]],
+  "scheme-bad": ["button", [N, F, N, N, N, P, P, P]],
+  "forced-bad": ["button", [N, N, N, N, N, F, P, P]],
+  "reflow-bad": ["button", [N, N, N, N, N, P, F, P]],
+  "reflow-scroll-ok": ["button", [N, N, N, N, N, P, P, P]],
+  "spacing-bad": ["button", [N, N, N, N, N, P, P, F]],
+  "spacing-sr-only": ["button", [N, N, N, N, N, P, P, P]],
+  "contrast-more-good": ["button", [N, N, P, N, N, P, P, P]],
+  "contrast-more-worse": ["button", [N, N, F, N, N, P, P, P]],
+  "contrast-less-good": ["button", [N, N, N, P, N, P, P, P]],
+  "contrast-less-bad": ["button", [N, N, N, F, N, P, P, P]],
+  "transparency-good": ["button", [N, N, N, N, P, P, P, P]],
+  "transparency-bad": ["button", [N, N, N, N, F, P, P, P]],
+  "whole-page": ["page", [N, N, N, N, N, P, P, P]],
 };
 
 for (const [page, [archetype, expected]] of Object.entries(PAGES)) {
@@ -65,7 +71,7 @@ for (const [page, [archetype, expected]] of Object.entries(PAGES)) {
   });
 }
 
-test("a failure says what moved, which element overflowed, or what got clipped", { skip, timeout: 120_000 }, async () => {
+test("a failure says what moved, which element overflowed, or what got clipped", { skip, timeout: 400_000 }, async () => {
   const detail = async (page, name) => (await runConditions(session.browser, `${server.origin}/${page}.html`, "button")).checks.find((c) => c.name === name).detail;
   assert.match(await detail("motion-bad", "reduced-motion-respected"), /still moves or repeats: slide on div\.spin \(moves transform; 1000ms, repeats forever\)/);
   assert.match(await detail("motion-transition-bad", "reduced-motion-respected"), /transform on div#panel/);
@@ -73,9 +79,12 @@ test("a failure says what moved, which element overflowed, or what got clipped",
   assert.match(await detail("spacing-bad", "text-spacing-no-clipping"), /span\.tag \("Status ok"\)/);
   assert.match(await detail("forced-bad", "forced-colors-focus-visible"), /box-shadow or a background color disappears in forced colors/);
   assert.match(await detail("scheme-bad", "dark-mode-contrast"), /In dark mode, .* text fall/);
+  assert.match(await detail("contrast-more-worse", "more-contrast-respected"), /With prefers-contrast: more, one piece of text falls below the minimum contrast\. The worst is "Plain text for the page\." at 2\.8\d:1/);
+  assert.match(await detail("contrast-less-bad", "less-contrast-stays-readable"), /With prefers-contrast: less, .* "Plain text for the page\." at 1\.9\d:1/);
+  assert.match(await detail("transparency-bad", "reduced-transparency-respected"), /div\.card \(60% opaque, backdrop-filter blur\(8px\)\)/);
 });
 
-test("the checks record the numbers they measured", { skip, timeout: 120_000 }, async () => {
+test("the checks record the numbers they measured", { skip, timeout: 200_000 }, async () => {
   const { checks } = await runConditions(session.browser, `${server.origin}/motion-bad.html`, "button");
   const motion = checks.find((c) => c.name === "reduced-motion-respected");
   assert.deepEqual(motion.measurements.map((m) => [m.setting, m.moveOrRepeat]), [["no preference", 1], ["reduce", 1]]);
@@ -101,9 +110,9 @@ test("a page target runs the conditions tier, and the report and results carry i
   assert.equal(tiers.computed.status, "not-applicable");
   assert.equal(tiers.conditions.status, "ran");
   assert.deepEqual(tiers.conditions.checks.map((c) => c.name), NAMES);
-  assert.deepEqual(target.summary.conditions, { pass: 3, fail: 1, undetermined: 0, notApplicable: 1, error: 0 });
+  assert.deepEqual(target.summary.conditions, { pass: 3, fail: 1, undetermined: 0, notApplicable: 4, error: 0 });
   assert.match(run.report, /### Conditions\./, "the coverage matrix has a Conditions table");
-  assert.match(run.report, /\| motion-bad\.html \| not-applicable \| ran, one failed, three passed, one not applicable \|/);
+  assert.match(run.report, /\| motion-bad\.html \| not-applicable \| ran, one failed, three passed, four not applicable \|/);
   assert.match(run.report, /#### Conditions\./, "the details have a Conditions section");
   assert.match(run.report, /\| `reduced-motion-respected` \| fail \| \[2\.3\.3 Animation from Interactions\]\(https:\/\/www\.w3\.org\/TR\/WCAG22\/#animation-from-interactions\), \[2\.2\.2 Pause, Stop, Hide\]/);
   assert.match(run.report, /never added to the axe-core or IBM Equal Access counts/);

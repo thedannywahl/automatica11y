@@ -98,6 +98,28 @@ export function installConditions() {
       style.textContent = "* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }";
       document.head.append(style);
     },
+    /**
+     * Surfaces that carry text over a see-through background or a blur: a background color that isn't fully opaque,
+     * or a backdrop filter. Empty overlays are left out, because they hold no text for the effect to get in the way of.
+     */
+    translucentSurfaces() {
+      const toRgba = window.__a11yMeasure?.rgba;
+      const found = [];
+      for (const el of allElements()) {
+        const box = el.getBoundingClientRect();
+        if (box.width === 0 || box.height === 0) continue;
+        const style = getComputedStyle(el);
+        if (style.visibility === "hidden" || style.display === "none") continue;
+        const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim()) || el.matches("input, textarea, select, button");
+        const holdsText = own || (el.textContent ?? "").trim().length > 0;
+        if (!holdsText) continue;
+        const color = toRgba ? toRgba(style.backgroundColor) : null;
+        const seeThrough = Boolean(color) && color[3] > 0 && color[3] < 1;
+        const blur = style.backdropFilter && style.backdropFilter !== "none" ? style.backdropFilter : "";
+        if (seeThrough || blur) found.push({ element: describe(el), background: seeThrough ? `${Math.round(color[3] * 100)}% opaque` : "", backdropFilter: blur });
+      }
+      return found;
+    },
     /** Elements that opt out of forced colors, and so keep their own colors. */
     forcedColorOptOuts() {
       return allElements().filter((el) => getComputedStyle(el).forcedColorAdjust === "none").slice(0, 20).map(describe);

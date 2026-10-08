@@ -222,7 +222,7 @@ export function criteriaCell(list) {
 
 const MEASURED_INTRO = {
   computed: ["Computed checks", "automatica11y's own measurements from resolved styles in the browser, with the numbers WCAG gives. They're reported on their own and never added to the axe-core or IBM Equal Access counts. A check that can't reduce the page to colors (a gradient, an image, transparency) is undetermined, which counts as a gap and never as a pass."],
-  conditions: ["Conditions", "automatica11y's own checks of how the page holds up under a user's settings (reduced motion, dark mode, forced colors) and environment (a 320 pixel window, wider text spacing). Each check opens fresh copies of the page. They're reported on their own and never added to the axe-core or IBM Equal Access counts. A check that can't tell is undetermined, which counts as a gap and never as a pass. \"Not applicable\" means the page doesn't use the feature, which isn't a failure."],
+  conditions: ["Conditions", "automatica11y's own checks of how the page holds up under a user's settings (reduced motion, dark mode, more or less contrast, reduced transparency, forced colors) and environment (a 320 pixel window, wider text spacing). Each check opens fresh copies of the page. They're reported on their own and never added to the axe-core or IBM Equal Access counts. A check that can't tell is undetermined, which counts as a gap and never as a pass. \"Not applicable\" means the page doesn't use the feature, which isn't a failure."],
 };
 
 export function measuredSection(tier, result, nested) {

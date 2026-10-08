@@ -5,6 +5,7 @@
  * It's a gap and never a pass.
  * These are automatica11y's own measurements. They're reported on their own and never added to axe-core or IBM counts.
  */
+import { num } from "../../text.js";
 import { criterionRef } from "../../wcag/index.js";
 import { contrastOver, contrastRatio, formatRatio, ringIsEnough, textThreshold } from "./color.js";
 
@@ -67,7 +68,7 @@ const TEXT_CONTRAST = {
     const skipped = reached === null ? " The trigger couldn't be reached with Tab, so keyboard focus wasn't measured." : "";
     if (failed.length) {
       const f = failed[0];
-      const more = failed.length > 1 ? ` ${failed.length - 1} more measurement${failed.length > 2 ? "s are" : " is"} below its threshold.` : "";
+      const more = failed.length > 1 ? ` ${num(failed.length - 1)} more measurement${failed.length > 2 ? "s are" : " is"} below its threshold.` : "";
       return fail(`In ${f.state}, "${f.text}" has ${formatRatio(f.ratio)} against its background and needs ${f.required}:1.${more} ${list}${skipped}`, { measurements });
     }
     if (unknown.length || reached === null) {
@@ -150,7 +151,7 @@ const FOCUS_CONTRAST = {
     if (px.changed === 0) return na("Nothing visible changed on focus, so there's no indicator to measure. The interactions tier reports that as a failure.");
     const perimeter = 2 * (rest.box.width + rest.box.height);
     const measurements = [{ changedPixels: px.changed, pixelsAtLeast3to1: px.strong, strongestChange: floor2(px.max), perimeterPixels: Math.round(perimeter) }];
-    const detail = `${px.strong} of ${px.changed} changed pixels reach 3:1 against their unfocused color, and the strongest change is ${formatRatio(px.max)}. Enough to count is about half the control's perimeter, ${Math.round(perimeter / 2)}.`;
+    const detail = `${num(px.strong)} of ${num(px.changed)} changed pixels reach 3:1 against their unfocused color, and the strongest change is ${formatRatio(px.max)}. Enough to count is about half the control's perimeter, ${Math.round(perimeter / 2)}.`;
     return ringIsEnough(px.strong, perimeter) ? pass(detail, { method: "pixels", measurements }) : fail(detail, { method: "pixels", measurements });
   },
 };

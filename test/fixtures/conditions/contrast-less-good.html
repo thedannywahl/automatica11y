@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>contrast-less-good</title>
+<style>
+body { margin: 16px; font: 16px/1.4 sans-serif; background: #fff; color: #222; }
+button { font: inherit; min-width: 44px; min-height: 44px; }
+p { color: #222; } @media (prefers-contrast: less) { p { color: #666; } }
+</style>
+</head>
+<body>
+<button type="button" id="go" data-a11y-trigger data-a11y-root>Save</button><p>Plain text for the page.</p>
+</body>
+</html>

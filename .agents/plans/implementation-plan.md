@@ -462,3 +462,13 @@ A fifth tier, `conditions`, opens fresh copies of a page (or a fixture) under a 
 - `text-spacing-no-clipping` (1.4.12): the spacing the criterion names, injected with `!important`, then every element that hides overflow is checked for newly cut-off text.
 
 Screenshots that decide whether a page "looks the same" freeze animations first. A running spinner had made every animated page look as if it adapted to dark mode. The pixel bar for a focus indicator is now half the control's perimeter (it was the full perimeter, which a thin anti-aliased default ring missed by five pixels). `openPage` now takes `colorScheme` and `reducedMotion`, and a check can open variants of its own page.
+
+### prefers-contrast and prefers-reduced-transparency.
+
+Three more conditions checks. Chrome 155 supports both media features. `prefers-contrast: more` goes through Playwright's context option for `more` only, so `openPage` sends `prefers-contrast` and `prefers-reduced-transparency` through the DevTools protocol (`Emulation.setEmulatedMedia`), which also covers `less`. That call replaces any other emulated feature, so a variant page sets one preference at a time.
+
+- `more-contrast-respected` (1.4.3, 1.4.6): if frozen screenshots differ under "more", all text is measured. It fails when any text falls below its minimum, or when the lowest contrast drops compared with no preference. A pass also says whether enhanced contrast (7:1, or 4.5:1 for large text) is reached.
+- `less-contrast-stays-readable` (1.4.3): if the page softens under "less", text must stay above the minimum.
+- `reduced-transparency-respected` (1.4.3, 1.4.11): surfaces holding text with a background that isn't fully opaque, or a backdrop filter, must be opaque under "reduce". Empty overlays aren't counted. The preference isn't a success criterion, and the detail says so.
+
+A page that doesn't respond to a preference is not applicable, never a failure. Counts in the new messages go through `num()` and `plural()` from `src/text.js`, so one through nine are spelled out.

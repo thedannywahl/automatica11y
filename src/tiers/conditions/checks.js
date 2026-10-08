@@ -5,6 +5,7 @@
  * These are automatica11y's own measurements. They're reported on their own and never added to axe-core or IBM counts.
  */
 import { contrastOver, formatRatio, ringIsEnough, textThreshold } from "../computed/color.js";
+import { num, plural } from "../../text.js";
 import { criterionRef } from "../../wcag/index.js";
 
 const pass = (detail, extra = {}) => ({ result: "pass", detail, ...extra });
@@ -14,7 +15,6 @@ const undetermined = (detail, extra = {}) => ({ result: "undetermined", detail, 
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 const floor2 = (n) => Math.floor(n * 100) / 100;
-const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const list = (items, max = 3) => `${items.slice(0, max).join("; ")}${items.length > max ? `; and ${items.length - max} more` : ""}`;
 
 /** Archetypes whose trigger shouldn't be pressed to reach their resting state: a link would navigate, and a chart has nothing to press. */
@@ -70,7 +70,7 @@ const reducedMotion = (archetype) => ({
     const still = reduced.filter(concerning);
     if (still.length) {
       const before = normal.filter(concerning).length;
-      return fail(`With prefers-reduced-motion: reduce, ${plural(still.length, "animation")} still ${still.length === 1 ? "moves or repeats" : "move or repeat"}: ${list(still.map(describeAnimation))}. Without the preference, ${before} did.`, { measurements });
+      return fail(`With prefers-reduced-motion: reduce, ${plural(still.length, "animation")} still ${still.length === 1 ? "moves or repeats" : "move or repeat"}: ${list(still.map(describeAnimation))}. Without the preference, ${num(before)} did.`, { measurements });
     }
     const had = normal.filter(concerning);
     return had.length
@@ -108,6 +108,91 @@ const colorScheme = () => ({
   },
 });
 
+// ---- prefers-contrast ----
+
+/** Measure the contrast of every piece of text on a page. */
+async function measureAllText(ctx) {
+  const parts = (await ctx.page.evaluate(() => window.__a11yMeasure.text("all"))) ?? [];
+  const rows = [];
+  const unknown = [];
+  for (const part of parts) {
+    if (part.undetermined || !part.backdrop) unknown.push(`"${part.text}" can't be measured because ${part.undetermined ?? "its background couldn't be read"}.`);
+    else rows.push({ text: part.text, ratio: contrastOver(part.color, part.backdrop), required: textThreshold(part.size, part.weight) });
+  }
+  return { rows, unknown };
+}
+
+/** The piece of text with the least room above its threshold, and how many fall below it. */
+function tightest(rows) {
+  const sorted = [...rows].sort((a, b) => a.ratio / a.required - b.ratio / b.required);
+  return { worst: sorted[0], below: sorted.filter((r) => r.ratio < r.required) };
+}
+
+/** Screenshots with animations frozen, so a running spinner can't make a page look different. */
+async function lookOf(ctx) {
+  await ctx.settle(300);
+  return ctx.page.screenshot({ animations: "disabled" });
+}
+
+const moreContrast = () => ({
+  name: "more-contrast-respected",
+  criteria: ["1.4.3", "1.4.6"],
+  async run(ctx) {
+    const normal = await lookOf(ctx);
+    const more = await ctx.variant({ contrast: "more" });
+    if (normal.equals(await lookOf(more))) return na("The page looks the same under prefers-contrast: more, so it doesn't respond to it. A page isn't required to. Nothing was checked.");
+    const base = await measureAllText(ctx);
+    const now = await measureAllText(more);
+    if (now.rows.length === 0) return undetermined("The page changes under prefers-contrast: more, but no visible text was measurable.");
+    const { worst, below } = tightest(now.rows);
+    const lowestNow = Math.min(...now.rows.map((r) => r.ratio));
+    const lowestBase = base.rows.length ? Math.min(...base.rows.map((r) => r.ratio)) : null;
+    const enhanced = now.rows.every((r) => r.ratio >= (r.required === 3 ? 4.5 : 7));
+    const measurements = [{ lowestWithoutPreference: lowestBase === null ? null : floor2(lowestBase), lowestWithMore: floor2(lowestNow), belowMinimum: below.length, reachesEnhanced: enhanced }];
+    if (below.length) return fail(`With prefers-contrast: more, ${plural(below.length, "piece")} of text fall${below.length === 1 ? "s" : ""} below the minimum contrast. The worst is "${worst.text}" at ${formatRatio(worst.ratio)} (needs ${worst.required}:1).`, { measurements });
+    if (lowestBase !== null && lowestNow < lowestBase - 0.01) return fail(`With prefers-contrast: more, the lowest text contrast dropped from ${formatRatio(lowestBase)} to ${formatRatio(lowestNow)}, so the page asked for more contrast and got less.`, { measurements });
+    if (now.unknown.length) return undetermined(`All ${plural(now.rows.length, "measured piece")} of text pass with more contrast. ${plural(now.unknown.length, "other piece")} can't be reduced to one color. ${now.unknown[0]}`, { measurements });
+    return pass(`The page responds to prefers-contrast: more. The lowest text contrast is ${formatRatio(lowestNow)}${lowestBase === null ? "" : `, from ${formatRatio(lowestBase)} without the preference`}. Enhanced contrast (${criterionRef("1.4.6")}, 7:1 for normal text) is ${enhanced ? "reached" : "not reached for every piece of text"}.`, { measurements });
+  },
+});
+
+const lessContrast = () => ({
+  name: "less-contrast-stays-readable",
+  criteria: ["1.4.3"],
+  async run(ctx) {
+    const normal = await lookOf(ctx);
+    const less = await ctx.variant({ contrast: "less" });
+    if (normal.equals(await lookOf(less))) return na("The page looks the same under prefers-contrast: less, so it doesn't respond to it. A page isn't required to. Nothing was checked.");
+    const now = await measureAllText(less);
+    if (now.rows.length === 0) return undetermined("The page changes under prefers-contrast: less, but no visible text was measurable.");
+    const { worst, below } = tightest(now.rows);
+    const measurements = [{ measured: now.rows.length, belowMinimum: below.length, lowest: floor2(Math.min(...now.rows.map((r) => r.ratio))) }];
+    if (below.length) return fail(`With prefers-contrast: less, ${plural(below.length, "piece")} of text fall${below.length === 1 ? "s" : ""} below the minimum contrast. The worst is "${worst.text}" at ${formatRatio(worst.ratio)} (needs ${worst.required}:1). Softer contrast is fine only while text stays readable.`, { measurements });
+    if (now.unknown.length) return undetermined(`All ${plural(now.rows.length, "measured piece")} of text stay above the minimum. ${plural(now.unknown.length, "other piece")} can't be reduced to one color. ${now.unknown[0]}`, { measurements });
+    return pass(`The page softens its contrast under prefers-contrast: less, and all ${plural(now.rows.length, "piece")} of text measured stay above the minimum. The lowest is ${formatRatio(Math.min(...now.rows.map((r) => r.ratio)))}.`, { measurements });
+  },
+});
+
+// ---- prefers-reduced-transparency ----
+
+const reducedTransparency = () => ({
+  name: "reduced-transparency-respected",
+  // The preference isn't a success criterion. See-through backgrounds make text contrast unpredictable, which 1.4.3 and 1.4.11 care about.
+  criteria: ["1.4.3", "1.4.11"],
+  async run(ctx) {
+    await ctx.settle(300);
+    const normal = await ctx.page.evaluate(() => window.__a11yConditions.translucentSurfaces());
+    const reduced = await ctx.variant({ reducedTransparency: true });
+    await reduced.settle(300);
+    const still = await reduced.page.evaluate(() => window.__a11yConditions.translucentSurfaces());
+    const measurements = [{ translucentWithoutPreference: normal.length, translucentWithReduce: still.length }];
+    if (normal.length === 0 && still.length === 0) return na("No surface that holds text is see-through (no translucent background and no backdrop filter), so there's nothing to reduce. Empty overlays aren't counted.");
+    const name = (s) => `${s.element} (${[s.background, s.backdropFilter && `backdrop-filter ${s.backdropFilter}`].filter(Boolean).join(", ")})`;
+    if (still.length) return fail(`With prefers-reduced-transparency: reduce, ${plural(still.length, "surface")} holding text stay${still.length === 1 ? "s" : ""} see-through: ${list(still.map(name))}. Without the preference there were ${num(normal.length)}. This preference isn't a WCAG requirement. It matters because see-through backgrounds make text contrast unpredictable.`, { measurements });
+    return pass(`${plural(normal.length, "see-through surface")} holding text (${list(normal.map(name), 2)}) become opaque when transparency is reduced.`, { measurements });
+  },
+});
+
 // ---- forced colors ----
 
 const forcedColors = (archetype) => ({
@@ -140,8 +225,8 @@ const forcedColors = (archetype) => ({
     const measurements = [{ changedPixels: px.changed, pixelsAtLeast3to1: px.strong, perimeterPixels: Math.round(perimeter), forcedColorOptOuts: optOuts.length }];
     if (px.changed === 0) return fail(`With forced colors on, nothing visible changed when the control took focus. A focus ring drawn with box-shadow or a background color disappears in forced colors. Use an outline.${note}`, { measurements, method: "pixels" });
     return ringIsEnough(px.strong, perimeter)
-      ? pass(`With forced colors on, the focus indicator is visible: ${px.strong} of ${px.changed} changed pixels reach 3:1 against their unfocused color.${note}`, { measurements, method: "pixels" })
-      : fail(`With forced colors on, the focus indicator is weak: only ${px.strong} of ${px.changed} changed pixels reach 3:1 against their unfocused color, and enough to count is about half the control's perimeter, ${Math.round(perimeter / 2)}.${note}`, { measurements, method: "pixels" });
+      ? pass(`With forced colors on, the focus indicator is visible: ${num(px.strong)} of ${num(px.changed)} changed pixels reach 3:1 against their unfocused color.${note}`, { measurements, method: "pixels" })
+      : fail(`With forced colors on, the focus indicator is weak: only ${num(px.strong)} of ${num(px.changed)} changed pixels reach 3:1 against their unfocused color, and enough to count is about half the control's perimeter, ${Math.round(perimeter / 2)}.${note}`, { measurements, method: "pixels" });
   },
 });
 
@@ -188,11 +273,11 @@ const textSpacing = (archetype) => ({
     const settings = "line height 1.5, letter spacing 0.12em, word spacing 0.16em, and paragraph spacing 2em";
     return cut.length
       ? fail(`With ${settings}, text in ${plural(cut.length, "element")} gets cut off: ${list(cut)}. Overlapping text isn't checked.`, { measurements })
-      : pass(`With ${settings}, no element cut off its text (${after.length} elements checked). Overlapping text isn't checked.`, { measurements });
+      : pass(`With ${settings}, no element cut off its text (${num(after.length)} elements checked). Overlapping text isn't checked.`, { measurements });
   },
 });
 
 /** The conditions checks for an archetype. Whole pages use the name "page". */
 export function conditionChecksFor(archetype) {
-  return [reducedMotion(archetype), colorScheme(), forcedColors(archetype), reflow(archetype), textSpacing(archetype)];
+  return [reducedMotion(archetype), colorScheme(), moreContrast(), lessContrast(), reducedTransparency(), forcedColors(archetype), reflow(archetype), textSpacing(archetype)];
 }
