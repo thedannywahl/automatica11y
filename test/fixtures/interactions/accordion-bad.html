@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>accordion-bad</title>
+<style>button { min-width: 44px; min-height: 44px; } [hidden] { display: none !important; } </style>
+</head>
+<body>
+<h3><div id="h" role="button" tabindex="0" aria-controls="panel" data-a11y-trigger style="border:1px solid #333;padding:8px;display:inline-block">Details</div></h3>
+<div id="panel" data-a11y-root hidden><p>More information.</p></div>
+<script>
+
+const h = document.getElementById("h"), panel = document.getElementById("panel");
+h.onclick = () => { panel.hidden = !panel.hidden; };
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>tabs-good</title>
+<style>button { min-width: 44px; min-height: 44px; } [hidden] { display: none !important; } </style>
+</head>
+<body>
+<div role="tablist" aria-label="Sections">
+<button role="tab" id="t1" type="button" aria-selected="true" aria-controls="p1" data-a11y-trigger data-a11y-root tabindex="0">One</button>
+<button role="tab" id="t2" type="button" aria-selected="false" aria-controls="p2" tabindex="-1">Two</button>
+<button role="tab" id="t3" type="button" aria-selected="false" aria-controls="p3" tabindex="-1">Three</button>
+</div>
+<div role="tabpanel" id="p1" aria-labelledby="t1">First</div>
+<div role="tabpanel" id="p2" aria-labelledby="t2" hidden>Second</div>
+<div role="tabpanel" id="p3" aria-labelledby="t3" hidden>Third</div>
+<script>
+
+const tabs = [...document.querySelectorAll("[role=tab]")];
+function select(tab) { tabs.forEach((t) => { const on = t === tab; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; document.getElementById(t.getAttribute("aria-controls")).hidden = !on; }); tab.focus(); }
+tabs.forEach((t) => t.addEventListener("click", () => select(t)));
+document.querySelector("[role=tablist]").addEventListener("keydown", (e) => {
+  const i = tabs.indexOf(document.activeElement);
+  if (e.key === "ArrowRight") select(tabs[(i + 1) % tabs.length]);
+  if (e.key === "ArrowLeft") select(tabs[(i - 1 + tabs.length) % tabs.length]);
+  if (e.key === "Home") select(tabs[0]);
+  if (e.key === "End") select(tabs[tabs.length - 1]);
+});
+</script>
+</body>
+</html>

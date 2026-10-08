@@ -1,0 +1,1 @@
+{ "name": "fake-wc", "version": "1.0.0", "type": "module", "main": "index.js", "customElements": "custom-elements.json" }

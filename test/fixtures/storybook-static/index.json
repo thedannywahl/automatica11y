@@ -1,0 +1,13 @@
+{
+  "v": 5,
+  "entries": {
+    "button--primary": { "id": "button--primary", "title": "Button", "name": "Primary", "type": "story", "tags": ["autodocs"], "importPath": "./Button.stories.js" },
+    "button--icon-only": { "id": "button--icon-only", "title": "Button", "name": "Icon only", "type": "story", "tags": [], "importPath": "./Button.stories.js" },
+    "button--docs": { "id": "button--docs", "title": "Button", "name": "Docs", "type": "docs", "tags": ["autodocs"], "importPath": "./Button.stories.js" },
+    "form-input--labeled": { "id": "form-input--labeled", "title": "Form/Input", "name": "Labeled", "type": "story", "tags": [], "importPath": "./Input.stories.js" },
+    "form-input--unlabeled": { "id": "form-input--unlabeled", "title": "Form/Input", "name": "Unlabeled", "type": "story", "tags": [], "importPath": "./Input.stories.js" },
+    "dialog-modal--open": { "id": "dialog-modal--open", "title": "Dialog/Modal", "name": "Open", "type": "story", "tags": [], "importPath": "./Modal.stories.js" },
+    "tabs--default": { "id": "tabs--default", "title": "Tabs", "name": "Default", "type": "story", "tags": [], "importPath": "./Tabs.stories.js" },
+    "broken--throws": { "id": "broken--throws", "title": "Broken", "name": "Throws", "type": "story", "tags": [], "importPath": "./Broken.stories.js" }
+  }
+}

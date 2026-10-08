@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dialog with a name</title>
+</head>
+<body>
+<main>
+<h1>Dialog with a name</h1>
+<button id="open" type="button" style="min-width:44px;min-height:44px">Open</button>
+<div id="dlg" role="dialog" aria-labelledby="t" hidden>
+<h2 id="t">Confirm</h2>
+<p>Are you sure?</p>
+<button id="close" type="button" style="min-width:44px;min-height:44px">Close</button>
+</div>
+<script>
+open.onclick = () => { dlg.hidden = false; close.focus(); };
+close.onclick = () => { dlg.hidden = true; open.focus(); };
+</script>
+</main>
+</body>
+</html>
