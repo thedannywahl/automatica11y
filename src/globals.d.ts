@@ -2,6 +2,7 @@
 interface Window {
   __a11y: any;
   __a11yMeasure: any;
+  __a11yConditions: any;
   __vsr: any;
   __a11yClicks: number;
   __a11yLast: any;

@@ -105,6 +105,8 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(runner, /order axe-core findings by impact and IBM findings by Toolkit level/);
   assert.match(runner, /you may run the same command once more\. If it fails again, report it/);
   assert.match(runner, /use the number and name exactly as `report\.md` prints them, and keep its "WCAG data" credit to the W3C/);
+  assert.match(runner, /Report conditions checks \(reduced motion, dark mode, forced colors, reflow at 320 pixels, text spacing\) in their own section/);
+  assert.match(runner, /"Not applicable" means the page doesn't use the feature/);
   // The computed tier.
   assert.match(runner, /Report computed checks \(contrast measured from resolved styles\) in their own section/);
   assert.match(runner, /Treat `undetermined` as a gap, never as a pass/);

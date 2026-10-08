@@ -34,6 +34,14 @@ export function textThreshold(sizePx, weight) {
   return sizePx >= 24 || (sizePx >= 18.66 && Number(weight) >= 700) ? 3 : 4.5;
 }
 
+/**
+ * Is a focus change big enough to count as an indicator? Pixels that change by 3:1 or more have to cover at least half the
+ * control's perimeter: a ring or underline a person can't miss, even with anti-aliased edges and rounded corners.
+ */
+export function ringIsEnough(strongPixels, perimeter) {
+  return strongPixels >= perimeter / 2;
+}
+
 /** "4.52:1". The ratio is cut down, never rounded up, so 2.999 never reads as 3. */
 export function formatRatio(ratio) {
   return `${(Math.floor(ratio * 100) / 100).toFixed(2).replace(/\.?0+$/, "")}:1`;

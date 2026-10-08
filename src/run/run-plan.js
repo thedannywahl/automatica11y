@@ -7,6 +7,7 @@ import { serveStatic } from "../harness/static-serve.js";
 import { listStories, readIndex, selectStories, storyUrl, waitForStory } from "../harness/storybook.js";
 import { closedShadowHosts, notTestableEntries } from "../harness/shadow.js";
 import { COMPUTED_NOT_APPLICABLE_FOR_PAGES } from "../tiers/computed/index.js";
+import { CONDITIONS_NOT_APPLICABLE_FOR_STORIES, runConditions } from "../tiers/conditions/index.js";
 import { NOT_APPLICABLE_FOR_PAGES } from "../tiers/interactions/index.js";
 import { failedVsr, runVsr } from "../tiers/vsr.js";
 import { openPage } from "../harness/url.js";
@@ -40,6 +41,9 @@ async function auditPage(browser, url, planTarget, plan, extraWarnings) {
         tiers.interactions = NOT_APPLICABLE_FOR_PAGES;
       } else if (tier === "computed") {
         tiers.computed = COMPUTED_NOT_APPLICABLE_FOR_PAGES;
+      } else if (tier === "conditions") {
+        // Each check opens its own copies of the page, so this runs while the first page is still open.
+        tiers.conditions = await runConditions(browser, url, "page");
       } else {
         tiers.vsr = await runVsr(opened.page, { scope: "body" }).catch(failedVsr);
       }
@@ -76,7 +80,9 @@ async function auditStory(browser, base, story, plan) {
             ? NOT_APPLICABLE_FOR_PAGES
             : tier === "computed"
               ? COMPUTED_NOT_APPLICABLE_FOR_PAGES
-              : await runVsr(opened.page, { scope: "#storybook-root" }).catch(failedVsr);
+              : tier === "conditions"
+                ? CONDITIONS_NOT_APPLICABLE_FOR_STORIES
+                : await runVsr(opened.page, { scope: "#storybook-root" }).catch(failedVsr);
     }
     const hidden = notTestableEntries(await closedShadowHosts(opened.page));
     return { id: story.id, ok: true, archetype: { status: "ran", configs: [{ libA11y: "n/a", tiers }] }, hidden };

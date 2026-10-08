@@ -237,7 +237,7 @@ export async function runSavedPlan(argv, io) {
 const FLAGS = `Options:
   --wcag <2.0|2.1|2.2>        WCAG version. Default 2.2.
   --level <A|AA|AAA>          Conformance level. Default AA.
-  --tiers <list>              rules, interactions, computed, vsr. Default all four.
+  --tiers <list>              rules, interactions, computed, conditions, vsr. Default all five.
   --engine <list>             axe, ibm. Default both.
   --archetypes <list>         Limit npm and Storybook targets to these archetypes.
   --lib-a11y <list>           on, off. Default both.

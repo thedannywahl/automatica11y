@@ -66,13 +66,25 @@ export function makeContext(page) {
 }
 
 /** Run one check on a fresh page, so no check inherits another's state. */
-export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_MS, kits = [installHelpers] } = {}) {
+export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_MS, kits = [installHelpers], needsTrigger = true, waitUntil = /** @type {"load" | "networkidle"} */ ("load") } = {}) {
   /** @type {Awaited<ReturnType<typeof openPage>> | null} */
   let opened = null;
+  /** @type {Array<Awaited<ReturnType<typeof openPage>>>} */
+  const variants = [];
+  const beforeGoto = async (page) => { for (const kit of kits) await page.addInitScript(kit); };
   try {
-    opened = await openPage(browser, url, { beforeGoto: async (page) => { for (const kit of kits) await page.addInitScript(kit); }, waitUntil: "load" });
+    opened = await openPage(browser, url, { beforeGoto, waitUntil });
     const ctx = makeContext(opened.page);
-    await ctx.trigger.waitFor({ state: "attached", timeout: 3000 });
+    /**
+     * Open the same page again with other browser settings (reduced motion, dark mode, a narrow window), and get a context for it.
+     * It closes with the check.
+     */
+    ctx.variant = async (options) => {
+      const other = await openPage(browser, url, { ...options, beforeGoto, waitUntil });
+      variants.push(other);
+      return makeContext(other.page);
+    };
+    if (needsTrigger) await ctx.trigger.waitFor({ state: "attached", timeout: 3000 });
     const outcome = await Promise.race([
       check.run(ctx),
       new Promise((_, reject) => setTimeout(() => reject(new Error(`The check took longer than ${timeoutMs / 1000} seconds.`)), timeoutMs)),
@@ -82,6 +94,7 @@ export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_
     return { name: check.name, criteria: check.criteria, result: "error", detail: `The check couldn't finish: ${(error instanceof Error ? error.message : String(error)).split("\n")[0]}` };
   } finally {
     await opened?.close();
+    for (const other of variants) await other.close();
   }
 }
 

@@ -2,7 +2,7 @@ import * as v from "valibot";
 
 export const WCAG_VERSIONS = ["2.0", "2.1", "2.2"];
 export const LEVELS = ["A", "AA", "AAA"];
-export const TIERS = ["rules", "interactions", "computed", "vsr"];
+export const TIERS = ["rules", "interactions", "computed", "conditions", "vsr"];
 export const ENGINES = ["axe", "ibm"];
 export const LIB_A11Y = ["on", "off"];
 export const IMPACTS = ["minor", "moderate", "serious", "critical"];
@@ -223,6 +223,7 @@ export const TargetResultSchema = v.object({
     notTestable: v.array(v.string()),
     interactions: v.optional(v.object({ pass: v.number(), fail: v.number(), notApplicable: v.number(), error: v.number() })),
     computed: v.optional(v.object({ pass: v.number(), fail: v.number(), undetermined: v.number(), notApplicable: v.number(), error: v.number() })),
+    conditions: v.optional(v.object({ pass: v.number(), fail: v.number(), undetermined: v.number(), notApplicable: v.number(), error: v.number() })),
     vsr: v.optional(v.object({ walks: v.number(), flagged: v.number() })),
   }),
   warnings: v.array(v.string()),

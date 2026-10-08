@@ -12,6 +12,7 @@ import { openPage } from "../harness/url.js";
 import { candidateMapping, findAuthoredFixture } from "../plan/mapping.js";
 import { ARCHETYPES } from "../schema.js";
 import { runComputed } from "../tiers/computed/index.js";
+import { runConditions } from "../tiers/conditions/index.js";
 import { runInteractions } from "../tiers/interactions/index.js";
 import { runRules } from "../tiers/rules/index.js";
 import { failedVsr, runVsr } from "../tiers/vsr.js";
@@ -128,7 +129,7 @@ async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
       /** @type {Record<string, any>} */
       const tiers = {};
       for (const tier of plan.options.tiers) {
-        if (tier === "interactions" || tier === "computed") continue;
+        if (tier === "interactions" || tier === "computed" || tier === "conditions") continue;
         if (tier === "vsr") tiers.vsr = failure ? { status: "skipped", simulated: true, reason: failure } : await runVsr(opened.page, { scope: "body", state }).catch(failedVsr);
         else if (failure) tiers.rules = { status: "failed", reason: failure, engines: Object.fromEntries(plan.options.engines.map((e) => [e, { status: "failed", reason: failure }])) };
         else {
@@ -142,6 +143,7 @@ async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
     // The checks open their own fresh pages, so run them after this page's rules results are in.
     if (plan.options.tiers.includes("interactions")) configs[0].tiers.interactions = await runInteractions(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, archetype);
     if (plan.options.tiers.includes("computed")) configs[0].tiers.computed = await runComputed(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, archetype);
+    if (plan.options.tiers.includes("conditions")) configs[0].tiers.conditions = await runConditions(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, archetype);
     return { configs, hidden };
   } finally {
     await opened.close();

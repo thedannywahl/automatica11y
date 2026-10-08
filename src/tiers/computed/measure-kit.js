@@ -99,8 +99,9 @@ export function installMeasure() {
      * visually hidden (a one-pixel screen reader copy) is left out. `key` lets a later call tell which text is new.
      */
     text(scope) {
+      const wholePage = scope === "page" || scope === "all";
       const el = trigger();
-      if (!el) return null;
+      if (!el && !wholePage) return null;
       const parts = [];
       const seen = new Set();
       const consider = (textNode, label, own) => {
@@ -126,14 +127,14 @@ export function installMeasure() {
         });
       };
       const walk = (root) => {
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, scope === "page" ? { acceptNode: (n) => (n.parentElement?.closest("script, style, noscript, [data-a11y-trigger]") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) } : undefined);
-        for (let node = walker.nextNode(); node && parts.length < 30; node = walker.nextNode()) {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, wholePage ? { acceptNode: (n) => (n.parentElement?.closest(scope === "all" ? "script, style, noscript" : "script, style, noscript, [data-a11y-trigger]") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) } : undefined);
+        for (let node = walker.nextNode(); node && parts.length < (scope === "all" ? 300 : 30); node = walker.nextNode()) {
           if (node.nodeValue && node.nodeValue.trim() && node.parentElement) consider(node, node.nodeValue);
         }
-        if (scope === "page") for (const host of root.querySelectorAll("*")) if (host.shadowRoot) walk(host.shadowRoot);
+        if (wholePage) for (const host of root.querySelectorAll("*")) if (host.shadowRoot) walk(host.shadowRoot);
       };
-      walk(scope === "page" ? document.body : el);
-      if (scope !== "page" && el.matches("input, textarea, select") && "value" in el && String(el.value).trim()) {
+      walk(wholePage ? document.body : el);
+      if (!wholePage && el.matches("input, textarea, select") && "value" in el && String(el.value).trim()) {
         consider(el, String(el.value), el);
       }
       return parts;

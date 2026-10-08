@@ -9,7 +9,7 @@ export const sentence = (text) => String(text).replace(/\.+$/, "");
 /** Escape angle brackets so rule text like <input> doesn't turn into HTML. */
 export const esc = (text) => String(text ?? "").replace(/</g, "\\<");
 export const ENGINE_NAMES = { axe: "axe-core", ibm: "IBM Equal Access" };
-export const TIER_NAMES = { rules: "Rules", interactions: "Interactions", computed: "Computed checks", vsr: "Virtual screen reader" };
+export const TIER_NAMES = { rules: "Rules", interactions: "Interactions", computed: "Computed checks", conditions: "Conditions", vsr: "Virtual screen reader" };
 
 export function toolLines(tools) {
   return Object.entries(tools)
@@ -28,8 +28,8 @@ export function engineCell(summary, engine) {
 export function tierCell(target, tier) {
   const counts = target.summary?.interactions;
   const vsr = target.summary?.vsr;
-  const measured = target.summary?.computed;
-  if (tier === "computed" && measured) {
+  const measured = target.summary?.[tier];
+  if ((tier === "computed" || tier === "conditions") && measured) {
     const parts = [measured.fail && `${num(measured.fail)} failed`, measured.undetermined && `${num(measured.undetermined)} undetermined`, measured.error && plural(measured.error, "error"), measured.pass && `${num(measured.pass)} passed`, measured.notApplicable && `${num(measured.notApplicable)} not applicable`].filter(Boolean);
     return `ran, ${parts.join(", ")}`;
   }
@@ -220,8 +220,14 @@ export function criteriaCell(list) {
   }).join(", ");
 }
 
-export function computedSection(result, nested) {
-  const lines = [`${nested ? "#####" : "####"} Computed checks.`, "", "automatica11y's own measurements from resolved styles in the browser, with the numbers WCAG gives. They're reported on their own and never added to the axe-core or IBM Equal Access counts. A check that can't reduce the page to colors (a gradient, an image, transparency) is undetermined, which counts as a gap and never as a pass.", ""];
+const MEASURED_INTRO = {
+  computed: ["Computed checks", "automatica11y's own measurements from resolved styles in the browser, with the numbers WCAG gives. They're reported on their own and never added to the axe-core or IBM Equal Access counts. A check that can't reduce the page to colors (a gradient, an image, transparency) is undetermined, which counts as a gap and never as a pass."],
+  conditions: ["Conditions", "automatica11y's own checks of how the page holds up under a user's settings (reduced motion, dark mode, forced colors) and environment (a 320 pixel window, wider text spacing). Each check opens fresh copies of the page. They're reported on their own and never added to the axe-core or IBM Equal Access counts. A check that can't tell is undetermined, which counts as a gap and never as a pass. \"Not applicable\" means the page doesn't use the feature, which isn't a failure."],
+};
+
+export function measuredSection(tier, result, nested) {
+  const [title, intro] = MEASURED_INTRO[tier];
+  const lines = [`${nested ? "#####" : "####"} ${title}.`, "", intro, ""];
   lines.push("| Check | Result | WCAG | Detail |", "| --- | --- | --- | --- |");
   for (const check of result.checks) {
     lines.push(`| ${code(check.name)} | ${check.result} | ${cell(criteriaCell(check.criteria))} | ${cell(check.detail)}${check.method ? cell(` (method: ${check.method})`) : ""} |`);
@@ -274,8 +280,8 @@ export function targetSection(planTarget, target) {
           lines.push(vsrSection(result, name !== "page"), "");
         } else if (tier === "interactions" && result.status === "ran") {
           lines.push(interactionsSection(result, name !== "page"), "");
-        } else if (tier === "computed" && result.status === "ran") {
-          lines.push(computedSection(result, name !== "page"), "");
+        } else if ((tier === "computed" || tier === "conditions") && result.status === "ran") {
+          lines.push(measuredSection(tier, result, name !== "page"), "");
         } else if (result.status !== "ran") {
           skipped.add(`${TIER_NAMES[tier] ?? tier}: ${sentence(result.reason ?? result.status)}.`);
         }

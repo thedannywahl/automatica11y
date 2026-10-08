@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>motion-transition-bad</title>
+<style>
+body { margin: 16px; font: 16px/1.4 sans-serif; background: #fff; color: #222; }
+button { font: inherit; min-width: 44px; min-height: 44px; }
+#panel { transform: translateY(-40px); transition: transform 400ms; } #panel.on { transform: translateY(0); }
+</style>
+</head>
+<body>
+<button type="button" id="go" data-a11y-trigger data-a11y-root>Save</button><div id="panel">Saved.</div>
+<script>
+document.getElementById('go').addEventListener('click', () => document.getElementById('panel').classList.add('on'));
+</script>
+</body>
+</html>

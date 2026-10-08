@@ -37,6 +37,11 @@ export function summarize(archetypes, engines, gaps = []) {
     summary.computed = { pass: 0, fail: 0, undetermined: 0, notApplicable: 0, error: 0 };
     for (const check of measured) summary.computed[check.result === "not-applicable" ? "notApplicable" : check.result] += 1;
   }
+  const adapted = Object.values(archetypes).flatMap((a) => a.configs.flatMap((c) => c.tiers.conditions?.checks ?? []));
+  if (adapted.length) {
+    summary.conditions = { pass: 0, fail: 0, undetermined: 0, notApplicable: 0, error: 0 };
+    for (const check of adapted) summary.conditions[check.result === "not-applicable" ? "notApplicable" : check.result] += 1;
+  }
   const walks = Object.entries(archetypes).flatMap(([name, a]) => a.configs.map((c) => ({ name, vsr: c.tiers.vsr })).filter((x) => x.vsr?.status === "ran"));
   if (walks.length) {
     summary.vsr = { walks: walks.length, flagged: walks.reduce((n, w) => n + w.vsr.flags.length, 0) };

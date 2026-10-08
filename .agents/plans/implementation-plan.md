@@ -450,3 +450,15 @@ Running the live-region archetype on a React alert and a web component alert tur
 - A library that needs a companion stylesheet or theme rendered unstyled, and its results described that. A mapping entry can now list `install` packages. The fixture imports their stylesheets, and a stylesheet a fixture imports is bundled and linked.
 
 The live-region check also now tells apart a region that was inserted with its message from an element that was in the page but only became a live region when the message arrived.
+
+### The conditions tier.
+
+A fifth tier, `conditions`, opens fresh copies of a page (or a fixture) under a user's settings and environment. It runs on whole pages and on component fixtures. Storybook stories are reported as not applicable. Results are reported on their own and never join the axe-core or IBM counts.
+
+- `reduced-motion-respected` (2.3.3, 2.2.2): `getAnimations()` with and without `prefers-reduced-motion: reduce`, at load and just after the trigger is pressed. Animations that repeat forever, or move for more than 100 ms (transform, offsets, margins, size), must be gone under "reduce". Fades are fine. JavaScript-driven motion isn't visible.
+- `dark-mode-contrast` (1.4.3): if frozen screenshots differ under `prefers-color-scheme: dark`, every piece of text on the page is measured for contrast. A page that doesn't adapt is not applicable.
+- `forced-colors-focus-visible` (1.4.11, 2.4.7): pixel comparison of the focused and unfocused control with forced colors on, with the elements that opt out (`forced-color-adjust: none`) named.
+- `reflow-at-320px` (1.4.10): a 320 by 256 window, with the trigger pressed for fixtures. Sideways page scroll, elements past the right edge (excluding ones inside their own scroll container), and a root that spills out.
+- `text-spacing-no-clipping` (1.4.12): the spacing the criterion names, injected with `!important`, then every element that hides overflow is checked for newly cut-off text.
+
+Screenshots that decide whether a page "looks the same" freeze animations first. A running spinner had made every animated page look as if it adapted to dark mode. The pixel bar for a focus indicator is now half the control's perimeter (it was the full perimeter, which a thin anti-aliased default ring missed by five pixels). `openPage` now takes `colorScheme` and `reducedMotion`, and a check can open variants of its own page.

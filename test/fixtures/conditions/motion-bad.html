@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>motion-bad</title>
+<style>
+body { margin: 16px; font: 16px/1.4 sans-serif; background: #fff; color: #222; }
+button { font: inherit; min-width: 44px; min-height: 44px; }
+.spin { width: 20px; height: 20px; background: #06c; animation: slide 1s ease-in-out infinite alternate; } @keyframes slide { from { transform: translateX(0); } to { transform: translateX(120px); } }
+</style>
+</head>
+<body>
+<button type="button" id="go" data-a11y-trigger data-a11y-root>Save</button><div class="spin" aria-hidden="true"></div>
+<script>
+
+</script>
+</body>
+</html>

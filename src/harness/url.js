@@ -8,12 +8,12 @@ const NETWORK_IDLE_MS = 30_000;
  * The returned `warnings` hold anything the report should mention, such as a network that never went idle.
  * @param {import("playwright-core").Browser} browser
  * @param {string} url
- * @param {{ viewport?: { width: number, height: number }, forcedColors?: boolean, beforeGoto?: (page: import("playwright-core").Page) => void | Promise<unknown>, waitUntil?: "load" | "networkidle" }} [options]
+ * @param {{ viewport?: { width: number, height: number }, forcedColors?: boolean, colorScheme?: "light" | "dark", reducedMotion?: boolean, beforeGoto?: (page: import("playwright-core").Page) => void | Promise<unknown>, waitUntil?: "load" | "networkidle" }} [options]
  *   `beforeGoto` runs before navigation, so a caller can attach console listeners that see the first messages.
  *   `waitUntil` defaults to `networkidle`. Local fixture pages don't need to wait for the network.
  */
-export async function openPage(browser, url, { viewport = VIEWPORT, forcedColors = false, beforeGoto, waitUntil = "networkidle" } = {}) {
-  const context = await browser.newContext({ viewport, deviceScaleFactor: 1, forcedColors: forcedColors ? "active" : "none" });
+export async function openPage(browser, url, { viewport = VIEWPORT, forcedColors = false, colorScheme = "light", reducedMotion = false, beforeGoto, waitUntil = "networkidle" } = {}) {
+  const context = await browser.newContext({ viewport, deviceScaleFactor: 1, forcedColors: forcedColors ? "active" : "none", colorScheme, reducedMotion: reducedMotion ? "reduce" : "no-preference" });
   await context.addInitScript(recordClosedShadowRoots);
   await context.addInitScript(recordCustomElements);
   /** @type {string[]} */

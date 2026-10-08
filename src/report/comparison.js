@@ -15,7 +15,7 @@ import {
   targetSection,
 } from "./parts.js";
 
-const TIER_ORDER = ["rules", "interactions", "computed", "vsr"];
+const TIER_ORDER = ["rules", "interactions", "computed", "conditions", "vsr"];
 
 /** The archetype rows: component archetypes in a fixed order, then whole pages, then Storybook stories. */
 function archetypeKeys(results) {
@@ -104,9 +104,9 @@ function interactionsCell(configs) {
   return parts.filter(Boolean).join("; ");
 }
 
-function computedCell(configs) {
-  const checks = configs.flatMap((c) => c.tiers.computed?.checks ?? []);
-  if (checks.length === 0) return configs.map((c) => c.tiers.computed?.status).find(Boolean) ?? "-";
+function measuredCell(configs, tier) {
+  const checks = configs.flatMap((c) => c.tiers[tier]?.checks ?? []);
+  if (checks.length === 0) return configs.map((c) => c.tiers[tier]?.status).find(Boolean) ?? "-";
   const failed = checks.filter((c) => c.result === "fail").map((c) => code(c.name));
   const unknown = checks.filter((c) => c.result === "undetermined").length;
   const errors = checks.filter((c) => c.result === "error").length;
@@ -123,17 +123,17 @@ function vsrCell(configs) {
 }
 
 function findingsTable(plan, results, key) {
-  const head = ["Target", "Configuration", ENGINE_NAMES.axe, ENGINE_NAMES.ibm, "Interactions", "Computed checks", "Virtual screen reader (simulated)"];
+  const head = ["Target", "Configuration", ENGINE_NAMES.axe, ENGINE_NAMES.ibm, "Interactions", "Computed checks", "Conditions", "Virtual screen reader (simulated)"];
   const lines = [`| ${head.join(" | ")} |`, `| ${head.map(() => "---").join(" | ")} |`];
   for (const target of results.targets) {
     const planTarget = plan.targets.find((t) => t.id === target.id);
     for (const row of rowsFor(planTarget, target, key)) {
       if (row.note) {
-        lines.push(`| ${cell(target.id)} | ${cell(row.label)} | ${cell(row.note)} | | | | |`);
+        lines.push(`| ${cell(target.id)} | ${cell(row.label)} | ${cell(row.note)} | | | | | |`);
         continue;
       }
       const c = row.configs;
-      lines.push(`| ${cell(target.id)} | ${cell(row.label)} | ${cell(ruleCell(c, "axe"))} | ${cell(ruleCell(c, "ibm"))} | ${cell(interactionsCell(c))} | ${cell(computedCell(c))} | ${cell(vsrCell(c))} |`);
+      lines.push(`| ${cell(target.id)} | ${cell(row.label)} | ${cell(ruleCell(c, "axe"))} | ${cell(ruleCell(c, "ibm"))} | ${cell(interactionsCell(c))} | ${cell(measuredCell(c, "computed"))} | ${cell(measuredCell(c, "conditions"))} | ${cell(vsrCell(c))} |`);
     }
   }
   return lines;

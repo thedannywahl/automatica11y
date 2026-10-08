@@ -6,7 +6,7 @@
  * These are automatica11y's own measurements. They're reported on their own and never added to axe-core or IBM counts.
  */
 import { criterionRef } from "../../wcag/index.js";
-import { contrastOver, contrastRatio, formatRatio, textThreshold } from "./color.js";
+import { contrastOver, contrastRatio, formatRatio, ringIsEnough, textThreshold } from "./color.js";
 
 const pass = (detail, extra = {}) => ({ result: "pass", detail, ...extra });
 const fail = (detail, extra = {}) => ({ result: "fail", detail, ...extra });
@@ -150,8 +150,8 @@ const FOCUS_CONTRAST = {
     if (px.changed === 0) return na("Nothing visible changed on focus, so there's no indicator to measure. The interactions tier reports that as a failure.");
     const perimeter = 2 * (rest.box.width + rest.box.height);
     const measurements = [{ changedPixels: px.changed, pixelsAtLeast3to1: px.strong, strongestChange: floor2(px.max), perimeterPixels: Math.round(perimeter) }];
-    const detail = `${px.strong} of ${px.changed} changed pixels reach 3:1 against their unfocused color, and the strongest change is ${formatRatio(px.max)}. A ring around this control needs about ${Math.round(perimeter)}.`;
-    return px.strong >= perimeter ? pass(detail, { method: "pixels", measurements }) : fail(detail, { method: "pixels", measurements });
+    const detail = `${px.strong} of ${px.changed} changed pixels reach 3:1 against their unfocused color, and the strongest change is ${formatRatio(px.max)}. Enough to count is about half the control's perimeter, ${Math.round(perimeter / 2)}.`;
+    return ringIsEnough(px.strong, perimeter) ? pass(detail, { method: "pixels", measurements }) : fail(detail, { method: "pixels", measurements });
   },
 };
 
