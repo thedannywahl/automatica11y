@@ -298,7 +298,7 @@ The `rules` tier runs the engines named by `--engine` (default `axe,ibm`) agains
 
 ### Tier 2: interactions.
 
-Table-driven Playwright steps per archetype, defined in `archetypes.js` and run by one small runner. Each check is a named test with pass, fail, or not-applicable.
+Table-driven Playwright checks per archetype, defined in `archetypes.js` and run by one runner. Each check is a named test with `pass`, `fail`, `not-applicable`, or `error` (the check couldn't finish; it counts as a gap, never as a pass), and carries the WCAG criteria it speaks to. Each check runs on a fresh page. The checks run once per archetype, in its first state. Page and Storybook targets report the tier as `not-applicable`, because they have no trigger and root hooks.
 
 | Archetype | Checks |
 |---|---|

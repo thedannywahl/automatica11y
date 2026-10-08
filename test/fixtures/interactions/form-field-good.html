@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>form-field-good</title>
+<style>button { min-width: 44px; min-height: 44px; } [hidden] { display: none !important; } </style>
+</head>
+<body>
+<form novalidate>
+<label for="email">Email</label>
+<input id="email" type="email" required data-a11y-trigger aria-describedby="hint">
+<p id="hint">We never share it.</p>
+<div data-a11y-root><p id="err" role="alert"></p></div>
+</form>
+<script>
+
+const input = document.getElementById("email"), err = document.getElementById("err");
+input.addEventListener("blur", () => {
+  const bad = !input.validity.valid;
+  input.setAttribute("aria-invalid", String(bad));
+  if (bad) { input.setAttribute("aria-describedby", "hint err"); err.textContent = "Enter an email address like name@example.com."; }
+  else { input.setAttribute("aria-describedby", "hint"); err.textContent = ""; }
+});
+</script>
+</body>
+</html>

@@ -10,6 +10,7 @@ import { serveStatic } from "../harness/static-serve.js";
 import { openPage } from "../harness/url.js";
 import { candidateMapping, findAuthoredFixture } from "../plan/mapping.js";
 import { ARCHETYPES } from "../schema.js";
+import { runInteractions } from "../tiers/interactions/index.js";
 import { runRules } from "../tiers/rules/index.js";
 import { num } from "../text.js";
 import { summarize } from "./summary.js";
@@ -23,7 +24,6 @@ const STATES = {
   accordion: ["collapsed", "expanded"],
 };
 const NOT_BUILT = {
-  interactions: "The interactions tier isn't built yet (M5).",
   vsr: "The virtual screen reader tier isn't built yet (M6).",
 };
 
@@ -106,6 +106,7 @@ async function auditFixture({ browser, url, archetype, plan }) {
       /** @type {Record<string, any>} */
       const tiers = {};
       for (const tier of plan.options.tiers) {
+        if (tier === "interactions") continue;
         if (tier !== "rules") tiers[tier] = { status: "skipped", reason: NOT_BUILT[tier] };
         else if (failure) tiers.rules = { status: "failed", reason: failure, engines: Object.fromEntries(plan.options.engines.map((e) => [e, { status: "failed", reason: failure }])) };
         else {
@@ -115,7 +116,10 @@ async function auditFixture({ browser, url, archetype, plan }) {
       configs.push({ libA11y: "n/a", state, tiers });
       if (errors.length) return { gap: `The fixture logged errors in the ${state} state: ${errors[0]}` };
     }
-    return { configs, hidden: notTestableEntries(await closedShadowHosts(opened.page)) };
+    const hidden = notTestableEntries(await closedShadowHosts(opened.page));
+    // The checks open their own fresh pages, so run them after this page's rules results are in.
+    if (plan.options.tiers.includes("interactions")) configs[0].tiers.interactions = await runInteractions(browser, url, archetype);
+    return { configs, hidden };
   } finally {
     await opened.close();
   }

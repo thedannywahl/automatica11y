@@ -103,13 +103,14 @@ test("--level AAA tells the reader IBM has no AAA rules", { skip }, async () => 
   assert.match(run.report, /Note: IBM's WCAG rulesets cover levels A and AA/);
 });
 
-test("tiers that aren't built yet are reported as skipped, not clean", { skip }, async () => {
+test("tiers that can't run on a page are reported as such, not clean", { skip }, async () => {
   const run = await audit(["audit", `${fixtures}clean.html`]);
   const tiers = tiersOf(run.results);
-  assert.equal(tiers.interactions.status, "skipped");
+  assert.equal(tiers.interactions.status, "not-applicable");
   assert.equal(tiers.vsr.status, "skipped");
   assert.match(run.report, /\*\*Not run\.\*\*/);
-  assert.match(run.report, /- Interactions: The interactions tier isn't built yet \(M5\)\./);
+  assert.match(run.report, /- Interactions: Interaction checks need an archetype fixture/);
+  assert.match(run.report, /- Virtual screen reader: The virtual screen reader tier isn't built yet \(M6\)\./);
 });
 
 test("--tiers limits what runs and what the matrix shows", { skip }, async () => {

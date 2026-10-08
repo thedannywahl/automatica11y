@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>tooltip-good</title>
+<style>button { min-width: 44px; min-height: 44px; } [hidden] { display: none !important; } #tip { position: absolute; top: 100%; left: 0; background: #222; color: #fff; padding: 6px 10px; white-space: nowrap; } .wrap { position: relative; display: inline-block; }</style>
+</head>
+<body>
+<span class="wrap" id="wrap"><button type="button" id="b" data-a11y-trigger aria-describedby="tip">Help</button>
+<span role="tooltip" id="tip" data-a11y-root hidden>Saves your work.</span></span>
+<script>
+
+const wrap = document.getElementById("wrap"), tip = document.getElementById("tip");
+const show = () => { tip.hidden = false; }, hide = () => { tip.hidden = true; };
+wrap.addEventListener("focusin", show); wrap.addEventListener("focusout", hide);
+wrap.addEventListener("mouseenter", show); wrap.addEventListener("mouseleave", hide);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") hide(); });
+</script>
+</body>
+</html>

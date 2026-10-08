@@ -25,6 +25,11 @@ function engineCell(summary, engine) {
 }
 
 function tierCell(target, tier) {
+  const counts = target.summary?.interactions;
+  if (tier === "interactions" && counts) {
+    const parts = [counts.fail && plural(counts.fail, "failed", "failed"), counts.error && plural(counts.error, "error"), counts.pass && `${num(counts.pass)} passed`, counts.notApplicable && `${num(counts.notApplicable)} not applicable`].filter(Boolean);
+    return `ran, ${parts.join(", ")}`;
+  }
   const configs = Object.values(target.archetypes).flatMap((a) => a.configs);
   const status = configs.map((c) => c.tiers[tier]?.status).find(Boolean);
   return status ?? "-";
@@ -148,6 +153,15 @@ function storybookSection(planTarget, target) {
   return lines.join("\n");
 }
 
+function interactionsSection(result, nested) {
+  const lines = [`${nested ? "#####" : "####"} Interactions.`, "", "Each check ran on a fresh page, using only the trigger and root hooks and ARIA roles. A check that couldn't finish is an error, which counts as a gap and never as a pass.", ""];
+  lines.push("| Check | Result | WCAG | Detail |", "| --- | --- | --- | --- |");
+  for (const check of result.checks) {
+    lines.push(`| ${code(check.name)} | ${check.result} | ${cell((check.criteria ?? []).join(", ") || "-")} | ${cell(check.detail)}${check.method ? cell(` (method: ${check.method})`) : ""} |`);
+  }
+  return lines.join("\n");
+}
+
 function archetypeTable(target) {
   const rows = Object.entries(target.archetypes).map(([name, archetype]) => {
     if (archetype.status === "gap") return `| ${name} | gap | - | ${cell(sentence(archetype.reason ?? "No fixture."))} |`;
@@ -182,6 +196,8 @@ function targetSection(planTarget, target) {
       for (const [tier, result] of Object.entries(config.tiers)) {
         if (tier === "rules") {
           for (const [engine, engineResult] of Object.entries(result.engines ?? {})) lines.push(engineSection(engine, engineResult, name !== "page"), "");
+        } else if (tier === "interactions" && result.status === "ran") {
+          lines.push(interactionsSection(result, name !== "page"), "");
         } else if (result.status !== "ran") {
           skipped.add(`${TIER_NAMES[tier] ?? tier}: ${sentence(result.reason ?? result.status)}.`);
         }

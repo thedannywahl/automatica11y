@@ -129,7 +129,18 @@ const TierResultSchema = v.object({
   status: v.picklist(TIER_STATUS),
   reason: v.optional(v.nullable(v.string())),
   engines: v.optional(v.record(v.string(), EngineResultSchema)),
-  checks: v.optional(v.array(v.unknown())),
+  checks: v.optional(
+    v.array(
+      v.object({
+        name: v.string(),
+        criteria: v.optional(v.array(v.string())),
+        result: v.picklist(["pass", "fail", "not-applicable", "error"]),
+        detail: v.string(),
+        /** How the focus indicator was detected: computed-style or screenshot. */
+        method: v.optional(v.string()),
+      }),
+    ),
+  ),
   simulated: v.optional(v.boolean()),
   log: v.optional(v.array(v.unknown())),
 });
@@ -187,6 +198,7 @@ export const TargetResultSchema = v.object({
     engines: v.record(v.string(), EngineSummarySchema),
     gaps: v.array(v.string()),
     notTestable: v.array(v.string()),
+    interactions: v.optional(v.object({ pass: v.number(), fail: v.number(), notApplicable: v.number(), error: v.number() })),
   }),
   warnings: v.array(v.string()),
 });

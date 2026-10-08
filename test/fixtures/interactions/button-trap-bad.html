@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>button-trap-bad</title>
+<style>button { min-width: 44px; min-height: 44px; } [hidden] { display: none !important; } </style>
+</head>
+<body>
+<button type="button" data-a11y-trigger data-a11y-root>Save</button>
+<script>
+const b = document.querySelector('button'); b.addEventListener('keydown', (e) => { if (e.key === 'Tab') { e.preventDefault(); b.focus(); } });
+</script>
+</body>
+</html>

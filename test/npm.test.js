@@ -176,6 +176,27 @@ test("React: the open state finds problems the closed state can't", { skip }, as
   assert.match(result.report, /#### dialog \(open state\)\./);
 });
 
+test("the interactions tier runs on each fixture and lands in the results and the report", { skip }, async () => {
+  const result = await run(["audit", "ui=fake-ui", "--archetypes", "button,dialog"], { files: { "fixtures/ui/dialog.jsx": REACT_DIALOG } });
+  assert.equal(result.code, 0, result.stderr);
+  const button = archetype(result, "button").configs[0].tiers.interactions;
+  assert.equal(button.status, "ran");
+  const byName = Object.fromEntries(button.checks.map((c) => [c.name, c.result]));
+  assert.deepEqual(byName, { "trigger-reachable-by-tab": "pass", "focus-indicator-visible": "pass", "no-focus-trap": "pass", "enter-activates": "pass", "space-activates": "pass" });
+  // Checks run once per archetype, in its first state.
+  const dialog = archetype(result, "dialog");
+  assert.equal(dialog.configs[0].tiers.interactions.status, "ran");
+  assert.equal(dialog.configs[1].tiers.interactions, undefined);
+  // This fake dialog doesn't move focus, trap it, or close on Escape. The checks say so.
+  const dialogChecks = Object.fromEntries(dialog.configs[0].tiers.interactions.checks.map((c) => [c.name, c.result]));
+  assert.equal(dialogChecks["focus-moves-into-dialog"], "fail");
+  assert.equal(dialogChecks["escape-closes"], "fail");
+  assert.deepEqual(result.results.targets[0].summary.interactions.fail > 0, true);
+  assert.match(result.report, /#### Interactions\./);
+  assert.match(result.report, /\| `escape-closes` \| fail \|/);
+  assert.match(result.report, /\| ui \|[^\n]*ran, \w+ failed/);
+});
+
 test("--archetypes limits which archetypes run and which gaps show", { skip }, async () => {
   const result = await run(["audit", "ui=fake-ui", "--archetypes", "button,tabs", "--tiers", "rules"]);
   assert.deepEqual(Object.keys(result.results.targets[0].archetypes), ["button", "tabs"]);

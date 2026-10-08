@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>combobox-bad</title>
+<style>button { min-width: 44px; min-height: 44px; } [hidden] { display: none !important; } </style>
+</head>
+<body>
+<label for="c">Fruit</label>
+<input id="c" role="combobox" aria-expanded="false" aria-controls="lb" aria-autocomplete="list" data-a11y-trigger autocomplete="off">
+<ul role="listbox" id="lb" data-a11y-root hidden>
+<li role="option" id="o1">Apple</li>
+<li role="option" id="o2">Banana</li>
+<li role="option" id="o3">Cherry</li>
+</ul>
+<script>
+
+const input = document.getElementById("c"), lb = document.getElementById("lb");
+input.addEventListener("click", () => { lb.hidden = false; input.setAttribute("aria-expanded", "true"); });
+</script>
+</body>
+</html>

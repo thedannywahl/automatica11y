@@ -6,6 +6,7 @@ import { launchBrowser } from "../harness/browser.js";
 import { serveStatic } from "../harness/static-serve.js";
 import { listStories, readIndex, selectStories, storyUrl, waitForStory } from "../harness/storybook.js";
 import { closedShadowHosts, notTestableEntries } from "../harness/shadow.js";
+import { NOT_APPLICABLE_FOR_PAGES } from "../tiers/interactions/index.js";
 import { openPage } from "../harness/url.js";
 import { renderReport } from "../report/single.js";
 import { num } from "../text.js";
@@ -22,7 +23,6 @@ const STORY_CONCURRENCY = 4;
 const EXIT = { OK: 0, FAIL_THRESHOLD: 1, ENVIRONMENT: 3, ALL_TARGETS_FAILED: 4 };
 
 const NOT_BUILT = {
-  interactions: "The interactions tier isn't built yet (M5).",
   vsr: "The virtual screen reader tier isn't built yet (M6).",
 };
 
@@ -38,6 +38,8 @@ async function auditPage(browser, url, planTarget, plan, extraWarnings) {
     for (const tier of plan.options.tiers) {
       if (tier === "rules") {
         tiers.rules = await runRules(opened.page, { engines: plan.options.engines, wcag: plan.options.wcag, level: plan.options.level });
+      } else if (tier === "interactions") {
+        tiers.interactions = NOT_APPLICABLE_FOR_PAGES;
       } else {
         tiers[tier] = { status: "skipped", reason: NOT_BUILT[tier] };
       }
@@ -70,7 +72,9 @@ async function auditStory(browser, base, story, plan) {
       tiers[tier] =
         tier === "rules"
           ? await runRules(opened.page, { engines: plan.options.engines, wcag: plan.options.wcag, level: plan.options.level, scope: "#storybook-root" })
-          : { status: "skipped", reason: NOT_BUILT[tier] };
+          : tier === "interactions"
+            ? NOT_APPLICABLE_FOR_PAGES
+            : { status: "skipped", reason: NOT_BUILT[tier] };
     }
     const hidden = notTestableEntries(await closedShadowHosts(opened.page));
     return { id: story.id, ok: true, archetype: { status: "ran", configs: [{ libA11y: "n/a", tiers }] }, hidden };

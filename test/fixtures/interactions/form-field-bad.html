@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>form-field-bad</title>
+<style>button { min-width: 44px; min-height: 44px; } [hidden] { display: none !important; } </style>
+</head>
+<body>
+<form novalidate>
+<input id="email" type="email" required placeholder="Email" data-a11y-trigger data-a11y-root>
+</form>
+<script>
+
+const input = document.getElementById("email");
+input.addEventListener("blur", () => { input.style.borderColor = input.validity.valid ? "" : "red"; });
+</script>
+</body>
+</html>

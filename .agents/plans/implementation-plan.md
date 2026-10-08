@@ -262,15 +262,36 @@ Exit (met): `audit` on one non-compound React library (button, tabs), one compou
 - **Found along the way.** `aria-dialog-name` is a best-practice rule in axe 4.14, so the WCAG tag set leaves it out. The tests use an image without alt text that only exists in the open state instead.
 - **Dependencies added.** `esbuild` and `@guidepup/virtual-screen-reader` (M6 uses the latter), plus `react` and `react-dom` as dev dependencies for the test packages.
 
-### M5. Interactions tier (three days).
+### M5. Interactions tier (done).
 
-- [ ] `archetypes.js` step table plus one runner. Add rows for button, link, dialog, menu, and tabs first. Then combobox, form-field, accordion, and tooltip.
-- [ ] Shared checks: Tab reachable, visible focus, no focus trap.
-- [ ] Visible-focus method: computed-style diff first, screenshot diff as backup. Record which method fired.
-- [ ] Every check returns `pass`, `fail`, or `not-applicable` with a detail string.
-- [ ] Test each archetype row against a known-good and a known-bad fixture.
+- [x] `archetypes.js` step table plus one runner. Add rows for button, link, dialog, menu, and tabs first. Then combobox, form-field, accordion, and tooltip.
+- [x] Shared checks: Tab reachable, visible focus, no focus trap.
+- [x] Visible-focus method: computed-style diff first, screenshot diff as backup. Record which method fired.
+- [x] Every check returns `pass`, `fail`, or `not-applicable` with a detail string.
+- [x] Test each archetype row against a known-good and a known-bad fixture.
 
 Exit: the full check table in spec section 7 has a test per row.
+
+**Results.** All nine archetypes with checks are built. `npm test` runs 140 tests in about two minutes, and `npm run lint` is clean. One full run failed a single test in 174 ms (the missing-page error check) and passed on rerun and in isolation. The cause is unknown, so watch for it.
+
+- **Shape.** `tiers/interactions/archetypes.js` is the table: each check has a name, the WCAG criteria it speaks to, and a function that returns `pass`, `fail`, or `not-applicable` with a detail. `index.js` is the one runner. It gives every check its own fresh page and context, with a timeout, so no check inherits another's state. `helpers.js` installs a small kit into the page (`window.__a11y`) that reaches through open shadow roots.
+- **Checks.** Every archetype gets `trigger-reachable-by-tab`, `focus-indicator-visible`, and `no-focus-trap`. Then:
+  - button and link: `enter-activates`, `space-activates` (Space is `not-applicable` for links)
+  - dialog: `focus-moves-into-dialog`, `tab-stays-inside-dialog`, `escape-closes`, `focus-returns-to-trigger`
+  - menu: `opens-with-enter-or-arrow`, `arrow-keys-move-between-items`, `escape-closes-and-returns-focus`
+  - tabs: `arrow-keys-move-between-tabs`, `home-and-end-work`, `selected-state-exposed`
+  - combobox: `arrow-down-opens-list`, `arrow-keys-change-active-option`, `enter-selects`, `escape-closes`
+  - form-field: `label-associated`, `error-associated-on-invalid`
+  - accordion: `expanded-state-exposed`, `enter-toggles`, `space-toggles`
+  - tooltip: `appears-on-focus`, `escape-dismisses`, `content-reachable-on-hover`
+- **Results.** A fourth result, `error`, covers a check that couldn't finish (it threw or timed out). It counts as a gap and never as a pass or a fail. Each check carries `criteria`. The focus-indicator check carries `method`: it compares computed styles first, then a screenshot of the area around the trigger, and the report says which one found the change.
+- **Where it runs.** Once per archetype, in the first state, on its fixture page. Page and Storybook targets report `interactions` as `not-applicable`, because they have no trigger and root hooks. `chart` has no checks and reports `not-applicable`.
+- **Judgment calls.**
+  - A dialog that isn't marked `aria-modal` counts as non-modal, so a Tab that leaves it is `not-applicable`, not a fail.
+  - The form-field error check only counts error text that appears after the input goes wrong, so a hint linked all along doesn't pass it. If the field is invalid but shows no linked or live text, it fails, and the detail says the check can't see the browser's built-in message. If nothing can make the field invalid, it's `not-applicable`.
+  - `aria-modal` and the other attributes come from the fixture. A fixture that doesn't set them gets the result its markup earns.
+- **Tests.** Each archetype has a good page and at least one bad page in `test/fixtures/interactions/` (22 pages), and a test pins every check's result on every page. A test fails if a check exists that no page exercises. Tests also cover the error and timeout paths.
+- **Not covered.** Keyboard behavior for stateful widgets beyond what the table lists, mouse-only interaction, touch, and focus order across several widgets. Anything that needs a human to judge meaning stays in the method note.
 
 ### M6. vsr tier (one day).
 
