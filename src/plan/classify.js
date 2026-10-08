@@ -58,9 +58,9 @@ function readStorybookIndex(text) {
   }
 }
 
-/** @param {string} abs @param {{ input: string, label: string | null, name: string }} base @returns {ClassifiedTarget} */
-function classifyLocal(abs, base) {
-  if (!existsSync(abs)) return failed(`Path not found: ${abs}`, base);
+/** @param {string} abs @param {{ input: string, label: string | null, name: string }} base @param {string} [hint] @returns {ClassifiedTarget} */
+function classifyLocal(abs, base, hint = "") {
+  if (!existsSync(abs)) return failed(`Path not found: ${abs}.${hint}`, base);
   const stats = statSync(abs);
   if (stats.isDirectory()) {
     for (const file of ["index.json", "stories.json"]) {
@@ -127,7 +127,7 @@ function classifyNpm(spec, base) {
   const match = NPM_NAME.exec(spec);
   if (!match) {
     if (/[A-Z]/.test(spec) && NPM_NAME.test(spec.toLowerCase())) return failed(`"${spec}" isn't a valid package name. npm package names are lowercase.`, base);
-    return failed(`Can't classify "${spec}". Use a package name, an http(s) URL, or a path that starts with ./, ../, /, ~, or file:.`, base);
+    return failed(`"${spec}" isn't a valid npm package name. Write npm:name, npm:@scope/name, or npm:name@version.`, base);
   }
   const [, scope, name, version] = match;
   if (version === "") return failed(`"${spec}" ends with @ but has no version.`, base);
@@ -143,8 +143,18 @@ function classifyNpm(spec, base) {
   };
 }
 
+/** What to say when a bare word isn't a path on disk: it might have been a package or a web address. */
+function notFoundHint(spec) {
+  const hints = [];
+  if (NPM_NAME.test(spec)) hints.push(`If you meant the npm package, write npm:${spec}.`);
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/.*)?$/i.test(spec)) hints.push(`If you meant a web page, write https://${spec}.`);
+  return hints.length ? ` ${hints.join(" ")}` : "";
+}
+
 /**
- * Classify one target. Order, first match wins: local path, Storybook, plain URL, npm package.
+ * Classify one target. A URL starts with http:// or https://. An npm package starts with npm:. Everything else is a path,
+ * relative to the working folder unless it's absolute, so `button` means the folder `./button`. First match wins: URL, npm package, path.
+ * A path that isn't there fails with a hint about `npm:` and `https://`, so a mistake never turns into a different target.
  * A failure comes back as a `failed` target with a reason, never as a throw, so one bad target can't stop a comparison.
  * @param {string} raw `[label=]<spec>`
  * @param {ClassifyContext} [ctx]
@@ -156,10 +166,6 @@ export async function classifyTarget(raw, ctx = {}) {
   const { label, spec } = parseTargetInput(raw.trim());
   const base = { input: raw, label, name: label ?? "" };
 
-  if (LOCAL_PATH.test(spec) || spec === "." || spec === "..") {
-    const abs = toAbsolutePath(spec, cwd, home);
-    return classifyLocal(abs, { ...base, name: label ?? basename(abs) });
-  }
   if (HTTP_URL.test(spec)) {
     let host = spec;
     try {
@@ -169,5 +175,11 @@ export async function classifyTarget(raw, ctx = {}) {
     }
     return classifyUrl(spec, { ...base, name: label ?? host }, ctx);
   }
-  return classifyNpm(spec.startsWith("npm:") ? spec.slice("npm:".length) : spec, base);
+  if (spec.startsWith("npm:")) return classifyNpm(spec.slice("npm:".length), base);
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(spec) && !spec.startsWith("file:")) {
+    return failed(`Only http and https URLs are supported. Got "${spec.split("://")[0]}://".`, base);
+  }
+  const explicit = LOCAL_PATH.test(spec) || spec === "." || spec === "..";
+  const abs = toAbsolutePath(spec, cwd, home);
+  return classifyLocal(abs, { ...base, name: label ?? basename(abs) }, explicit ? "" : notFoundHint(spec));
 }

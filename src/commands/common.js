@@ -259,7 +259,7 @@ export function usage(command) {
   }[command ?? ""];
   if (command === "run") return header;
   if (header) {
-    return `${header}A target is [label=]<spec>. A spec is a package name, an http(s) URL, or a path starting with ./, ../, /, ~, or file:.\n\n${FLAGS}`;
+    return `${header}A target is [label=]<spec>. A spec is an http(s) URL, an npm package written npm:name, or a path. A path with no prefix is relative to the working folder, so "button" means the folder ./button.\n\n${FLAGS}`;
   }
   return `Usage:
   automatica11y audit <target> [options]

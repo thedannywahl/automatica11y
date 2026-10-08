@@ -44,11 +44,11 @@ Use `audit` for one target and `compare` for two or more. A target is `[label=]<
 | The user means | The spec is |
 |---|---|
 | A live page | `https://example.com/page` |
-| A local page or site | `./page.html` or `./dist` (a path starts with `./`, `../`, `/`, `~`, or `file:`) |
+| A local page or site | `./page.html` or `./dist`. A path with no prefix is relative to the working folder. |
 | A Storybook | its URL, or a local folder with `index.json` |
-| An npm package | `name`, `@scope/name`, or `name@version` |
+| An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version` |
 
-A bare word such as `button` is always an npm package, never a folder. Ask the user for the package name or path if the word could be either.
+A bare word such as `button` is a path: the folder or file `./button`. Always write an npm package with the `npm:` prefix. If a word could mean a package or a folder, ask the user which one before you run anything.
 
 Options you can set, and nothing else:
 

@@ -147,6 +147,18 @@ test("every command the docs run exists, and every guide topic they name is real
   assert.deepEqual(codes, [0, 1, 2, 3, 4]);
 });
 
+test("the docs write npm packages with the npm: prefix, as the tool requires", () => {
+  const readme = read("README.md");
+  for (const { name, text } of [{ name: "README.md", text: readme }, ...agentDocs]) {
+    assert.doesNotMatch(text, /(^|[\s=`])@[a-z][\w-]*\/[\w.-]+/m, `${name} has no bare scoped package as a target`);
+    assert.doesNotMatch(text, /=(react-aria-components|@radix-ui)/, `${name} labels no bare package`);
+  }
+  assert.match(readme, /compare radix=npm:@radix-ui\/react-dialog aria=npm:react-aria-components/);
+  assert.match(runner, /\| An npm package \| `npm:name`, `npm:@scope\/name`, or `npm:name@version` \|/);
+  assert.match(runner, /A bare word such as `button` is a path: the folder or file `\.\/button`\. Always write an npm package with the `npm:` prefix/);
+  assert.match(readme, /Write `npm:button` to pick the package/);
+});
+
 test("the archetypes the runner lists match the tool's", async () => {
   const { ARCHETYPES } = await import("../src/schema.js");
   const line = /Choose from ([^.|]+)\./.exec(runner)[1].split(",").map((s) => s.trim());

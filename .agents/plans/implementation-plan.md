@@ -168,6 +168,7 @@ Exit: acceptance criteria for `--plan` and exit code 3 pass. They do: `npm test`
 **Results.**
 
 - `bin/automatica11y.js` calls `main(argv, io)` in `src/cli.js`. The streams, environment, working directory, and `fetch` are arguments, so tests drive the CLI in-process.
+- **Changed after M8:** a bare word is now a path relative to the working folder, and only the `npm:` prefix picks a package. The first rule (a bare word is a package) let a folder or a typo change what a target meant. Now a bare word that isn't a path fails with a hint (`npm:name` for a package, `https://` for a web address), and any URL scheme other than http and https fails.
 - Targets that can't be classified come back as `failed` entries with a reason (path not found, unsupported file type, HTTP 404, unreachable, bad package name), not as exceptions. One bad target doesn't stop a comparison, and if every target fails the CLI exits 4.
 - A directory or URL counts as Storybook only when its `index.json` or `stories.json` has the Storybook shape (an `entries` or `stories` object). A random `index.json` in a static site stays a static site. A real Storybook (Carbon's) classified correctly.
 - npm targets stay `kind: "npm"` in the plan with `resolved.version: null` and the requested range. `--plan` can't tell React from web components without reading the package, so M4 fills in the framework and the resolved version. Web components are in scope for v1.
@@ -345,7 +346,7 @@ Exit: two-library comparison meets the acceptance criterion.
 
 Exit: all acceptance criteria in spec section 13. They hold. See the check at the end of this section.
 
-**Results.** `npm test` runs 183 tests in about two minutes, and `npm run lint` is clean.
+**Results.** `npm test` runs 188 tests in about two minutes, and `npm run lint` is clean.
 
 - **Runner skill.** `skills/automatica11y-runner/SKILL.md` walks a model through the version check, `doctor`, turning a request into a command, the fixture loop for npm packages, running and reading `results.json`, the report rules from the spec's section 9, and what to say when a target can't be tested. `references/fixtures.md` holds the fixture contract with React and web component examples. A guard test checks that every `--flag` and command the skill mentions exists, that its exit-code table matches, and that its archetype list matches the tool's, so the skill can't drift from the CLI unnoticed.
 - **Version handshake.** `SKILL.md` states the series it works with (`0.2.x`: in the 0.x series a minor version can change behavior, and from 1.0 the major version is enough). It runs `npx --yes automatica11y@latest --version` and stops if the output doesn't start with that series, telling the user to get a matching copy of the skill. The file is static now, so a test fails if its series disagrees with the version in `package.json`. Bump both together.

@@ -114,18 +114,17 @@ Classification order. The first match wins:
 
 | Type | Syntax | Detection |
 |---|---|---|
-| Local path | Starts with `./`, `../`, `/`, `~`, or `file:` | Exists on disk. |
-| Storybook | `http(s)://` URL or local directory | `index.json` or `stories.json` found at the root. |
-| Plain URL | `http(s)://` | Anything else that responds. |
-| npm package | `name`, `@scope/name`, `name@version`, or an explicit `npm:` prefix | Fallback. |
+| URL | Starts with `http://` or `https://` | Storybook if `index.json` or `stories.json` is found at the root, otherwise a plain URL if it responds. |
+| npm package | Starts with `npm:`, as in `npm:name`, `npm:@scope/name`, or `npm:name@version` | Always a package. |
+| Path | Everything else, relative to the working folder unless absolute (`./`, `../`, `/`, `~`, and `file:` work, and so does a bare word) | Exists on disk. A directory is a Storybook if `index.json` or `stories.json` is found at the root. |
 
 Rules:
 
-- Local paths need the explicit prefix. A bare `button` is a package, never a folder.
+- The `npm:` prefix is what picks a package. A bare `button` is the path `./button`, so a folder or file with a package's name never changes what a target means. A bare word that isn't a path fails with a hint (`npm:name` for a package, `https://` for a web address). Any other URL scheme fails.
 - An `.html` file is served from a local static server over `http://localhost`. Never load it over `file://`, because module scripts and relative assets break there.
 - A directory is a static site. If it holds `index.json`, treat it as a Storybook build. A static site audits `index.html` only. A directory without one is a failed target.
 - Reject other file types with a clear message.
-- A bare package name means the latest published version. `name@version` pins one.
+- `npm:name` means the latest published version. `npm:name@version` pins one.
 - A directory or URL is Storybook only when its `index.json` or `stories.json` has the Storybook shape (an `entries` or `stories` object).
 - A target that can't be classified or resolved becomes a `failed` entry with a reason. Exit 4 applies only when every target fails.
 
@@ -199,7 +198,7 @@ The CLI accepts only the declarative grammar. The skill treats any input that do
   "targets": [
     {
       "id": "radix",
-      "input": "radix=@radix-ui/react-dialog",
+      "input": "radix=npm:@radix-ui/react-dialog",
       "kind": "npm-react",              // npm-react | npm-wc | npm-unsupported | npm-non-ui | storybook | url | html-file | static-dir
       "resolved": { "name": "@radix-ui/react-dialog", "version": "1.1.0" },
       "evidenceLevel": "component",     // component | page

@@ -92,7 +92,7 @@ test("candidateMapping: matches by name, marks compound parts, and leaves the re
 });
 
 test("--plan resolves versions and frameworks from the registry without installing", async () => {
-  const result = await run(["compare", "ui=fake-ui", "wc=fake-wc", "vue-lib", "ghost", "--plan"]);
+  const result = await run(["compare", "ui=npm:fake-ui", "wc=npm:fake-wc", "npm:vue-lib", "npm:ghost", "--plan"]);
   assert.equal(result.code, 0, result.stderr);
   const [ui, wc, vue, ghost] = result.plan.targets;
   assert.deepEqual([ui.kind, ui.resolved.version, ui.resolved.framework], ["npm-react", "1.0.0", "React"]);
@@ -105,7 +105,7 @@ test("--plan resolves versions and frameworks from the registry without installi
 
 test("React: a template covers the button, an authored fixture covers the dialog, and the rest are gaps", { skip }, async () => {
   const before = leftovers().length;
-  const result = await run(["audit", "ui=fake-ui", "--tiers", "rules"], { files: { "fixtures/ui/dialog.jsx": REACT_DIALOG } });
+  const result = await run(["audit", "ui=npm:fake-ui", "--tiers", "rules"], { files: { "fixtures/ui/dialog.jsx": REACT_DIALOG } });
   assert.equal(result.code, 0, result.stderr);
   const target = result.results.targets[0];
   assert.equal(target.status, "ran");
@@ -140,7 +140,7 @@ test("React: a template covers the button, an authored fixture covers the dialog
 });
 
 test("React: the open state finds problems the closed state can't", { skip }, async () => {
-  const result = await run(["audit", "ui=fake-ui", "--archetypes", "dialog", "--tiers", "rules"], { files: { "fixtures/ui/dialog.jsx": REACT_DIALOG_BAD } });
+  const result = await run(["audit", "ui=npm:fake-ui", "--archetypes", "dialog", "--tiers", "rules"], { files: { "fixtures/ui/dialog.jsx": REACT_DIALOG_BAD } });
   const [closed, open] = archetype(result, "dialog").configs;
   assert.deepEqual(violations(closed, "axe"), []);
   assert.deepEqual(violations(open, "axe"), ["image-alt"]);
@@ -150,7 +150,7 @@ test("React: the open state finds problems the closed state can't", { skip }, as
 });
 
 test("the interactions tier runs on each fixture and lands in the results and the report", { skip }, async () => {
-  const result = await run(["audit", "ui=fake-ui", "--archetypes", "button,dialog"], { files: { "fixtures/ui/dialog.jsx": REACT_DIALOG } });
+  const result = await run(["audit", "ui=npm:fake-ui", "--archetypes", "button,dialog"], { files: { "fixtures/ui/dialog.jsx": REACT_DIALOG } });
   assert.equal(result.code, 0, result.stderr);
   const button = archetype(result, "button").configs[0].tiers.interactions;
   assert.equal(button.status, "ran");
@@ -171,7 +171,7 @@ test("the interactions tier runs on each fixture and lands in the results and th
 });
 
 test("the virtual screen reader walks each state, and the logs differ between closed and open", { skip }, async () => {
-  const result = await run(["audit", "ui=fake-ui", "--archetypes", "dialog", "--tiers", "rules,vsr"], { files: { "fixtures/ui/dialog.jsx": REACT_DIALOG } });
+  const result = await run(["audit", "ui=npm:fake-ui", "--archetypes", "dialog", "--tiers", "rules,vsr"], { files: { "fixtures/ui/dialog.jsx": REACT_DIALOG } });
   const [closed, open] = archetype(result, "dialog").configs;
   assert.equal(closed.tiers.vsr.log[0].state, "closed");
   assert.equal(open.tiers.vsr.log[0].state, "open");
@@ -185,7 +185,7 @@ test("the virtual screen reader walks each state, and the logs differ between cl
 
 test("web components: shadow content the virtual screen reader can't read is listed as not testable", { skip }, async () => {
   const fixture = `export default function mount(c) { c.innerHTML = '<fake-button data-a11y-trigger data-a11y-root>Save</fake-button>'; }\n`;
-  const result = await run(["audit", "wc=fake-wc", "--archetypes", "button", "--tiers", "rules,vsr"], { files: { "fixtures/wc/button.js": fixture } });
+  const result = await run(["audit", "wc=npm:fake-wc", "--archetypes", "button", "--tiers", "rules,vsr"], { files: { "fixtures/wc/button.js": fixture } });
   const vsr = archetype(result, "button").configs[0].tiers.vsr;
   assert.match(vsr.notTestable[0], /open shadow root in <fake-button> \(1\)/);
   assert.match(result.results.targets[0].summary.notTestable.join("\n"), /button: open shadow root in <fake-button>/);
@@ -195,7 +195,7 @@ test("--lib-a11y runs a library's accessibility options both ways and labels eac
   // With the option on, the icon button gets a name. With it off, it has none.
   const fixture = `import { Button } from "fake-ui";\nexport default function Fixture({ libA11y }) {\n  return <Button data-a11y-trigger data-a11y-root aria-label={libA11y ? "Save" : undefined} />;\n}\n`;
   const files = { "fixtures/ui/button.jsx": fixture, "map.json": JSON.stringify({ ui: { button: { libA11y: true } } }) };
-  const both = await run(["audit", "ui=fake-ui", "--mapping", "map.json", "--archetypes", "button", "--tiers", "rules,vsr"], { files });
+  const both = await run(["audit", "ui=npm:fake-ui", "--mapping", "map.json", "--archetypes", "button", "--tiers", "rules,vsr"], { files });
   assert.equal(both.code, 0, both.stderr);
   const configs = archetype(both, "button").configs;
   assert.deepEqual(configs.map((c) => c.libA11y), ["on", "off"]);
@@ -207,21 +207,21 @@ test("--lib-a11y runs a library's accessibility options both ways and labels eac
   assert.match(both.report, /#### button \(initial state, library accessibility off\)\./);
   assert.match(both.report, /\| button \| ran \| initial \| library accessibility on and off \|/);
 
-  const onlyOn = await run(["audit", "ui=fake-ui", "--mapping", "map.json", "--archetypes", "button", "--lib-a11y", "on", "--tiers", "rules"], { files });
+  const onlyOn = await run(["audit", "ui=npm:fake-ui", "--mapping", "map.json", "--archetypes", "button", "--lib-a11y", "on", "--tiers", "rules"], { files });
   assert.deepEqual(archetype(onlyOn, "button").configs.map((c) => c.libA11y), ["on"]);
 
   // An archetype that doesn't declare the option runs once, unlabeled, whatever the flag says.
-  const plain = await run(["audit", "ui=fake-ui", "--archetypes", "button", "--lib-a11y", "on,off", "--tiers", "rules"]);
+  const plain = await run(["audit", "ui=npm:fake-ui", "--archetypes", "button", "--lib-a11y", "on,off", "--tiers", "rules"]);
   assert.deepEqual(archetype(plain, "button").configs.map((c) => c.libA11y), ["n/a"]);
 });
 
 test("--archetypes limits which archetypes run and which gaps show", { skip }, async () => {
-  const result = await run(["audit", "ui=fake-ui", "--archetypes", "button,tabs", "--tiers", "rules"]);
+  const result = await run(["audit", "ui=npm:fake-ui", "--archetypes", "button,tabs", "--tiers", "rules"]);
   assert.deepEqual(Object.keys(result.results.targets[0].archetypes), ["button", "tabs"]);
 });
 
 test("a button template fails cleanly when the library drops data attributes", { skip }, async () => {
-  const result = await run(["audit", "fake-nospread", "--archetypes", "button", "--tiers", "rules"]);
+  const result = await run(["audit", "npm:fake-nospread", "--archetypes", "button", "--tiers", "rules"]);
   assert.equal(result.code, 4);
   const button = archetype(result, "button");
   assert.equal(button.status, "gap");
@@ -233,7 +233,7 @@ test("a button template fails cleanly when the library drops data attributes", {
 
 test("a broken authored fixture is a gap with the reason, and the others still run", { skip }, async () => {
   const files = { "fixtures/ui/dialog.jsx": "export default function Fixture() { throw new Error('boom'); }\n", "fixtures/ui/tabs.jsx": 'import { Nope } from "does-not-exist";\nexport default () => null;\n' };
-  const result = await run(["audit", "ui=fake-ui", "--archetypes", "button,dialog,tabs", "--tiers", "rules"], { files });
+  const result = await run(["audit", "ui=npm:fake-ui", "--archetypes", "button,dialog,tabs", "--tiers", "rules"], { files });
   assert.equal(archetype(result, "button").status, "ran");
   assert.equal(archetype(result, "dialog").status, "gap");
   assert.match(archetype(result, "dialog").reason, /boom|didn't render an element with data-a11y-trigger/);
@@ -243,7 +243,7 @@ test("a broken authored fixture is a gap with the reason, and the others still r
 
 test("a fixture with two triggers is rejected", { skip }, async () => {
   const fixture = 'import { Button } from "fake-ui";\nexport default () => (<><Button data-a11y-trigger>A</Button><Button data-a11y-trigger>B</Button></>);\n';
-  const result = await run(["audit", "ui=fake-ui", "--archetypes", "button", "--tiers", "rules"], { files: { "fixtures/ui/button.jsx": fixture } });
+  const result = await run(["audit", "ui=npm:fake-ui", "--archetypes", "button", "--tiers", "rules"], { files: { "fixtures/ui/button.jsx": fixture } });
   assert.match(archetype(result, "button").reason, /exactly one data-a11y-trigger\. It marked two\./);
 });
 
@@ -252,7 +252,7 @@ test("--mapping points a target at its fixtures and overrides the export", { ski
     "elsewhere/my-dialog.jsx": REACT_DIALOG,
     "map.json": JSON.stringify({ ui: { dialog: { fixture: "elsewhere/my-dialog.jsx" }, button: { export: "Link" } } }),
   };
-  const result = await run(["audit", "ui=fake-ui", "--mapping", "map.json", "--archetypes", "button,dialog", "--tiers", "rules"], { files });
+  const result = await run(["audit", "ui=npm:fake-ui", "--mapping", "map.json", "--archetypes", "button,dialog", "--tiers", "rules"], { files });
   assert.equal(archetype(result, "dialog").status, "ran");
   assert.equal(result.mapping.ui.button.export, "Link");
   assert.equal(archetype(result, "button").status, "ran");
@@ -260,7 +260,7 @@ test("--mapping points a target at its fixtures and overrides the export", { ski
 
 test("--mapping errors exit 2", async () => {
   const bad = async (files, pattern) => {
-    const result = await run(["audit", "ui=fake-ui", "--mapping", "map.json", "--plan"], { files });
+    const result = await run(["audit", "ui=npm:fake-ui", "--mapping", "map.json", "--plan"], { files });
     assert.equal(result.code, 2, result.stderr);
     assert.match(result.stderr, pattern);
   };
@@ -271,7 +271,7 @@ test("--mapping errors exit 2", async () => {
 });
 
 test("web components: a template covers the button and an authored mount covers the dialog", { skip }, async () => {
-  const result = await run(["audit", "wc=fake-wc", "--archetypes", "button,dialog", "--tiers", "rules"], { files: { "fixtures/wc/dialog.js": WC_DIALOG } });
+  const result = await run(["audit", "wc=npm:fake-wc", "--archetypes", "button,dialog", "--tiers", "rules"], { files: { "fixtures/wc/dialog.js": WC_DIALOG } });
   assert.equal(result.code, 0, result.stderr);
   const target = result.results.targets[0];
   assert.deepEqual([target.npm.flavor, target.npm.tags.sort()], ["wc", ["fake-button", "fake-dialog"]]);
@@ -286,7 +286,7 @@ test("web components: a template covers the button and an authored mount covers 
 
 test("web components: open shadow content is tested", { skip }, async () => {
   const fixture = `export default function mount(c) { c.innerHTML = '<fake-button data-a11y-trigger data-a11y-root></fake-button>'; }\n`;
-  const result = await run(["audit", "wc=fake-wc", "--archetypes", "button", "--tiers", "rules"], { files: { "fixtures/wc/button.js": fixture } });
+  const result = await run(["audit", "wc=npm:fake-wc", "--archetypes", "button", "--tiers", "rules"], { files: { "fixtures/wc/button.js": fixture } });
   const button = archetype(result, "button");
   // The button is empty, so the native button inside the open shadow root has no name.
   assert.deepEqual(violations(button.configs[0], "axe"), ["button-name"]);
@@ -294,7 +294,7 @@ test("web components: open shadow content is tested", { skip }, async () => {
 });
 
 test("web components: a closed shadow root is reported as not testable, never as clean", { skip }, async () => {
-  const result = await run(["audit", "closed-wc", "--archetypes", "button", "--tiers", "rules"]);
+  const result = await run(["audit", "npm:closed-wc", "--archetypes", "button", "--tiers", "rules"]);
   assert.equal(result.code, 0, result.stderr);
   const target = result.results.targets[0];
   assert.equal(target.npm.flavor, "wc");
@@ -304,7 +304,7 @@ test("web components: a closed shadow root is reported as not testable, never as
 });
 
 test("a package that neither renders React nor defines custom elements is not applicable", { skip }, async () => {
-  const result = await run(["audit", "plain-utils", "--tiers", "rules"]);
+  const result = await run(["audit", "npm:plain-utils", "--tiers", "rules"]);
   assert.equal(result.code, 4);
   assert.equal(result.results.targets[0].status, "not-applicable");
   assert.match(result.results.targets[0].reason, /no rendering surface/);
@@ -313,7 +313,7 @@ test("a package that neither renders React nor defines custom elements is not ap
 
 test("an unsupported framework is named, and nothing is installed", { skip }, async () => {
   const before = leftovers().length;
-  const result = await run(["audit", "vue-lib", "--tiers", "rules"]);
+  const result = await run(["audit", "npm:vue-lib", "--tiers", "rules"]);
   assert.equal(result.code, 4);
   assert.equal(result.results.targets[0].status, "unsupported");
   assert.match(result.results.targets[0].reason, /Vue packages aren't supported/);
@@ -326,7 +326,7 @@ test("an install failure fails that target and the comparison goes on", { skip }
   const { io } = makeIo({ cwd, env: process.env });
   io.npmView = flaky;
   io.installPackage = installPackage;
-  const code = await main(["compare", "flaky", "closed-wc", "--archetypes", "button", "--tiers", "rules"], io);
+  const code = await main(["compare", "npm:flaky", "npm:closed-wc", "--archetypes", "button", "--tiers", "rules"], io);
   assert.equal(code, 0);
   const results = JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8"));
   assert.deepEqual(results.targets.map((t) => t.status), ["failed", "ran"]);
@@ -335,8 +335,8 @@ test("an install failure fails that target and the comparison goes on", { skip }
 
 test("the same npm audit twice gives the same findings", { skip }, async () => {
   const files = { "fixtures/ui/dialog.jsx": REACT_DIALOG_BAD };
-  const one = await run(["audit", "ui=fake-ui", "--archetypes", "button,dialog", "--tiers", "rules"], { files });
-  const two = await run(["audit", "ui=fake-ui", "--archetypes", "button,dialog", "--tiers", "rules"], { files });
+  const one = await run(["audit", "ui=npm:fake-ui", "--archetypes", "button,dialog", "--tiers", "rules"], { files });
+  const two = await run(["audit", "ui=npm:fake-ui", "--archetypes", "button,dialog", "--tiers", "rules"], { files });
   const strip = (r) => ({ ...r, runAt: null });
   assert.deepEqual(strip(two.results), strip(one.results));
 });

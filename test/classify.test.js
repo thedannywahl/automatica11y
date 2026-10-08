@@ -4,7 +4,7 @@ import { classifyTarget, parseTargetInput } from "../src/plan/classify.js";
 import { STORYBOOK_INDEX, fakeFetch, makeTree } from "./helpers/fixtures.js";
 
 test("label syntax", () => {
-  assert.deepEqual(parseTargetInput("radix=@radix-ui/react-dialog"), { label: "radix", spec: "@radix-ui/react-dialog" });
+  assert.deepEqual(parseTargetInput("radix=npm:@radix-ui/react-dialog"), { label: "radix", spec: "npm:@radix-ui/react-dialog" });
   assert.deepEqual(parseTargetInput("react"), { label: null, spec: "react" });
   assert.deepEqual(parseTargetInput("site=https://example.com/?a=b"), { label: "site", spec: "https://example.com/?a=b" });
   assert.deepEqual(parseTargetInput("https://example.com/?a=b"), { label: null, spec: "https://example.com/?a=b" });
@@ -71,22 +71,32 @@ test("local path prefixes: ../, /, ~/, file:, and file://", async () => {
   assert.equal((await classifyTarget(`file://${cwd}/a/page.html`, { cwd })).kind, "html-file");
 });
 
-test("a bare name is a package, never a folder", async () => {
-  const cwd = makeTree({ "button/index.html": "" });
-  const target = await classifyTarget("button", { cwd });
+test("a bare word is a folder in the working folder, not a package", async () => {
+  const cwd = makeTree({ "button/index.html": "<h1>Hi</h1>", "demo.html": "<h1>Hi</h1>" });
+  const folder = await classifyTarget("button", { cwd });
+  assert.equal(folder.status, "ok");
+  assert.equal(folder.kind, "static-dir");
+  assert.equal(folder.resolved.path, `${cwd}/button`);
+  assert.equal((await classifyTarget("demo.html", { cwd })).kind, "html-file");
+  assert.equal((await classifyTarget("button/index.html", { cwd })).kind, "html-file");
+});
+
+test("npm: picks a package, even when a folder has the same name", async () => {
+  const cwd = makeTree({ "button/index.html": "<h1>Hi</h1>" });
+  const target = await classifyTarget("npm:button", { cwd });
   assert.equal(target.kind, "npm");
   assert.equal(target.resolved.name, "button");
   assert.equal(target.resolved.requested, null);
+  assert.equal((await classifyTarget("button", { cwd })).kind, "static-dir", "without the prefix, the folder wins");
 });
 
-test("npm package forms", async () => {
+test("npm package forms need the npm: prefix", async () => {
   const cases = [
-    ["lodash", "lodash", null],
-    ["@scope/name", "@scope/name", null],
-    ["react@18.3.1", "react", "18.3.1"],
-    ["@radix-ui/react-dialog@^1.1.0", "@radix-ui/react-dialog", "^1.1.0"],
-    ["react@latest", "react", "latest"],
-    ["npm:react", "react", null],
+    ["npm:lodash", "lodash", null],
+    ["npm:@scope/name", "@scope/name", null],
+    ["npm:react@18.3.1", "react", "18.3.1"],
+    ["npm:@radix-ui/react-dialog@^1.1.0", "@radix-ui/react-dialog", "^1.1.0"],
+    ["npm:react@latest", "react", "latest"],
     ["npm:@a/b@2", "@a/b", "2"],
   ];
   for (const [input, name, requested] of cases) {
@@ -99,20 +109,43 @@ test("npm package forms", async () => {
   }
 });
 
-test("npm: bad specs fail with a reason", async () => {
+test("a bare word that isn't a path fails, and the message says how to ask for a package or a web page", async () => {
   const cwd = makeTree();
-  assert.match((await classifyTarget("React", { cwd })).reason, /lowercase/);
-  assert.match((await classifyTarget("foo/bar", { cwd })).reason, /Can't classify/);
-  assert.match((await classifyTarget("react@", { cwd })).reason, /no version/);
-  assert.match((await classifyTarget("ftp://example.com", { cwd })).reason, /Can't classify/);
+  const react = await classifyTarget("react", { cwd });
+  assert.equal(react.status, "failed");
+  assert.match(react.reason, /Path not found: .*\/react\./);
+  assert.match(react.reason, /If you meant the npm package, write npm:react\./);
+  assert.doesNotMatch(react.reason, /web page/);
+  assert.match((await classifyTarget("@radix-ui/react-dialog", { cwd })).reason, /write npm:@radix-ui\/react-dialog\./);
+  assert.match((await classifyTarget("react@18", { cwd })).reason, /write npm:react@18\./);
+  const host = await classifyTarget("example.com", { cwd });
+  assert.match(host.reason, /If you meant a web page, write https:\/\/example\.com\./);
+  const nothing = await classifyTarget("My Folder!", { cwd });
+  assert.doesNotMatch(nothing.reason, /If you meant/, "no hint when the word could be neither");
+  // An explicit path that's missing gets no hint, because the user was clear.
+  assert.doesNotMatch((await classifyTarget("./react", { cwd })).reason, /If you meant/);
+});
+
+test("npm: with a bad name fails with a reason", async () => {
+  const cwd = makeTree();
+  assert.match((await classifyTarget("npm:React", { cwd })).reason, /lowercase/);
+  assert.match((await classifyTarget("npm:foo/bar", { cwd })).reason, /isn't a valid npm package name\. Write npm:name/);
+  assert.match((await classifyTarget("npm:react@", { cwd })).reason, /no version/);
+  assert.match((await classifyTarget("npm:", { cwd })).reason, /isn't a valid npm package name/);
+});
+
+test("a URL that isn't http or https fails clearly", async () => {
+  const target = await classifyTarget("ftp://example.com", { cwd: makeTree() });
+  assert.equal(target.status, "failed");
+  assert.match(target.reason, /Only http and https URLs are supported\. Got "ftp:\/\/"\./);
 });
 
 test("label names the target; package name or host is the default", async () => {
   const cwd = makeTree();
-  const labelled = await classifyTarget("radix=@radix-ui/react-dialog", { cwd });
+  const labelled = await classifyTarget("radix=npm:@radix-ui/react-dialog", { cwd });
   assert.equal(labelled.label, "radix");
   assert.equal(labelled.name, "radix");
-  assert.equal((await classifyTarget("@radix-ui/react-dialog", { cwd })).name, "@radix-ui/react-dialog");
+  assert.equal((await classifyTarget("npm:@radix-ui/react-dialog", { cwd })).name, "@radix-ui/react-dialog");
 });
 
 test("URL: Storybook index.json at the root", async () => {

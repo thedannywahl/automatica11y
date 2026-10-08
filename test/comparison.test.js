@@ -49,7 +49,7 @@ function table(report, heading) {
 }
 
 test("two React libraries: the report opens with the coverage matrix, then findings per archetype", { skip }, async () => {
-  const run = await compare(["ui=fake-ui", "ns=fake-nospread", "--archetypes", "button,dialog,tabs"], { files: { "fixtures/ui/dialog.jsx": DIALOG } });
+  const run = await compare(["ui=npm:fake-ui", "ns=npm:fake-nospread", "--archetypes", "button,dialog,tabs"], { files: { "fixtures/ui/dialog.jsx": DIALOG } });
   assert.equal(run.code, 0, run.stderr);
   const { report } = run;
   assert.match(report, /^# Accessibility comparison\./);
@@ -65,7 +65,7 @@ test("two React libraries: the report opens with the coverage matrix, then findi
 });
 
 test("each engine gets its own table, and counts are never added across engines or targets", { skip }, async () => {
-  const run = await compare(["ui=fake-ui", "ns=fake-nospread", "--archetypes", "button"], {});
+  const run = await compare(["ui=npm:fake-ui", "ns=npm:fake-nospread", "--archetypes", "button"], {});
   const { report } = run;
   assert.ok(report.includes("### axe-core, violations by impact."));
   assert.ok(report.includes("### IBM Equal Access, violations by Toolkit level."));
@@ -81,7 +81,7 @@ test("each engine gets its own table, and counts are never added across engines 
 });
 
 test("a gap reads as a gap in the findings, with the reason, and never as clean", { skip }, async () => {
-  const run = await compare(["ui=fake-ui", "ns=fake-nospread", "--archetypes", "button,tabs"]);
+  const run = await compare(["ui=npm:fake-ui", "ns=npm:fake-nospread", "--archetypes", "button,tabs"]);
   const rows = table(run.report, "### tabs.");
   assert.match(rows[2], /^\| ui \| - \| gap: No export looks like the tabs archetype/);
   assert.match(rows[3], /^\| ns \| - \| gap: No export looks like the tabs archetype/);
@@ -92,7 +92,7 @@ test("a gap reads as a gap in the findings, with the reason, and never as clean"
 });
 
 test("mixing components and pages opens with the non-equivalence warning", { skip }, async () => {
-  const run = await compare(["ui=fake-ui", `site=${fixtures}clean.html`, "--archetypes", "button"]);
+  const run = await compare(["ui=npm:fake-ui", `site=${fixtures}clean.html`, "--archetypes", "button"]);
   assert.equal(run.code, 0, run.stderr);
   assert.match(run.report, /\*\*Warning\.\*\* This comparison mixes component evidence and page evidence\. They test different things, so the results aren't equivalent\./);
   assert.ok(run.report.indexOf("**Warning.**") < run.report.indexOf("## Coverage."));
@@ -116,7 +116,7 @@ test("a canvas-only target shows as not-testable in the matrix, beside one that 
 test("--lib-a11y rows are labeled in the matrix and the findings", { skip }, async () => {
   const fixture = `import { Button } from "fake-ui";\nexport default function Fixture({ libA11y }) {\n  return <Button data-a11y-trigger data-a11y-root aria-label={libA11y ? "Save" : undefined} />;\n}\n`;
   const files = { "fixtures/ui/button.jsx": fixture, "map.json": JSON.stringify({ ui: { button: { libA11y: true } } }) };
-  const run = await compare(["ui=fake-ui", `site=${fixtures}clean.html`, "--mapping", "map.json", "--archetypes", "button", "--tiers", "rules"], { files });
+  const run = await compare(["ui=npm:fake-ui", `site=${fixtures}clean.html`, "--mapping", "map.json", "--archetypes", "button", "--tiers", "rules"], { files });
   assert.equal(run.code, 0, run.stderr);
   const rules = table(run.report, "### Rules.");
   assert.ok(rules.includes("| button | ran (initial state, library accessibility on; initial state, library accessibility off) | not-applicable |"), rules.join("\n"));

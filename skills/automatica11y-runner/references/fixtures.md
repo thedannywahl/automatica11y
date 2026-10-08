@@ -6,7 +6,7 @@ Write fixtures from the library's public documentation. Don't copy from memory w
 
 ## Where fixtures go
 
-`fixtures/<target id>/<archetype>.jsx` for React, in the folder where you run the command. Use `.js` for web components. The target id is the label (`radix=@radix-ui/react-dialog` has the id `radix`), or the package name with `/` turned into `-`, such as `radix-ui-react-dialog`. The report's **Targets** list shows each id.
+`fixtures/<target id>/<archetype>.jsx` for React, in the folder where you run the command. Use `.js` for web components. The target id is the label (`radix=npm:@radix-ui/react-dialog` has the id `radix`), or the package name with `/` turned into `-`, such as `radix-ui-react-dialog`. The report's **Targets** list shows each id.
 
 To keep a fixture somewhere else, name it in a mapping file and pass `--mapping`:
 

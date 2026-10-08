@@ -16,7 +16,7 @@ You need Node 20 or newer and Chrome or Chromium.
 ```bash
 npx automatica11y doctor
 npx automatica11y audit https://example.com
-npx automatica11y compare radix=@radix-ui/react-dialog aria=react-aria-components
+npx automatica11y compare radix=npm:@radix-ui/react-dialog aria=npm:react-aria-components
 ```
 
 `doctor` checks your setup. If it can't find a browser, it prints the command that installs one:
@@ -34,11 +34,11 @@ A target is `[label=]<spec>`. The label is optional, and names the target in the
 | Target | Spec |
 |---|---|
 | A live page | `https://example.com/page` |
-| A local page or site | `./page.html` or `./dist`. Paths start with `./`, `../`, `/`, `~`, or `file:`. |
+| A local page or site | `./page.html` or `./dist`. A path with no prefix is relative to the working folder, so `dist` means `./dist`. Prefixes `../`, `/`, `~`, and `file:` work too. |
 | A Storybook | Its URL, or a local folder with `index.json` or `stories.json`. |
-| An npm package | `name`, `@scope/name`, or `name@version`. React and web component libraries work. |
+| An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. React and web component libraries work. |
 
-A bare word such as `button` is always an npm package, never a folder.
+A bare word such as `button` is a path: the folder or file `./button`. Write `npm:button` to pick the package. The prefix is what chooses a package, so a folder with the same name never gets in the way. A bare word that isn't a path fails with a hint, such as "If you meant the npm package, write npm:react."
 
 A local `.html` file is served over `http://localhost`, never `file://`. A static site audits its `index.html` only.
 
