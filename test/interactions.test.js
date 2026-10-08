@@ -31,6 +31,17 @@ const N = "not-applicable";
 /** The common checks come first, then the archetype's own. */
 const common = (reach, focus, trap) => ({ "trigger-reachable-by-tab": reach, "focus-indicator-visible": focus, "no-focus-trap": trap });
 
+/** The live-region checks, in table order. */
+const live = (inRegion, text, before, politeness, focus, dismiss, kept) => ({
+  "message-in-live-region": inRegion,
+  "message-has-text": text,
+  "region-exists-before-message": before,
+  "live-politeness-fits-role": politeness,
+  "focus-stays-on-trigger": focus,
+  "dismiss-works-by-keyboard": dismiss,
+  "focus-kept-after-removal": kept,
+});
+
 /** One page per row, with the result every check should give. Good pages pass. Bad pages fail in a known way. */
 /** @type {Record<string, [string, Record<string, string>]>} */
 const PAGES = {
@@ -56,6 +67,13 @@ const PAGES = {
   "accordion-bad": ["accordion", { ...common(P, P, P), "expanded-state-exposed": F, "enter-toggles": F, "space-toggles": F }],
   "tooltip-good": ["tooltip", { ...common(P, P, P), "appears-on-focus": P, "escape-dismisses": P, "content-reachable-on-hover": P }],
   "tooltip-bad": ["tooltip", { ...common(P, P, P), "appears-on-focus": F, "escape-dismisses": N, "content-reachable-on-hover": F }],
+  "live-region-good": ["live-region", { ...common(P, P, P), ...live(P, P, P, P, P, N, N) }],
+  "live-region-good-alert": ["live-region", { ...common(P, P, P), ...live(P, P, P, P, P, P, P) }],
+  "live-region-bad-plain": ["live-region", { ...common(P, P, P), ...live(F, P, N, N, P, N, N) }],
+  "live-region-bad-insert": ["live-region", { ...common(P, P, P), ...live(P, P, F, P, P, N, N) }],
+  "live-region-bad-focus": ["live-region", { ...common(P, P, P), ...live(P, P, P, F, F, N, N) }],
+  "live-region-bad-dismiss-keys": ["live-region", { ...common(P, P, P), ...live(P, P, P, P, P, F, N) }],
+  "live-region-bad-dismiss-focus": ["live-region", { ...common(P, P, P), ...live(P, P, P, P, P, P, F) }],
 };
 
 for (const [page, [archetype, expected]] of Object.entries(PAGES)) {

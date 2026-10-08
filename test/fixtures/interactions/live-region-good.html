@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>live-region-good</title>
+<style>button { min-width: 44px; min-height: 44px; } [hidden] { display: none !important; } </style>
+</head>
+<body>
+<button type="button" id="go" data-a11y-trigger>Save</button>
+<div role="status" id="box" data-a11y-root></div>
+<script>
+document.getElementById('go').addEventListener('click', () => { document.getElementById('box').textContent = 'Saved.'; });
+</script>
+</body>
+</html>

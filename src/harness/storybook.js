@@ -12,6 +12,7 @@ export const ARCHETYPE_PATTERNS = {
   "form-field": /\binputs?\b|\btext ?(field|area|box)\b|\bform\b|\bcheckbox(es)?\b|\bradio\b|\bswitch\b|\bfield\b/i,
   accordion: /\baccordions?\b|\bcollaps(e|ible)\b|\bdisclosure\b/i,
   tooltip: /\btooltips?\b|\bpopovers?\b/i,
+  "live-region": /\balerts?\b(?! ?dialogs?)|\bstatus\b|\btoasts?\b|\bsnackbars?\b|\bnotifications?\b|\blive ?regions?\b/i,
   chart: /\bcharts?\b|\bgraphs?\b|\bplots?\b/i,
 };
 

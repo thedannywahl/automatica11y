@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>live-region-good-alert</title>
+<style>button { min-width: 44px; min-height: 44px; } [hidden] { display: none !important; } </style>
+</head>
+<body>
+<button type="button" id="go" data-a11y-trigger>Save</button>
+<div id="slot"></div>
+<script>
+document.getElementById('go').addEventListener('click', () => {
+  const alert = document.createElement('div');
+  alert.setAttribute('role', 'alert');
+  alert.setAttribute('data-a11y-root', '');
+  alert.innerHTML = 'Could not save. <button type="button" id="close">Dismiss</button>';
+  document.getElementById('slot').append(alert);
+  alert.querySelector('#close').addEventListener('click', () => { alert.remove(); document.getElementById('go').focus(); });
+});
+</script>
+</body>
+</html>

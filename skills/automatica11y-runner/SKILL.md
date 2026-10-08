@@ -60,7 +60,7 @@ Options you can set, and nothing else:
 | `--level A\|AA\|AAA` | `AA` | The user names a level. IBM Equal Access has no AAA rules, so it runs its AA rules and says so. |
 | `--engine axe,ibm` | both | The user wants one rule engine. |
 | `--tiers rules,interactions,computed,vsr` | all four | The user wants fewer checks. |
-| `--archetypes a,b` | all | The user cares about some components. Choose from button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, chart. |
+| `--archetypes a,b` | all | The user cares about some components. Choose from button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, live-region, chart. |
 | `--lib-a11y on,off` | both | Only for libraries with opt-in accessibility features. |
 | `--mapping <file>` | none | You wrote or edited a mapping file. |
 | `--max-stories <n>` | 200 | A large Storybook. |

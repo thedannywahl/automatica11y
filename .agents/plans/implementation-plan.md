@@ -434,3 +434,7 @@ Criterion numbers, names, levels, and versions now come from the W3C's published
 - axe-core's compact tags (`wcag1410`) resolve through the W3C list. Sentences that cite a criterion take its name and level from the data.
 - A test checks that every criterion any check cites exists in WCAG 2.2.
 - Left as is: axe-core's tag names (`wcag22aa`) and IBM's ruleset ids. They're those tools' own vocabularies, not WCAG data.
+
+### The live-region archetype.
+
+An alert-style comparison needed an archetype, so `live-region` joined the list. It's named for the accessibility pattern (a message that appears, changes, or goes away without moving focus), not for any component, and its test pages are plain HTML. One archetype covers `role="alert"`, `role="status"`, `role="log"`, and `aria-live`, because the checks branch on the region's role. Checks: the message is in a live region, has text, the region exists before the message (not required for `role="alert"`), politeness fits the role, focus stays on the trigger, the dismiss control works by keyboard, and focus isn't lost when the message is removed. Seven test pages cover the good and bad cases. Mapping and Storybook matching recognize alert, status, toast, snackbar, notification, and live region.

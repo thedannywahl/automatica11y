@@ -14,6 +14,7 @@ const BASE_NAMES = {
   "form-field": ["input", "textfield", "textinput", "field", "checkbox"],
   accordion: ["accordion", "collapsible", "disclosure"],
   tooltip: ["tooltip", "popover"],
+  "live-region": ["alert", "status", "toast", "snackbar", "notification", "liveregion"],
   chart: ["chart", "linechart", "barchart"],
 };
 

@@ -47,7 +47,7 @@ A local `.html` file is served over `http://localhost`, never `file://`. A stati
 Four tiers run by default. Use `--tiers` to pick fewer.
 
 - **Rules.** axe-core and IBM Equal Access run side by side. They overlap, and each catches things the other misses. Their findings are reported separately and never added together. axe-core reports an impact (`minor` to `critical`). IBM reports its Toolkit level, a staged adoption scale where level 1 is essential, high-impact requirements. The two scales aren't comparable.
-- **Interactions.** Keyboard and focus checks for nine archetypes: button, link, dialog, menu, tabs, combobox, form-field, accordion, and tooltip. Each check runs on a fresh page.
+- **Interactions.** Keyboard and focus checks for ten archetypes: button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, and live-region (a message that appears or changes without moving focus, such as an alert or status message). Each check runs on a fresh page.
 - **Computed checks.** automatica11y's own measurements from resolved styles in the browser, for the trigger of each archetype fixture: text contrast in rest, hover, keyboard focus, and pressed states (1.4.3), the contrast of the control's edge, fill, or icon (1.4.11), and the contrast and thickness of the focus indicator (1.4.11, and 2.4.13 at level AAA). A page that uses a gradient, an image, or transparency behind the control can't be reduced to one color, so that check reports `undetermined`, which is a gap and never a pass. These results are reported on their own and never added to the rule engines' counts.
 - **Virtual screen reader.** The announcements a simulated screen reader makes, recorded as data. The output is simulated. It isn't a real screen reader, and real ones announce things differently.
 
@@ -119,7 +119,7 @@ The guidance ships with the tool, so it always matches the version you run. Tell
 ## Limits.
 
 - Automated rules find only part of what WCAG covers. They can't judge whether alt text is meaningful, whether link and heading text make sense in context, cognitive load, real focus and reading order in use, or how real screen readers behave. A person has to check those.
-- Components are tested in the states a fixture shows. Dialogs, menus, tooltips, and comboboxes run closed and open. Other states aren't visited.
+- Components are tested in the states a fixture shows. Dialogs, menus, tooltips, and comboboxes run closed and open, and live regions run before and after the message. Other states aren't visited.
 - Content on a canvas with no alternative, or inside a closed shadow root, can't be tested, and the report says so. The virtual screen reader can't read inside shadow roots at all.
 - Vue, Svelte, Angular, and other frameworks report "unsupported framework."
 - Native screen readers aren't part of this version.

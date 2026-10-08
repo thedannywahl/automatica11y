@@ -87,9 +87,119 @@ async function openMenu(ctx) {
   return null;
 }
 
+// ---- live-region: a message that appears or changes without moving focus ----
+
+/** Press Enter on the trigger and wait for the message. Returns what the page looked like before, and after. */
+async function showMessage(ctx) {
+  await ctx.focus();
+  const before = await ctx.page.evaluate(() => window.__a11y.live());
+  await ctx.press("Enter");
+  const deadline = Date.now() + 2500;
+  let after = await ctx.page.evaluate(() => window.__a11y.live());
+  while (Date.now() < deadline && !(after.present && after.visible && (after.text || after.named))) {
+    await ctx.settle(80);
+    after = await ctx.page.evaluate(() => window.__a11y.live());
+  }
+  return { before, after, appeared: after.present && after.visible };
+}
+
+const NO_MESSAGE = "The message didn't appear when Enter was pressed on the trigger.";
+
+const LIVE_REGION_CHECKS = [
+  {
+    name: "message-in-live-region",
+    criteria: ["4.1.3"],
+    async run(ctx) {
+      const { after, appeared } = await showMessage(ctx);
+      if (!appeared) return fail(NO_MESSAGE);
+      if (!after.region) return fail("The message isn't inside an element with role alert, status, or log, or with an aria-live attribute, so a screen reader isn't told when it appears.");
+      if (after.region.politeness === "off") return fail(`The message sits in a region that doesn't announce (${after.region.role ? `role ${after.region.role}` : "aria-live"}${after.region.ariaLive ? `, aria-live="${after.region.ariaLive}"` : ""}), so a screen reader isn't told when it appears.`);
+      return pass(`The message is in a live region (${after.region.role ? `role ${after.region.role}, ` : ""}${after.region.politeness}).`);
+    },
+  },
+  {
+    name: "message-has-text",
+    criteria: ["4.1.3"],
+    async run(ctx) {
+      const { after, appeared } = await showMessage(ctx);
+      if (!appeared) return na(`${NO_MESSAGE} Its text wasn't checked.`);
+      return after.text || after.named ? pass(`The message says "${after.text || "(named by aria-label)"}".`) : fail("The message has no text and no accessible name, so there's nothing to announce.");
+    },
+  },
+  {
+    name: "region-exists-before-message",
+    criteria: ["4.1.3"],
+    async run(ctx) {
+      const { before, after, appeared } = await showMessage(ctx);
+      if (!appeared) return na(`${NO_MESSAGE} Its region wasn't checked.`);
+      if (!after.region || after.region.politeness === "off") return na("The message isn't in a live region, so the region's timing doesn't apply.");
+      if (before.regionUids.includes(after.region.uid)) return pass("The live region was already in the page before the message, so assistive technology was watching it.");
+      return after.region.role === "alert"
+        ? pass("The live region was added together with its message. role=\"alert\" is announced when it's inserted, so this works.")
+        : fail("The live region was added to the page together with its message. Screen readers often miss that. Keep the region in the page and change what's inside it.");
+    },
+  },
+  {
+    name: "live-politeness-fits-role",
+    criteria: ["4.1.3"],
+    async run(ctx) {
+      const { after, appeared } = await showMessage(ctx);
+      if (!appeared) return na(`${NO_MESSAGE} Its politeness wasn't checked.`);
+      const r = after.region;
+      if (!r) return na("The message isn't in a live region, so there's no politeness to check.");
+      if (r.role === "alert" && r.ariaLive && r.ariaLive.toLowerCase() !== "assertive") return fail(`role="alert" is assertive, but aria-live="${r.ariaLive}" on the same element overrides it.`);
+      if (r.role === "status" && (r.ariaLive ?? "").toLowerCase() === "off") return fail('role="status" is polite, but aria-live="off" on the same element turns announcing off.');
+      return pass(`The region announces ${r.politeness}${r.role ? `, as role ${r.role} implies` : ""}.`);
+    },
+  },
+  {
+    name: "focus-stays-on-trigger",
+    criteria: ["4.1.3"],
+    async run(ctx) {
+      const { appeared } = await showMessage(ctx);
+      if (!appeared) return na(`${NO_MESSAGE} Focus wasn't checked.`);
+      await ctx.settle(200);
+      const s = await ctx.snap();
+      return s.activeIsTrigger ? pass("Focus stayed on the trigger when the message appeared.") : fail(`Focus moved to ${where(s)} when the message appeared. A status message is announced without taking focus.`);
+    },
+  },
+  {
+    name: "dismiss-works-by-keyboard",
+    criteria: ["2.1.1"],
+    async run(ctx) {
+      const { appeared } = await showMessage(ctx);
+      if (!appeared) return na(`${NO_MESSAGE} Its controls weren't checked.`);
+      const found = await ctx.page.evaluate(() => window.__a11y.focusDismiss());
+      if (!found.found) return na("The message has no control inside it, so there's nothing to dismiss.");
+      await ctx.settle();
+      await ctx.press("Enter");
+      const gone = await ctx.waitFor((s) => !s.rootExists || !s.rootVisible, 1500);
+      return gone ? pass(`Enter on the ${found.tag}${found.label ? ` "${found.label}"` : ""} removed the message.`) : fail(`Enter on the ${found.tag}${found.label ? ` "${found.label}"` : ""} didn't remove the message.`);
+    },
+  },
+  {
+    name: "focus-kept-after-removal",
+    criteria: ["2.4.3"],
+    async run(ctx) {
+      const { appeared } = await showMessage(ctx);
+      if (!appeared) return na(`${NO_MESSAGE} Focus after removal wasn't checked.`);
+      const found = await ctx.page.evaluate(() => window.__a11y.focusDismiss());
+      if (!found.found) return na("The message has no control inside it, so nothing removes it from the keyboard.");
+      await ctx.settle();
+      await ctx.press("Enter");
+      if (!(await ctx.waitFor((s) => !s.rootExists || !s.rootVisible, 1500))) return na("Enter didn't remove the message, so where focus goes wasn't checked.");
+      await ctx.settle(200);
+      const s = await ctx.snap();
+      return s.bodyActive ? fail("Focus fell back to the page when the message was removed. Move it to the trigger or another control.") : pass(`Focus moved to ${where(s)} when the message was removed.`);
+    },
+  },
+];
+
 // ---- The tables ----
 
 export const ARCHETYPE_CHECKS = {
+  "live-region": LIVE_REGION_CHECKS,
+
   button: [
     { name: "enter-activates", criteria: ["2.1.1"], run: activates("Enter", "Enter") },
     { name: "space-activates", criteria: ["2.1.1"], run: activates("Space", "Space") },

@@ -24,6 +24,7 @@ const STATES = {
   tooltip: ["closed", "open"],
   combobox: ["closed", "open"],
   accordion: ["collapsed", "expanded"],
+  "live-region": ["before message", "message shown"],
 };
 
 const firstLine = (error) => (error instanceof Error ? error.message : String(error)).split("\n").find((l) => l.trim()) ?? "unknown error";
@@ -96,6 +97,9 @@ async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
     if (count !== 1) return { gap: `The fixture must mark exactly one data-a11y-trigger. It marked ${num(count)}.` };
     if (errors.length) return { gap: `The fixture logged errors when it mounted: ${errors[0]}` };
 
+    if (archetype === "live-region" && (await trigger.first().evaluate((el) => el.matches("[data-a11y-root]")))) {
+      return { gap: "The fixture marks the same element as the trigger and the message. A live-region fixture needs a control that makes the message appear (data-a11y-trigger) and the message itself (data-a11y-root)." };
+    }
     const states = STATES[archetype] ?? ["initial"];
     const configs = [];
     for (const [index, state] of states.entries()) {
@@ -105,12 +109,14 @@ async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
           if (archetype === "tooltip") await trigger.first().focus();
           else await trigger.first().click();
           await opened.page.waitForFunction(
-            () => {
+            (needsText) => {
               const root = document.querySelector("[data-a11y-root]");
               const shown = root && /** @type {HTMLElement} */ (root).getClientRects().length > 0;
+              // A live region can be on the page and empty until the trigger fills it, so wait for the message itself.
+              if (needsText) return Boolean(shown && ((root.textContent ?? "").trim() || root.getAttribute("aria-label") || root.getAttribute("aria-labelledby")));
               return shown || document.querySelector('[data-a11y-trigger][aria-expanded="true"]') !== null;
             },
-            undefined,
+            archetype === "live-region",
             { timeout: 3000 },
           );
         } catch {

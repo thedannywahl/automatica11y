@@ -8,7 +8,7 @@ export const LIB_A11Y = ["on", "off"];
 export const IMPACTS = ["minor", "moderate", "serious", "critical"];
 export const TOOLKIT_LEVELS = [1, 2, 3];
 export const FAIL_MODES = ["any", "all"];
-export const ARCHETYPES = ["button", "link", "dialog", "menu", "tabs", "combobox", "form-field", "accordion", "tooltip", "chart"];
+export const ARCHETYPES = ["button", "link", "dialog", "menu", "tabs", "combobox", "form-field", "accordion", "tooltip", "live-region", "chart"];
 export const FLAVORS = ["react", "wc"];
 export const MAPPING_STATUSES = ["template", "authored", "needs-fixture", "no-match"];
 

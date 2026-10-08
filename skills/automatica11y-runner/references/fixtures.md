@@ -54,6 +54,16 @@ export default function Fixture({ libA11y }) {
 
 For a dialog, menu, tooltip, or combobox, the tool tests the closed state, then activates the trigger and tests the open state. For an accordion it tests collapsed, then expanded. The tool activates the trigger by clicking it. For a tooltip it focuses the trigger instead, so a tooltip has to open on focus. If it opens only on pointer hover, the open state never appears. Make sure activating the trigger really opens the surface, and that the element with `data-a11y-root` is then attached to the document, isn't `display: none` or `hidden`, and isn't `visibility: hidden`. The tool also counts the surface as open if the trigger has `aria-expanded="true"`. If neither holds, the open state is reported as failed, with the reason. The interaction checks also press keys and hover, but they don't change how the open state is reached.
 
+## Live regions
+
+The `live-region` archetype covers any message that appears, changes, or goes away without moving focus: alerts, status messages, toasts, snackbars, and other `role="alert"`, `role="status"`, `role="log"`, or `aria-live` content. A library's alert component is a fixture for this archetype. The archetype isn't named after any one component.
+
+- `data-a11y-trigger` goes on the control that makes the message appear or change, such as a "Save" button. It can't be the message itself. A message that's on the page from the start has nothing to announce, so the tool reports a gap and asks for a trigger.
+- `data-a11y-root` goes on the message: the element that carries the role, or the element whose text changes. It may already be in the page and empty, or the trigger may insert it.
+- If the message has a dismiss control, put it inside the root. The tool presses Enter on it and checks that the message goes away and that focus lands somewhere sensible.
+- The tool checks that the message sits in a live region, that the region was in the page before the message arrived (except for `role="alert"`, which is announced on insertion), that the politeness fits the role, and that focus stays on the trigger.
+- The states are "before message" and "message shown". The tool activates the trigger by clicking it, then waits for the message to have text.
+
 ## Check your fixture
 
 Run the audit and look at the report's **Archetypes** table. `ran` means it worked. A `gap` row says what went wrong, such as "didn't render an element with data-a11y-trigger" or "didn't bundle." Fix the file and run again.

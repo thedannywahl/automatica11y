@@ -77,7 +77,8 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
 
 /**
  * Find the optional peer dependencies that installed packages declare, with the range each asks for.
- * npm leaves these out, but a library's default setup can still need one (MUI needs an Emotion package).
+ * npm leaves these out, but a library's default setup can still need one
+ * (e.g., React libraries may need an Emotion package).
  * @param {string} dir The install folder.
  * @returns {Map<string, string>} Package name to range.
  */

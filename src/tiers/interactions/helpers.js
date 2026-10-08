@@ -71,6 +71,20 @@ export function installHelpers() {
     return (pointed && byId(active, pointed)) || active;
   };
 
+  const LIVE_ROLES = { alert: "assertive", status: "polite", log: "polite", marquee: "off", timer: "off" };
+  /** How a live region announces: its aria-live value if it has a valid one, otherwise what its role implies. */
+  const politeness = (el) => {
+    const set = (el.getAttribute("aria-live") ?? "").trim().toLowerCase();
+    if (["off", "polite", "assertive"].includes(set)) return set;
+    return LIVE_ROLES[el.getAttribute("role") ?? ""] ?? "off";
+  };
+  const isLiveElement = (el) => Object.hasOwn(LIVE_ROLES, el.getAttribute("role") ?? "") || el.hasAttribute("aria-live");
+  /** The closest element, from `el` upward, that is a live region or has an aria-live attribute. */
+  const liveRegionOf = (el) => {
+    for (let node = el; node; node = node.assignedSlot || node.parentElement || node.getRootNode?.().host) if (node.nodeType === 1 && isLiveElement(node)) return node;
+    return null;
+  };
+
   window.__a11yClicks = 0;
   document.addEventListener("click", () => (window.__a11yClicks += 1), true);
 
@@ -115,6 +129,27 @@ export function installHelpers() {
         hasSelected: el.hasAttribute("aria-selected"),
         visible: visible(el),
       }));
+    },
+    /** The message (data-a11y-root) and the live region it sits in, as they are right now. */
+    live() {
+      const root = queryDeep("[data-a11y-root]");
+      const region = root ? liveRegionOf(root) : null;
+      return {
+        present: Boolean(root),
+        visible: visible(root),
+        text: text(root),
+        named: Boolean(root && (root.getAttribute("aria-label") || root.getAttribute("aria-labelledby"))),
+        region: region ? { uid: uid(region), role: region.getAttribute("role"), ariaLive: region.getAttribute("aria-live"), politeness: politeness(region), isMessage: region === root } : null,
+        regionUids: queryAllDeep("[role], [aria-live]").filter(isLiveElement).map(uid),
+      };
+    },
+    /** Move focus to the first control inside the message, such as a dismiss button. Returns what it found. */
+    focusDismiss() {
+      const root = queryDeep("[data-a11y-root]");
+      const control = root ? [...root.querySelectorAll('button, a[href], input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])')].find(visible) : null;
+      if (!control) return { found: false };
+      control.focus();
+      return { found: true, tag: control.localName, label: text(control) || control.getAttribute("aria-label") || "" };
     },
     /** The name a control gets from its label, in the order browsers use. */
     nameSources() {
