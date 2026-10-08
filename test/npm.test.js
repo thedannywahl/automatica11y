@@ -10,7 +10,9 @@ import { candidateMapping } from "../src/plan/mapping.js";
 import { parseResults } from "../src/schema.js";
 import { makeIo, makeTree } from "./helpers/fixtures.js";
 import { installPackage, npmView } from "./helpers/npm-fakes.js";
-import { installPackage as realInstall } from "../src/harness/npm-install.js";
+import { installPackage as realInstall, installOptionalPeers, declaredOptionalPeers } from "../src/harness/npm-install.js";
+import { unresolvedPackages } from "../src/harness/bundle.js";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 
 // Other test files run at the same time and make their own temporary folders. Give this file its own, so counting leftovers is exact.
 process.env.TMPDIR = makeTree();
@@ -102,6 +104,71 @@ test("an install that fails for another reason isn't retried, and a retry that f
     throw new Error("npm error code ETARGET\nnpm error notarget No matching version found for pkg@9.9.9.");
   };
   await assert.rejects(realInstall({ dir: makeTree(), name: "pkg", version: "9.9.9", flavor: "wc", run: alwaysMissing }), /npm couldn't install pkg@9\.9\.9/);
+});
+
+function fakeInstall(packages) {
+  const dir = mkdtempSync(join(tmpdir(), "a11y-peers-"));
+  for (const [name, pkg] of Object.entries(packages)) {
+    mkdirSync(join(dir, "node_modules", name), { recursive: true });
+    writeFileSync(join(dir, "node_modules", name, "package.json"), JSON.stringify({ name, version: "1.0.0", ...pkg }));
+  }
+  return dir;
+}
+
+test("unresolvedPackages names each missing package once and ignores relative paths", () => {
+  const text = (name) => ({ text: `Could not resolve "${name}"` });
+  assert.deepEqual(
+    unresolvedPackages([text("@emotion/react"), text("@emotion/styled/base"), text("lodash/get"), text("./local.js"), text("lodash"), { text: "Something else" }]),
+    ["@emotion/react", "@emotion/styled", "lodash"],
+  );
+});
+
+test("optional peers: only packages an installed library declares as optional are installed", async () => {
+  const dir = fakeInstall({
+    "ui-lib": { peerDependencies: { "@emotion/react": "^11.0.0", react: "^19" }, peerDependenciesMeta: { "@emotion/react": { optional: true } } },
+  });
+  assert.deepEqual([...declaredOptionalPeers(dir)], [["@emotion/react", "^11.0.0"]]);
+  const calls = [];
+  const run = async (args) => void calls.push(args);
+  const result = await installOptionalPeers({ dir, unresolved: ["@emotion/react", "left-pad"], run });
+  assert.deepEqual(result.installed, ["@emotion/react"]);
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].includes("@emotion/react@^11.0.0"));
+  assert.ok(!calls[0].some((arg) => arg.includes("left-pad")));
+  assert.ok(!calls[0].some((arg) => arg.startsWith("react")), "no react installed here, so none is named");
+  assert.match(result.warnings[0], /optional peer dependencies/);
+});
+
+test("optional peers: an installed React is named again so the install can't prune it", async () => {
+  const dir = fakeInstall({
+    "ui-lib": { peerDependencies: { "@emotion/react": "^11.0.0" }, peerDependenciesMeta: { "@emotion/react": { optional: true } } },
+    react: { version: "19.1.0" },
+    "react-dom": { version: "19.1.0" },
+  });
+  const calls = [];
+  await installOptionalPeers({ dir, unresolved: ["@emotion/react"], run: async (args) => void calls.push(args) });
+  assert.ok(calls[0].includes("react@19.1.0") && calls[0].includes("react-dom@19.1.0"));
+});
+
+test("optional peers: nothing is installed when the package is already there or isn't declared", async () => {
+  const dir = fakeInstall({
+    "ui-lib": { peerDependencies: { "@emotion/react": "^11.0.0" }, peerDependenciesMeta: { "@emotion/react": { optional: true } } },
+    "@emotion/react": {},
+  });
+  const run = async () => assert.fail("npm shouldn't run");
+  assert.deepEqual((await installOptionalPeers({ dir, unresolved: ["@emotion/react", "other"], run })).installed, []);
+});
+
+test("optional peers: an install failure says which packages and why", async () => {
+  const dir = fakeInstall({ "ui-lib": { peerDependencies: { x: "1" }, peerDependenciesMeta: { x: { optional: true } } } });
+  await assert.rejects(installOptionalPeers({ dir, unresolved: ["x"], run: async () => { throw new Error("npm error E404"); } }), /optional peer dependencies x: E404/);
+});
+
+test("candidateMapping: a button next to ButtonBase and ButtonGroup is still a template, but real parts make it a compound", () => {
+  const flat = candidateMapping({ flavor: "react", exports: ["Button", "ButtonBase", "ButtonGroup", "ButtonGroupContext"].map((name) => ({ name, type: "function", parts: [] })) });
+  assert.deepEqual([flat.button.export, flat.button.status], ["Button", "template"]);
+  const parted = candidateMapping({ flavor: "react", exports: [{ name: "Button", type: "object", parts: ["Root", "Label"] }] });
+  assert.equal(parted.button.status, "needs-fixture");
 });
 
 test("candidateMapping: matches by name, marks compound parts, and leaves the rest as gaps", () => {

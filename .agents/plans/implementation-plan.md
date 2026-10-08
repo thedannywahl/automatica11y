@@ -399,3 +399,12 @@ Five subagent scenarios plus a real `npx` smoke test of the published 0.3.1. Fix
 - The React detection reason now says whether react is a peer dependency or a dependency.
 
 Still open: the first run of the weekly latest-deps workflow, a trial in a live agent session, and the Radix open-state `aria-hidden-focus` finding on the trigger (unclear if it's a Radix defect or a harness artifact). Version 0.3.0 on npm is broken, so deprecate it.
+
+### MUI and InstUI button comparison (0.3.2) and fixes.
+
+MUI failed to bundle because Emotion is an optional peer dependency that npm leaves out. Two fixes on main:
+
+- When a bundle can't resolve a package that an installed library declares as an optional peer, the tool installs it (keeping React pinned, since a loose install prunes peer-only packages) and bundles once more, with a warning in the report.
+- A `button` or `link` is no longer treated as compound just because exports like `ButtonBase` and `ButtonGroup` share its prefix. Only real parts (such as `Button.Root`) count.
+
+Result with both fixes: MUI Button and InstUI Button each ran all three tiers with no automated violations. IBM listed items to review only (`aria_content_in_landmark` on both, `style_focus_visible` on MUI).

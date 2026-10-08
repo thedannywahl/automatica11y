@@ -58,7 +58,8 @@ export function candidateMapping({ flavor, exports = [], tags = [] }) {
     const info = exports.find((e) => e.name === best);
     const parts = info?.parts ?? [];
     // Flat compound libraries (DialogRoot, DialogTrigger, DialogContent) have sibling exports that share a prefix.
-    const siblings = flavor === "react" ? names.filter((n) => n !== best && n.startsWith(best) && n.length > best.length) : [];
+    // A button or link usually sits beside ButtonBase, ButtonGroup, and the like, which aren't its parts, so only real parts (Button.Root) count there.
+    const siblings = flavor === "react" && !TEMPLATED.has(archetype) ? names.filter((n) => n !== best && n.startsWith(best) && n.length > best.length) : [];
     const compound = parts.length > 0 || siblings.length >= 2;
     const templated = TEMPLATED.has(archetype) && !compound;
     mapping[archetype] = {

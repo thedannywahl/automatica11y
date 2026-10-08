@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const NPM_FLAGS = ["--ignore-scripts", "--no-audit", "--no-fund", "--prefer-offline", "--loglevel=error"];
@@ -73,6 +73,55 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
     }
   }
   return { dir, warnings, react: installedVersion(dir, "react"), reactDom: installedVersion(dir, "react-dom"), version: installedVersion(dir, name) };
+}
+
+/**
+ * Find the optional peer dependencies that installed packages declare, with the range each asks for.
+ * npm leaves these out, but a library's default setup can still need one (MUI needs an Emotion package).
+ * @param {string} dir The install folder.
+ * @returns {Map<string, string>} Package name to range.
+ */
+export function declaredOptionalPeers(dir) {
+  const root = join(dir, "node_modules");
+  const found = new Map();
+  const names = [];
+  for (const entry of existsSync(root) ? readdirSync(root) : []) {
+    if (entry.startsWith(".")) continue;
+    if (entry.startsWith("@")) for (const inner of readdirSync(join(root, entry))) names.push(`${entry}/${inner}`);
+    else names.push(entry);
+  }
+  for (const name of names) {
+    try {
+      const pkg = JSON.parse(readFileSync(join(root, name, "package.json"), "utf8"));
+      for (const [peer, meta] of Object.entries(pkg.peerDependenciesMeta ?? {})) {
+        if (meta?.optional && pkg.peerDependencies?.[peer] && !found.has(peer)) found.set(peer, pkg.peerDependencies[peer]);
+      }
+    } catch {
+      // A folder without a readable package.json isn't a package.
+    }
+  }
+  return found;
+}
+
+/**
+ * Install the optional peer dependencies a failed bundle was missing. Only packages that an installed library
+ * declares as optional peers are added, so a typo in a fixture can't pull in an arbitrary package.
+ * @param {{ dir: string, unresolved: string[], run?: typeof runNpm }} options
+ * @returns {Promise<{ installed: string[], warnings: string[] }>}
+ */
+export async function installOptionalPeers({ dir, unresolved, run = runNpm }) {
+  const declared = declaredOptionalPeers(dir);
+  const wanted = unresolved.filter((name) => declared.has(name) && !installedVersion(dir, name));
+  if (wanted.length === 0) return { installed: [], warnings: [] };
+  // A loose install prunes packages that only arrived as peers, so name React again to keep it.
+  const keep = ["react", "react-dom"].flatMap((name) => (installedVersion(dir, name) ? [`${name}@${installedVersion(dir, name)}`] : []));
+  const specs = [...wanted.map((name) => `${name}@${declared.get(name)}`), ...keep];
+  try {
+    await run(["install", ...specs, "--legacy-peer-deps", ...NPM_FLAGS], dir);
+  } catch (error) {
+    throw new Error(`npm couldn't install the optional peer dependencies ${wanted.join(", ")}: ${firstLine(error.message)}`);
+  }
+  return { installed: wanted, warnings: [`The library lists ${wanted.join(", ")} as optional peer dependencies and its code needs them to load, so they were installed.`] };
 }
 
 function firstLine(text) {

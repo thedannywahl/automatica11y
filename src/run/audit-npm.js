@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { bundleEntries } from "../harness/bundle.js";
-import { installPackage } from "../harness/npm-install.js";
+import { installOptionalPeers, installPackage } from "../harness/npm-install.js";
 import * as react from "../harness/npm-react.js";
 import * as wc from "../harness/npm-wc.js";
 import { closedShadowHosts, notTestableEntries } from "../harness/shadow.js";
@@ -40,12 +40,28 @@ function watchErrors(errors) {
   };
 }
 
+/**
+ * Bundle, and if the library needs an optional peer dependency that npm left out, install it and bundle once more.
+ * @param {Parameters<typeof bundleEntries>[0]} options
+ * @param {string[]} warnings Gets a note when peers were installed.
+ */
+async function bundleWithPeers(options, warnings) {
+  try {
+    return await bundleEntries(options);
+  } catch (error) {
+    const added = await installOptionalPeers({ dir: options.workDir, unresolved: error.unresolved ?? [] });
+    if (added.installed.length === 0) throw error;
+    warnings.push(...added.warnings);
+    return bundleEntries(options);
+  }
+}
+
 /** Load the whole package in a page to list its exports and the custom elements it defines. */
-async function discover({ browser, workDir, flavor, pkg, buildDir }) {
+async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
   const helper = flavor === "react" ? react : wc;
   const entryFile = join(workDir, "discover.js");
   writeFileSync(entryFile, helper.discoverEntry(pkg));
-  await bundleEntries({ entries: { discover: entryFile }, outdir: buildDir, workDir, react: flavor === "react" });
+  await bundleWithPeers({ entries: { discover: entryFile }, outdir: buildDir, workDir, react: flavor === "react" }, warnings);
   const server = await serveStatic(buildDir);
   const errors = [];
   try {
@@ -164,7 +180,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor });
     const warnings = [...installed.warnings];
 
-    const found = await discover({ browser, workDir, flavor: flavor === "react" ? "react" : "wc", pkg: resolved.name, buildDir });
+    const found = await discover({ browser, workDir, flavor: flavor === "react" ? "react" : "wc", pkg: resolved.name, buildDir, warnings });
     if (flavor === "unknown") {
       if (found.tags.length > 0) flavor = "wc";
       else if (installed.react && found.exports.some((e) => /^[A-Z]/.test(e.name))) flavor = "react";
@@ -219,7 +235,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       mkdirSync(join(tmp, "entries"), { recursive: true });
       writeFileSync(entryFile, helper.entry(fixture, resolved.name));
       try {
-        await bundleEntries({ entries: { [archetype]: entryFile }, outdir: buildDir, workDir, react: flavor === "react" });
+        await bundleWithPeers({ entries: { [archetype]: entryFile }, outdir: buildDir, workDir, react: flavor === "react" }, warnings);
         runnable[archetype] = `/${archetype}.html`;
       } catch (error) {
         archetypes[archetype] = { status: "gap", reason: `The fixture didn't bundle. ${firstLine(error)}`, configs: [] };

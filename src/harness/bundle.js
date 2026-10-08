@@ -6,6 +6,20 @@ const ASSET_LOADERS = /** @type {Record<string, import("esbuild").Loader>} */ (O
 ));
 
 /**
+ * The package names esbuild couldn't resolve, such as `@emotion/react`. A subpath import counts as its package.
+ * @param {{ text?: string }[]} errors
+ * @returns {string[]}
+ */
+export function unresolvedPackages(errors) {
+  const names = new Set();
+  for (const { text = "" } of errors) {
+    const match = /^Could not resolve "([^".\/][^"]*)"/.exec(text);
+    if (match) names.add(match[1].split("/").slice(0, match[1].startsWith("@") ? 2 : 1).join("/"));
+  }
+  return [...names];
+}
+
+/**
  * Bundle fixture entries into one folder of browser-ready ES modules, plus one HTML shell per entry.
  * esbuild loads here and only here. It doesn't type-check, and fixtures don't need it to.
  * @param {{ entries: Record<string, string>, outdir: string, workDir: string, react?: boolean }} options
@@ -33,7 +47,7 @@ export async function bundleEntries({ entries, outdir, workDir, react = false })
     });
   } catch (error) {
     const messages = (error.errors ?? []).slice(0, 3).map((e) => `${e.text}${e.location ? ` (${e.location.file}:${e.location.line})` : ""}`);
-    throw new Error(`Bundling failed: ${messages.join("; ") || error.message}`);
+    throw Object.assign(new Error(`Bundling failed: ${messages.join("; ") || error.message}`), { unresolved: unresolvedPackages(error.errors ?? []) });
   }
   /** @type {Record<string, string>} */
   const pages = {};
