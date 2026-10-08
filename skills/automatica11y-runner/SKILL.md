@@ -10,7 +10,7 @@ This skill turns a request into an `automatica11y` command, runs it, and writes 
 
 It's plain Markdown, and it isn't tied to one agent. It needs an agent that can run shell commands (including `npx`) and read and write files. Paths such as `references/fixtures.md` are relative to this file.
 
-The tool is **not** an attestation or certification tool. Automated checks cover only part of WCAG. Say "no automated violations found." Never say a target is "accessible" or "compliant."
+The tool is **not** an attestation or certification tool. Automated checks cover only part of WCAG. Never say a target is "accessible" or "compliant." Where an engine reports zero violations for a target, say "no automated violations found" for that engine. Where it reports violations, list them as the tool reports them, and don't use that phrase for that engine.
 
 ## 1. Check the version
 
@@ -151,7 +151,7 @@ Write the narrative from `results.json`. Never write from memory, and never repe
 3. Open with the coverage matrix (target by archetype by tier). Then give the findings.
 4. Keep violations, needs-review items, and passes in separate lists. Never merge them.
 5. Break findings out by archetype and by impact.
-6. Say "no automated violations found." Never say "accessible," "compliant," or "passes WCAG."
+6. Use "no automated violations found" only for an engine that reported none for that target. For an engine that reported violations, list them as the tool reports them. Never say "accessible," "compliant," or "passes WCAG."
 7. Don't print a single score. If someone insists, pair any number with the coverage matrix and the automated-coverage caveat.
 8. Label virtual screen reader output **simulated**. Label library accessibility options **on** or **off** on every result that has one.
 9. Treat a gap, a not-testable result, an error, or a failed target as a finding. It never counts as a pass.

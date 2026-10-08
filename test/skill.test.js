@@ -53,7 +53,7 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   assert.match(bootstrap, /Don't guess at results/);
   assert.match(bootstrap, /exits with an error or prints no usable output, tell the user it failed, include the error text, and stop/);
   assert.match(bootstrap, /Don't continue with partial instructions/);
-  assert.match(bootstrap, /no automated violations found/);
+  assert.doesNotMatch(bootstrap, /no automated violations found|attestation/, "the wording rules live in the runner");
   assert.equal(existsSync(join(bootstrapDir, "references")), false, "the bootstrap has no references to lose");
   assert.doesNotMatch(bootstrap, /\d+\.\d+\.x/, "the bootstrap names no version, so it never goes stale");
   assert.deepEqual(readdirSync(bootstrapDir), ["SKILL.md"], "one file, so a user can copy it");
@@ -81,6 +81,10 @@ test("the series the runner names is the series of the version in package.json",
   assert.equal(stated[1], series(pkg.version), "bump SKILL.md when the version series changes");
   assert.ok(runner.includes(`doesn't start with \`${stated[1]}.\``), "the stop rule uses the same series");
   assert.match(runner, /exits with an error or prints nothing, tell the user it failed, include the error text, and stop/);
+  // The wording rule says when to use the phrase, and what to do when there are violations.
+  assert.match(runner, /Where an engine reports zero violations for a target, say "no automated violations found" for that engine\. Where it reports violations, list them as the tool reports them/);
+  assert.match(runner, /Use "no automated violations found" only for an engine that reported none for that target/);
+  assert.doesNotMatch(runner, /Say "no automated violations found\."/, "no unconditional instruction to say the phrase");
   assert.ok(agents.includes(`(\`${stated[1]}.x\`)`), "AGENTS.md names the same series");
   assert.doesNotMatch(runner, /\{\{[A-Z]+\}\}/, "no placeholders are left in the file");
 });

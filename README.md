@@ -7,7 +7,7 @@ automatica11y answers two questions:
 - How accessible is this? (`audit`)
 - How do these compare? (`compare`, two or more targets)
 
-It's **not** an attestation or certification tool. Automated checks cover only part of WCAG, so every report says "no automated violations found," never "accessible." See [Limits](#limits).
+It's **not** an attestation or certification tool. Automated checks cover only part of WCAG, so a report says "no automated violations found" only where an engine found none, and never says "accessible." See [Limits](#limits).
 
 ## Quick start.
 
