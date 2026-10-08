@@ -1,7 +1,10 @@
 /** Web component flavor: framework-free entries and templates. */
 
 /** Loads the package so its custom elements get defined, then calls the fixture's default export, `mount(container)`. */
-export const entry = (fixturePath, pkg) => `import ${JSON.stringify(pkg)};
+export const entry = (fixturePath, pkg) => `// A package's own "sideEffects" list can mark its entry as removable, which would drop a bare import and leave its elements undefined.
+// Using the namespace keeps the package and its registration code.
+import * as library from ${JSON.stringify(pkg)};
+globalThis.__a11yLibrary = library;
 import mount from ${JSON.stringify(fixturePath)};
 const libA11y = new URLSearchParams(location.search).get("libA11y") === "on";
 await mount(document.getElementById("root"), { libA11y });

@@ -134,8 +134,9 @@ const LIVE_REGION_CHECKS = [
       if (!appeared) return na(`${NO_MESSAGE} Its region wasn't checked.`);
       if (!after.region || after.region.politeness === "off") return na("The message isn't in a live region, so the region's timing doesn't apply.");
       if (before.regionUids.includes(after.region.uid)) return pass("The live region was already in the page before the message, so assistive technology was watching it.");
-      return after.region.role === "alert"
-        ? pass("The live region was added together with its message. role=\"alert\" is announced when it's inserted, so this works.")
+      if (after.region.role === "alert") return pass("The live region was added together with its message. role=\"alert\" is announced when it's inserted, so this works.");
+      return before.ancestorUids.includes(after.region.uid)
+        ? fail("The element was in the page before the message, but it only became a live region when the message arrived. Screen readers often miss that. Put role or aria-live in the page's HTML, and change only what's inside the region.")
         : fail("The live region was added to the page together with its message. Screen readers often miss that. Keep the region in the page and change what's inside it.");
     },
   },

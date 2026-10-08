@@ -155,4 +155,42 @@ const FOCUS_CONTRAST = {
   },
 };
 
-export const COMPUTED_CHECKS = [TEXT_CONTRAST, BOUNDARY_CONTRAST, FOCUS_CONTRAST];
+/**
+ * For a live region, the trigger is only a button that makes the message appear, so the message is what gets measured:
+ * the text that appears after the trigger is activated, in its resting state.
+ */
+const MESSAGE_TEXT_CONTRAST = {
+  name: "message-text-contrast",
+  criteria: ["1.4.3"],
+  async run(ctx) {
+    await parkPointer(ctx);
+    const before = (await ctx.page.evaluate(() => window.__a11yMeasure.text("page"))) ?? [];
+    await ctx.focus();
+    await ctx.press("Enter");
+    await ctx.settle(SETTLE_MS);
+    const after = (await ctx.page.evaluate(() => window.__a11yMeasure.text("page"))) ?? [];
+    const known = new Set(before.map((p) => p.key));
+    const fresh = after.filter((p) => !known.has(p.key));
+    if (fresh.length === 0) return na("No new visible text appeared when the trigger was activated, so there's no message text to measure.");
+    const rows = [];
+    const unknown = [];
+    for (const part of fresh) {
+      if (part.undetermined || !part.backdrop) unknown.push(`"${part.text}" can't be measured because ${part.undetermined ?? "its background couldn't be read"}.`);
+      else rows.push({ text: part.text, ratio: contrastOver(part.color, part.backdrop), required: textThreshold(part.size, part.weight) });
+    }
+    const measurements = rows.map((r) => ({ text: r.text, ratio: floor2(r.ratio), required: r.required }));
+    const failed = rows.filter((r) => r.ratio < r.required).sort((a, b) => a.ratio / a.required - b.ratio / b.required);
+    if (failed.length) return fail(`The message text "${failed[0].text}" has ${formatRatio(failed[0].ratio)} against its background and needs ${failed[0].required}:1.`, { measurements });
+    if (unknown.length) return undetermined(`${rows.length ? `The lowest measured is ${formatRatio(Math.min(...rows.map((r) => r.ratio)))}. ` : ""}${unknown[0]}`, { measurements });
+    const lowest = rows.reduce((a, b) => (b.ratio / b.required < a.ratio / a.required ? b : a));
+    return pass(`The message text "${lowest.text}" has ${formatRatio(lowest.ratio)} against its background (needs ${lowest.required}:1).`, { measurements });
+  },
+};
+
+/** The checks that apply to an archetype. */
+export function computedChecksFor(archetype) {
+  return archetype === "live-region" ? [MESSAGE_TEXT_CONTRAST] : [TEXT_CONTRAST, BOUNDARY_CONTRAST, FOCUS_CONTRAST];
+}
+
+/** Every computed check, for tests and docs. */
+export const COMPUTED_CHECKS = [TEXT_CONTRAST, BOUNDARY_CONTRAST, FOCUS_CONTRAST, MESSAGE_TEXT_CONTRAST];

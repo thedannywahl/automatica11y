@@ -1,6 +1,6 @@
 import { installHelpers } from "../interactions/helpers.js";
 import { runCheck } from "../interactions/index.js";
-import { COMPUTED_CHECKS } from "./checks.js";
+import { computedChecksFor } from "./checks.js";
 import { installMeasure } from "./measure-kit.js";
 
 /**
@@ -14,7 +14,7 @@ import { installMeasure } from "./measure-kit.js";
 export async function runComputed(browser, url, archetype) {
   if (archetype === "chart") return { status: "not-applicable", reason: "The chart archetype has no trigger to measure." };
   const results = [];
-  for (const check of COMPUTED_CHECKS) results.push(await runCheck(browser, url, check, { kits: [installHelpers, installMeasure] }));
+  for (const check of computedChecksFor(archetype)) results.push(await runCheck(browser, url, check, { kits: [installHelpers, installMeasure] }));
   return { status: "ran", checks: results };
 }
 

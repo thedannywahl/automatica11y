@@ -133,8 +133,14 @@ export function installHelpers() {
     /** The message (data-a11y-root) and the live region it sits in, as they are right now. */
     live() {
       const root = queryDeep("[data-a11y-root]");
-      const region = root ? liveRegionOf(root) : null;
+      let region = root ? liveRegionOf(root) : null;
+      // A web component can keep the role on a wrapper inside its shadow root, around a slot that shows the message.
+      if (!region && root?.shadowRoot) region = [...root.shadowRoot.querySelectorAll("[role], [aria-live]")].find((el) => isLiveElement(el) && el.querySelector("slot")) ?? null;
+      const chain = [];
+      for (let node = root; node && chain.length < 200; node = node.assignedSlot || node.parentElement || node.getRootNode?.().host) chain.push(uid(node));
       return {
+        /** The message and everything above it, so a later check can tell whether the region's element was already in the page. */
+        ancestorUids: chain,
         present: Boolean(root),
         visible: visible(root),
         text: text(root),

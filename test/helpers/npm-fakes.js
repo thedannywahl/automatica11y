@@ -10,6 +10,7 @@ export const REGISTRY = {
   "fake-nospread": { name: "fake-nospread", version: "1.0.0", peerDependencies: { react: "*", "react-dom": "*" } },
   "fake-wc": { name: "fake-wc", version: "1.0.0", customElements: "custom-elements.json" },
   "closed-wc": { name: "closed-wc", version: "2.0.0" },
+  "quiet-wc": { name: "quiet-wc", version: "1.0.0" },
   "plain-utils": { name: "plain-utils", version: "3.0.0" },
   "vue-lib": { name: "vue-lib", version: "1.0.0", peerDependencies: { vue: "^3" } },
 };

@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { bundleEntries } from "../harness/bundle.js";
-import { installOptionalPeers, installPackage } from "../harness/npm-install.js";
+import { settleAnimations } from "../harness/settle.js";
+import { installExtraPackages, installOptionalPeers, installPackage } from "../harness/npm-install.js";
 import * as react from "../harness/npm-react.js";
 import * as wc from "../harness/npm-wc.js";
 import { closedShadowHosts, notTestableEntries } from "../harness/shadow.js";
@@ -123,7 +124,7 @@ async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
           failure = `The ${state} state never appeared after activating the trigger. A fixture's data-a11y-root has to show up when the ${archetype} opens.`;
         }
       }
-      await opened.page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+      await settleAnimations(opened.page);
       /** @type {Record<string, any>} */
       const tiers = {};
       for (const tier of plan.options.tiers) {
@@ -187,6 +188,10 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     let flavor = planTarget.kind === "npm-react" ? "react" : planTarget.kind === "npm-wc" ? "wc" : "unknown";
     const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor });
     const warnings = [...installed.warnings];
+
+    // Packages the mapping names (a token stylesheet, a theme) go in beside the library, so a fixture can import them.
+    const extras = await installExtraPackages({ dir: workDir, specs: Object.values(planTarget.mapping ?? {}).flatMap((entry) => entry.install ?? []) });
+    warnings.push(...extras.warnings);
 
     const found = await discover({ browser, workDir, flavor: flavor === "react" ? "react" : "wc", pkg: resolved.name, buildDir, warnings });
     if (flavor === "unknown") {

@@ -60,6 +60,23 @@ for (const [page, [archetype, text, boundary, focus]] of Object.entries(PAGES)) 
   });
 }
 
+/** Live-region pages: the computed tier measures the message that appears, not the trigger. */
+/** @type {Record<string, string>} */
+const MESSAGES = {
+  "message-good": "pass",
+  "message-low": "fail",
+  "message-visually-hidden-copy": "pass",
+  "message-gradient": "undetermined",
+  "message-shadow-slot": "pass",
+};
+for (const [page, expected] of Object.entries(MESSAGES)) {
+  test(`${page}: the message's text contrast is ${expected}`, { skip, timeout: 60_000 }, async () => {
+    const result = await runComputed(session.browser, `${server.origin}/${page}.html`, "live-region");
+    assert.deepEqual(result.checks.map((c) => c.name), ["message-text-contrast"]);
+    assert.equal(result.checks[0].result, expected, result.checks[0].detail);
+  });
+}
+
 test("a state-dependent failure names the state that failed", { skip, timeout: 60_000 }, async () => {
   const result = await runComputed(session.browser, `${server.origin}/hover-low.html`, "button");
   const text = result.checks.find((c) => c.name === "text-contrast-by-state");

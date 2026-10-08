@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>message-visually-hidden-copy</title>
+<style>
+body { margin: 24px; background: #fff; font: 16px/1.4 sans-serif; }
+button { font: inherit; min-width: 44px; min-height: 44px; }
+#box { padding: 8px; background: #fff; color: #222; } .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); color: #fff; }
+</style>
+</head>
+<body>
+<button type="button" id="go" data-a11y-trigger>Save</button>
+<div role="status" id="box" data-a11y-root></div><div class="sr" id="sr"></div>
+<script>
+document.getElementById('go').addEventListener('click', () => { document.getElementById('box').textContent = 'Saved.'; document.getElementById('sr').textContent = 'Saved.'; });
+</script>
+</body>
+</html>

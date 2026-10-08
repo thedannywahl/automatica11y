@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>message-shadow-slot</title>
+<style>
+body { margin: 24px; background: #fff; font: 16px/1.4 sans-serif; }
+button { font: inherit; min-width: 44px; min-height: 44px; }
+x-note { color: #bbb; }
+</style>
+</head>
+<body>
+<button type="button" id="go" data-a11y-trigger>Save</button>
+<x-note id="box" data-a11y-root></x-note>
+<script>
+customElements.define('x-note', class extends HTMLElement {
+  constructor() { super(); this.attachShadow({ mode: 'open' }).innerHTML = '<style>div { background: #14213d; color: #fff; padding: 8px; }</style><div role="status"><slot></slot></div>'; }
+});
+document.getElementById('go').addEventListener('click', () => { document.getElementById('box').textContent = 'Saved.'; });
+</script>
+</body>
+</html>

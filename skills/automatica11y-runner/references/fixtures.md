@@ -27,7 +27,7 @@ The keys are target ids, then archetypes. `export` (React) or `tag` (web compone
 2. Mark **exactly one** element with `data-a11y-trigger`. This is what a person would focus and activate: the button that opens a dialog, the first tab, the combobox input, the form control. If nothing in the archetype can be activated, as with a chart, put `data-a11y-trigger` and `data-a11y-root` on the same element: the outermost one the library renders.
 3. Mark the **primary surface** with `data-a11y-root`. Put it on the element that carries the role (`role="dialog"`, `role="menu"`, `role="tooltip"`), not on an overlay or a portal wrapper. It's fine if the root doesn't exist until the trigger fires, and fine if it renders in a portal. The tool looks in the whole document.
 4. Mount without console errors. The tool treats errors as a broken fixture.
-5. Don't import CSS. The tool doesn't link it.
+5. A stylesheet the fixture imports is bundled and linked. If the library needs one (a token file, a theme) and its documentation says to load it, import it. If that stylesheet is in another package, list the package under `install` in the mapping (see below). Without the stylesheet the library renders unstyled, and the results describe that, not the library.
 6. Include every part the library's documentation marks as required (for example, a dialog's title and description), so the component doesn't log warnings.
 
 The attributes have to reach the DOM. Pass `data-a11y-trigger` to the component that renders the real element. If a component drops unknown props, use the library's documented way to render your own element in its place (for example, `asChild` in Radix, or the `as` prop in Headless UI), and put the attribute on that native element. If the library has no such way, leave the archetype as a gap. Don't wrap the library's component in an element you add and mark that element, because the fixture would then test your element and not the library.
@@ -49,6 +49,24 @@ export default function Fixture({ libA11y }) {
   return <Chart data-a11y-trigger data-a11y-root accessibility={libA11y} />;
 }
 ```
+
+## Companion packages
+
+Some libraries need another package beside them, such as a design token stylesheet or a theme. Name it under `install` in the mapping file, next to `fixture`. The first key is the target id, and the second is the archetype. The tool installs it into the same folder as the library, with install scripts off, and the fixture can import it:
+
+```json
+{
+  "lib": {
+    "live-region": { "fixture": "fixtures/lib/live-region.js", "install": ["@scope/tokens"] }
+  }
+}
+```
+
+```js
+import "@scope/tokens/style.css";
+```
+
+List only what the library's documentation asks you to load. Each entry has to be a package name with an optional version. Flags, paths, and URLs are refused.
 
 ## States
 

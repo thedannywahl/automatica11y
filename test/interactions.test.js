@@ -72,6 +72,8 @@ const PAGES = {
   "live-region-bad-plain": ["live-region", { ...common(P, P, P), ...live(F, P, N, N, P, N, N) }],
   "live-region-bad-insert": ["live-region", { ...common(P, P, P), ...live(P, P, F, P, P, N, N) }],
   "live-region-bad-focus": ["live-region", { ...common(P, P, P), ...live(P, P, P, F, F, N, N) }],
+  "live-region-good-shadow": ["live-region", { ...common(P, P, P), ...live(P, P, P, P, P, N, N) }],
+  "live-region-bad-late-live": ["live-region", { ...common(P, P, P), ...live(P, P, F, P, P, N, N) }],
   "live-region-bad-dismiss-keys": ["live-region", { ...common(P, P, P), ...live(P, P, P, P, P, F, N) }],
   "live-region-bad-dismiss-focus": ["live-region", { ...common(P, P, P), ...live(P, P, P, P, P, P, F) }],
 };

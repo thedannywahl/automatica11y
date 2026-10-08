@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>live-region-good-shadow</title>
+<style>button { min-width: 44px; min-height: 44px; } [hidden] { display: none !important; } </style>
+</head>
+<body>
+<button type="button" id="go" data-a11y-trigger>Save</button>
+<x-note id="note" data-a11y-root></x-note>
+<script>
+customElements.define('x-note', class extends HTMLElement {
+  constructor() { super(); this.attachShadow({ mode: 'open' }).innerHTML = '<div role="status"><slot></slot></div>'; }
+});
+document.getElementById('go').addEventListener('click', () => { document.getElementById('note').textContent = 'Saved.'; });
+</script>
+</body>
+</html>

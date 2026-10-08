@@ -6,11 +6,12 @@ import { test } from "node:test";
 import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { detectFlavor } from "../src/plan/resolve-npm.js";
+import { entry as wcEntry } from "../src/harness/npm-wc.js";
 import { candidateMapping } from "../src/plan/mapping.js";
-import { parseResults } from "../src/schema.js";
+import { parseMappingFile, parseResults } from "../src/schema.js";
 import { makeIo, makeTree } from "./helpers/fixtures.js";
 import { installPackage, npmView } from "./helpers/npm-fakes.js";
-import { installPackage as realInstall, installOptionalPeers, declaredOptionalPeers } from "../src/harness/npm-install.js";
+import { installPackage as realInstall, installOptionalPeers, declaredOptionalPeers, installExtraPackages } from "../src/harness/npm-install.js";
 import { bundleEntries, unresolvedPackages } from "../src/harness/bundle.js";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 
@@ -158,6 +159,29 @@ test("optional peers: an installed React is named again so the install can't pru
   const calls = [];
   await installOptionalPeers({ dir, unresolved: ["@emotion/react"], run: async (args) => void calls.push(args) });
   assert.ok(calls[0].includes("react@19.1.0") && calls[0].includes("react-dom@19.1.0"));
+});
+
+test("companion packages: the mapping's install list is installed beside the library, with React kept", async () => {
+  const dir = fakeInstall({ react: { version: "19.1.0" }, "react-dom": { version: "19.1.0" } });
+  const calls = [];
+  const result = await installExtraPackages({ dir, specs: ["@scope/tokens", "theme@^2", "@scope/tokens"], run: async (args) => void calls.push(args) });
+  assert.deepEqual(result.installed, ["@scope/tokens", "theme@^2"]);
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].slice(0, 5), ["install", "@scope/tokens", "theme@^2", "react@19.1.0", "react-dom@19.1.0"]);
+  assert.ok(calls[0].includes("--ignore-scripts"), "install scripts stay off");
+  assert.match(result.warnings[0], /@scope\/tokens, theme@\^2 to install beside the library/);
+  assert.deepEqual(await installExtraPackages({ dir, specs: [], run: async () => assert.fail("npm shouldn't run") }), { installed: [], warnings: [] });
+});
+
+test("companion packages: flags, paths, and URLs are refused before npm runs", async () => {
+  for (const bad of ["--registry=http://evil.test", "../local", "https://example.test/x.tgz", "file:./x", "git+https://example.test/x.git", ""]) {
+    await assert.rejects(installExtraPackages({ dir: tmpdir(), specs: [bad], run: async () => assert.fail("npm shouldn't run") }), /isn't a package name/, bad);
+  }
+});
+
+test("companion packages: a mapping file can list them", () => {
+  assert.deepEqual(parseMappingFile({ lib: { "live-region": { fixture: "a.js", install: ["@scope/tokens"] } } }).lib["live-region"].install, ["@scope/tokens"]);
+  assert.throws(() => parseMappingFile({ lib: { "live-region": { install: "@scope/tokens" } } }), /Invalid mapping/);
 });
 
 test("optional peers: nothing is installed when the package is already there or isn't declared", async () => {
@@ -394,6 +418,15 @@ test("web components: a template covers the button and an authored mount covers 
   assert.deepEqual(dialog.configs.map((c) => c.state), ["closed", "open"]);
   assert.deepEqual(violations(dialog.configs[1], "axe"), []);
   assert.equal(result.plan.targets[0].kind, "npm-wc");
+});
+
+test("web components: a package that marks only CSS as having side effects still registers its elements", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "a11y-quiet-"));
+  await installPackage({ dir, name: "quiet-wc", version: "1.0.0", flavor: "wc" });
+  writeFileSync(join(dir, "fixture.js"), "export default function mount(container) { container.textContent = 'x'; }");
+  writeFileSync(join(dir, "entry.js"), wcEntry(join(dir, "fixture.js"), "quiet-wc"));
+  await bundleEntries({ entries: { demo: join(dir, "entry.js") }, outdir: join(dir, "out"), workDir: dir });
+  assert.match(readFileSync(join(dir, "out", "demo.js"), "utf8"), /customElements\.define\("quiet-note"/, "the package's registration code is in the bundle");
 });
 
 test("web components: open shadow content is tested", { skip }, async () => {

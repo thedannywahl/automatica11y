@@ -438,3 +438,15 @@ Criterion numbers, names, levels, and versions now come from the W3C's published
 ### The live-region archetype.
 
 An alert-style comparison needed an archetype, so `live-region` joined the list. It's named for the accessibility pattern (a message that appears, changes, or goes away without moving focus), not for any component, and its test pages are plain HTML. One archetype covers `role="alert"`, `role="status"`, `role="log"`, and `aria-live`, because the checks branch on the region's role. Checks: the message is in a live region, has text, the region exists before the message (not required for `role="alert"`), politeness fits the role, focus stays on the trigger, the dismiss control works by keyboard, and focus isn't lost when the message is removed. Seven test pages cover the good and bad cases. Mapping and Storybook matching recognize alert, status, toast, snackbar, notification, and live region.
+
+### Findings from the alert comparison, and fixes.
+
+Running the live-region archetype on a React alert and a web component alert turned up five problems in the tool, all fixed on main:
+
+- A web component package whose `sideEffects` list names only CSS lost its elements, because esbuild dropped the bare `import "pkg"` that registers them. The entry now keeps the package through a namespace import. A fake package covers it.
+- Slotted text takes its color from the slot's parent in the flattened tree, and the live-region check finds a role kept inside a component's shadow root around a slot.
+- The rules tier scanned a message while it was still fading in, and both engines reported a contrast failure that wasn't there once the fade ended. States now wait for finite animations and transitions (up to 2 seconds) before they're scanned.
+- For a live region, the computed tier measures the message text that appears, not the harness trigger, and it ignores one-pixel screen reader copies.
+- A library that needs a companion stylesheet or theme rendered unstyled, and its results described that. A mapping entry can now list `install` packages. The fixture imports their stylesheets, and a stylesheet a fixture imports is bundled and linked.
+
+The live-region check also now tells apart a region that was inserted with its message from an element that was in the page but only became a live region when the message arrived.

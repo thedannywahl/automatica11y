@@ -23,6 +23,8 @@ export const MappingEntrySchema = v.object({
   fixture: v.optional(v.nullable(v.string())),
   /** The library ships opt-in accessibility features. The fixture gets `libA11y` (true or false) and `--lib-a11y` runs it both ways. */
   libA11y: v.optional(v.boolean()),
+  /** Other packages to install beside the target, such as the token stylesheet or theme the library asks for. A fixture can then import them. */
+  install: v.optional(v.array(v.string())),
   status: v.optional(v.picklist(MAPPING_STATUSES)),
   candidates: v.optional(v.array(v.string())),
   parts: v.optional(v.array(v.string())),

@@ -75,6 +75,31 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
   return { dir, warnings, react: installedVersion(dir, "react"), reactDom: installedVersion(dir, "react-dom"), version: installedVersion(dir, name) };
 }
 
+/** The installed React and React DOM, named again so a loose install can't prune them. */
+function pinnedReact(dir) {
+  return ["react", "react-dom"].flatMap((name) => (installedVersion(dir, name) ? [`${name}@${installedVersion(dir, name)}`] : []));
+}
+
+const PACKAGE_SPEC = /^(@[a-z0-9~][\w.~-]*\/)?[a-z0-9~][\w.~-]*(@[\w.^~<>=*|-]+)?$/i;
+
+/**
+ * Install packages a mapping names beside the target: a token stylesheet, a theme, or another package the library's own
+ * documentation says to load. Only plain package specs are accepted (no flags, paths, or URLs). Install scripts stay off.
+ * @param {{ dir: string, specs: string[], run?: typeof runNpm }} options
+ * @returns {Promise<{ installed: string[], warnings: string[] }>}
+ */
+export async function installExtraPackages({ dir, specs, run = runNpm }) {
+  const wanted = [...new Set(specs)];
+  if (wanted.length === 0) return { installed: [], warnings: [] };
+  for (const spec of wanted) if (!PACKAGE_SPEC.test(spec)) throw new Error(`The mapping's install list has "${spec}", which isn't a package name with an optional version.`);
+  try {
+    await run(["install", ...wanted, ...pinnedReact(dir), "--legacy-peer-deps", ...NPM_FLAGS], dir);
+  } catch (error) {
+    throw new Error(`npm couldn't install ${wanted.join(", ")}: ${firstLine(error.message)}`);
+  }
+  return { installed: wanted, warnings: [`The mapping named ${wanted.join(", ")} to install beside the library, so it was installed.`] };
+}
+
 /**
  * Find the optional peer dependencies that installed packages declare, with the range each asks for.
  * npm leaves these out, but a library's default setup can still need one
@@ -115,7 +140,7 @@ export async function installOptionalPeers({ dir, unresolved, run = runNpm }) {
   const wanted = unresolved.filter((name) => declared.has(name) && !installedVersion(dir, name));
   if (wanted.length === 0) return { installed: [], warnings: [] };
   // A loose install prunes packages that only arrived as peers, so name React again to keep it.
-  const keep = ["react", "react-dom"].flatMap((name) => (installedVersion(dir, name) ? [`${name}@${installedVersion(dir, name)}`] : []));
+  const keep = pinnedReact(dir);
   const specs = [...wanted.map((name) => `${name}@${declared.get(name)}`), ...keep];
   try {
     await run(["install", ...specs, "--legacy-peer-deps", ...NPM_FLAGS], dir);

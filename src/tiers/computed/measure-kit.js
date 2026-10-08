@@ -88,22 +88,35 @@ export function installMeasure() {
     return { inset: /\binset\b/.test(text), x: x ?? 0, y: y ?? 0, blur: blur ?? 0, spread: spread ?? 0, color: color ? rgba(color[0]) : null };
   };
 
+  const keys = new WeakMap();
+  let keyCounter = 0;
+
   window.__a11yMeasure = {
     rgba,
-    /** The text inside the trigger: each element that directly holds text, with its color, size, and backdrop. */
-    text() {
+    /**
+     * The text inside the trigger (or, with "page", anywhere on the page except the trigger): each piece of text with its
+     * color, size, and backdrop. Slotted text takes its style from the slot's parent in the flattened tree, and text that is
+     * visually hidden (a one-pixel screen reader copy) is left out. `key` lets a later call tell which text is new.
+     */
+    text(scope) {
       const el = trigger();
       if (!el) return null;
       const parts = [];
       const seen = new Set();
-      const consider = (node, label) => {
-        if (seen.has(node) || !visibleBox(node)) return;
-        seen.add(node);
+      const consider = (textNode, label, own) => {
+        const host = own ?? textNode.parentElement;
+        const node = own ?? textNode.assignedSlot ?? host;
+        if (!host || !node || seen.has(textNode) || !visibleBox(host)) return;
+        const box = host.getBoundingClientRect();
+        if (box.width <= 1 && box.height <= 1) return;
+        seen.add(textNode);
         const style = getComputedStyle(node);
         if (style.visibility === "hidden") return;
+        if (!keys.has(textNode)) keys.set(textNode, (keyCounter += 1));
         const behind = backdrop(node, true);
         const color = rgba(style.color);
         parts.push({
+          key: keys.get(textNode),
           text: label.replace(/\s+/g, " ").trim().slice(0, 40),
           color,
           size: parseFloat(style.fontSize),
@@ -112,11 +125,17 @@ export function installMeasure() {
           undetermined: behind.reason ?? (color ? null : "its color couldn't be read"),
         });
       };
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      for (let node = walker.nextNode(); node && parts.length < 12; node = walker.nextNode()) {
-        if (node.nodeValue && node.nodeValue.trim() && node.parentElement) consider(node.parentElement, node.nodeValue);
+      const walk = (root) => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, scope === "page" ? { acceptNode: (n) => (n.parentElement?.closest("script, style, noscript, [data-a11y-trigger]") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) } : undefined);
+        for (let node = walker.nextNode(); node && parts.length < 30; node = walker.nextNode()) {
+          if (node.nodeValue && node.nodeValue.trim() && node.parentElement) consider(node, node.nodeValue);
+        }
+        if (scope === "page") for (const host of root.querySelectorAll("*")) if (host.shadowRoot) walk(host.shadowRoot);
+      };
+      walk(scope === "page" ? document.body : el);
+      if (scope !== "page" && el.matches("input, textarea, select") && "value" in el && String(el.value).trim()) {
+        consider(el, String(el.value), el);
       }
-      if (el.matches("input, textarea, select") && "value" in el && String(el.value).trim()) consider(el, String(el.value));
       return parts;
     },
     /** What the control looks like from outside: label, input, or icon, and the colors that mark its edge. */
