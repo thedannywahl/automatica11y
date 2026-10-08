@@ -189,6 +189,18 @@ test("the archetypes the runner lists match the tool's", async () => {
   assert.deepEqual(line, ARCHETYPES);
 });
 
+test("every document tells a global install how to skip npx, without dropping the version check", () => {
+  const readme = read("README.md");
+  assert.match(readme, /npm i -g automatica11y/);
+  assert.match(readme, /`automatica11y` is on your `PATH`, with the short name `a11y` too/);
+  assert.match(readme, /A global install doesn't update itself, so run `npm i -g automatica11y@latest` to upgrade/);
+  assert.match(agents, /If `automatica11y` is already on the `PATH`[\s\S]*The version check in the steps still applies/);
+  assert.match(bootstrap, /If `automatica11y` is already installed \(`automatica11y --version` prints a version\), you can run `automatica11y guide skill` instead\. The steps check that the installed version matches them/);
+  assert.match(runner, /replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above/);
+  assert.match(runner, /If the installed version is the wrong series, or nothing is installed, use `npx`/);
+  assert.ok(bootstrap.split("\n").length < 40, "the bootstrap still fits on a screen");
+});
+
 test("the runner carries a Vue example too, and says not to import h", () => {
   const fixtures = referenceFiles.find((f) => f.name === "references/fixtures.md").text;
   assert.match(runner, /A Vue 3 fixture\. It's also JSX[\s\S]*\*\*don't import `h`\*\*[\s\S]*```jsx\nimport \{ DialogClose[\s\S]*from "reka-ui";[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);

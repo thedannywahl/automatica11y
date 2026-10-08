@@ -13,11 +13,21 @@ It's **not** an attestation or certification tool. Automated checks cover only p
 
 You need Node 20 or newer and Chrome or Chromium.
 
+Install it once, and `automatica11y` is on your `PATH`, with the short name `a11y` too:
+
 ```bash
-npx automatica11y doctor
-npx automatica11y audit https://example.com
-npx automatica11y compare radix=npm:@radix-ui/react-dialog aria=npm:react-aria-components
+npm i -g automatica11y
 ```
+
+Then run it without `npx`:
+
+```bash
+automatica11y doctor
+automatica11y audit https://example.com
+automatica11y compare radix=npm:@radix-ui/react-dialog aria=npm:react-aria-components
+```
+
+You can skip the install and put `npx` in front instead, for example `npx automatica11y doctor`. `npx` fetches the tool the first time and checks the registry after that. A global install doesn't update itself, so run `npm i -g automatica11y@latest` to upgrade, and `automatica11y --version` to see what you have. The rest of this page writes the short form. Add `npx` if you didn't install it.
 
 `doctor` checks your setup. If it can't find a browser, it prints the command that installs one:
 
@@ -120,7 +130,7 @@ Fixtures are code that the tool bundles and runs in a browser on your machine. W
 
 ## Use it with an AI agent.
 
-The tool prints its own guidance, so any agent that can run `npx` can learn to use it:
+The tool prints its own guidance, so any agent that can run `npx` can learn to use it. If the tool is installed globally, the agent can run `automatica11y guide skill` instead of `npx automatica11y@latest guide skill`:
 
 ```bash
 npx automatica11y@latest guide           # where to start (the AGENTS.md file)

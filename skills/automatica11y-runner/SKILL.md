@@ -1,6 +1,6 @@
 ---
 name: automatica11y-runner
-compatibility: Needs Node 20 or newer, Chrome or Chromium, a shell that can run npx, and network access to the npm registry.
+compatibility: Needs Node 20 or newer, Chrome or Chromium, a shell that can run npx or the installed automatica11y command, and network access to the npm registry.
 description: The full steps for running automatica11y audits and comparisons, from building the command to writing the report. Use it when the automatica11y skill or AGENTS.md sends you here, or when you've already been told to run automatica11y and need the steps.
 ---
 
@@ -23,6 +23,8 @@ npx --yes automatica11y@latest --version
 ```
 
 If the command exits with an error or prints nothing, tell the user it failed, include the error text, and stop. If the output doesn't start with `0.4.`, stop. Tell the user the version you got and the series this copy expects (`0.4.x`). If this copy came from a file, offer to read the matching steps with `npx --yes automatica11y@latest guide skill`. Don't run an audit until the user confirms how to proceed.
+
+If the user installed the tool globally (`npm i -g automatica11y`), `automatica11y` is on the `PATH` (so is the short name `a11y`), and it runs the same commands as `npx --yes automatica11y@latest`. Every command in this skill is written with `npx`, so replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above. If the installed version is the wrong series, or nothing is installed, use `npx`.
 
 ## 2. Check the setup
 

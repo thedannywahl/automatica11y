@@ -10,6 +10,8 @@ Keep the user's request as they gave it, including the target and any settings t
 npx --yes automatica11y@latest guide skill
 ```
 
+If `automatica11y` is already on the `PATH` (the user ran `npm i -g automatica11y`, and `automatica11y --version` prints a version), you can run `automatica11y guide skill` and `automatica11y guide fixtures` instead, and use `automatica11y` wherever the steps say `npx --yes automatica11y@latest`. The version check in the steps still applies. An installed copy can be older than the steps expect, and then the check stops you. Use `npx` when the installed version is the wrong series, or when nothing is installed.
+
 When the steps tell you to write a fixture, read the fixture guide:
 
 ```bash
