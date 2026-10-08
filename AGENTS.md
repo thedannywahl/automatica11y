@@ -23,6 +23,7 @@ Both print files that live in `skills/automatica11y-runner/` in the repository a
 ## If you're changing the code (in a checkout of the repository).
 
 - Run `npm test` (about two minutes, needs Chrome or Chromium) and `npm run lint` before you finish.
+- If `npm test` can't run because Chrome or Chromium is missing, or if either command fails, stop. Report the exact error and the command that failed, and don't report the change as complete. The browser tests skip themselves when no browser is found, so a run that prints skipped tests isn't a pass either. Report the skipped count, and don't call the change complete.
 - The code is plain ESM JavaScript with JSDoc types and no build step. It needs Node 20 or newer.
 - `src/` holds the tool. `test/` holds the tests. `test/fixtures/` holds test pages and fake packages, which are not the fixtures a user writes for an npm package.
 - Heavy dependencies (Playwright, esbuild, the rule engines) load only when a command needs them. A test checks that `--version`, `doctor`, `guide`, and `--plan` never import them.

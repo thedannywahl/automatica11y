@@ -164,6 +164,8 @@ test("AGENTS.md bridges to the runner, and tells contributors what to run", () =
   assert.ok(agents.includes("npx --yes automatica11y@latest guide fixtures"));
   for (const path of [...agents.matchAll(/`(skills\/[^`]+)`/g)].map((m) => m[1])) assert.ok(existsSync(join(root, path)), `${path} exists`);
   assert.match(agents, /npm test/);
+  assert.match(agents, /If `npm test` can't run because Chrome or Chromium is missing, or if either command fails, stop\. Report the exact error and the command that failed, and don't report the change as complete/);
+  assert.match(agents, /a run that prints skipped tests isn't a pass either/);
   assert.match(agents, /npm run lint/);
   assert.match(agents, /ships in the npm package/);
   assert.match(agents, /print the copy that comes with the latest release, and the steps they print check that the tool's version matches/);
