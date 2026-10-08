@@ -15,6 +15,8 @@ automatica11y tests and compares web accessibility. This skill only gets you sta
    npx --yes automatica11y@latest guide
    ```
 
+   If the command exits with an error or prints no usable output, tell the user it failed, include the error text, and stop. Don't continue with partial instructions.
+
 3. If you can't run shell commands, or `npx` can't reach the npm registry, tell the user and stop. Don't guess at results.
 
 The tool is **not** an attestation or certification tool. Automated checks cover only part of WCAG. Say "no automated violations found." Never say a target is "accessible" or "compliant."

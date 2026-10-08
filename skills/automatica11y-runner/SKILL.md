@@ -20,7 +20,7 @@ This skill works with automatica11y **0.2.x**. Run:
 npx --yes automatica11y@latest --version
 ```
 
-If the output doesn't start with `0.2.`, stop. Tell the user this skill and the tool are out of step. Run `npx --yes automatica11y@latest guide skill` and follow what it prints instead of this copy. Don't run the audit with a mismatched version.
+If the command exits with an error or prints nothing, tell the user it failed, include the error text, and stop. If the output doesn't start with `0.2.`, stop. Tell the user this skill and the tool are out of step. Run `npx --yes automatica11y@latest guide skill` and follow what it prints instead of this copy. Don't run the audit with a mismatched version.
 
 ## 2. Check the setup
 

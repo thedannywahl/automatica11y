@@ -50,6 +50,8 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   assert.ok(bootstrap.includes("npx --yes automatica11y@latest guide"), "it sends the agent to the guide");
   assert.match(bootstrap, /node --version/);
   assert.match(bootstrap, /Don't guess at results/);
+  assert.match(bootstrap, /exits with an error or prints no usable output, tell the user it failed, include the error text, and stop/);
+  assert.match(bootstrap, /Don't continue with partial instructions/);
   assert.match(bootstrap, /no automated violations found/);
   assert.equal(existsSync(join(bootstrapDir, "references")), false, "the bootstrap has no references to lose");
   assert.doesNotMatch(bootstrap, /\d+\.\d+\.x/, "the bootstrap names no version, so it never goes stale");
@@ -77,6 +79,7 @@ test("the series the runner names is the series of the version in package.json",
   assert.ok(stated, "the runner states the series it works with");
   assert.equal(stated[1], series(pkg.version), "bump SKILL.md when the version series changes");
   assert.ok(runner.includes(`doesn't start with \`${stated[1]}.\``), "the stop rule uses the same series");
+  assert.match(runner, /exits with an error or prints nothing, tell the user it failed, include the error text, and stop/);
   assert.ok(agents.includes(`(\`${stated[1]}.x\`)`), "AGENTS.md names the same series");
   assert.doesNotMatch(runner, /\{\{[A-Z]+\}\}/, "no placeholders are left in the file");
 });
