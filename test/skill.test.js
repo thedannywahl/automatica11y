@@ -203,7 +203,11 @@ test("the fixture guide says what to do when the documentation falls short, name
   assert.match(fixtures, /make `mount\(container\)` the file's default export\. It adds the archetype to the container/);
   assert.match(runner, /For web components, the default export is the function `mount\(container\)`/);
   assert.match(fixtures, /The tool activates the trigger by clicking it\. For a tooltip it focuses the trigger instead, so a tooltip has to open on focus\. If it opens only on pointer hover, the open state never appears/);
-  assert.match(fixtures, /If it isn't, the open state is reported as failed, with the reason/);
+  assert.match(fixtures, /is then attached to the document, isn't `display: none` or `hidden`, and isn't `visibility: hidden`\. The tool also counts the surface as open if the trigger has `aria-expanded="true"`\. If neither holds, the open state is reported as failed, with the reason/);
+  assert.match(fixtures, /use the library's documented way to render your own element in its place \(for example, `asChild` in Radix, or the `as` prop in Headless UI\), and put the attribute on that native element\. If the library has no such way, leave the archetype as a gap/);
+  assert.match(fixtures, /Don't wrap the library's component in an element you add and mark that element/);
+  assert.match(runner, /Don't wrap the library's component in an element you add and mark that/);
+  assert.match(fixtures, /Declare it at the archetype level in the mapping file, next to `fixture` or `export`, for example `\{ "charts": \{ "chart": \{ "libA11y": true \} \} \}`/);
   // "Hooks" reads as React hooks, so the docs name the attributes.
   for (const { name, text } of agentDocs) assert.doesNotMatch(text, /\bhooks?\b/i, `${name} says attributes, not hooks`);
   // The contract says one trigger, so no example may leave it out.

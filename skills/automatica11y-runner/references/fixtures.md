@@ -30,7 +30,7 @@ The keys are target ids, then archetypes. `export` (React) or `tag` (web compone
 5. Don't import CSS. The tool doesn't link it.
 6. Include every part the library's documentation marks as required (for example, a dialog's title and description), so the component doesn't log warnings.
 
-The attributes have to reach the DOM. Pass `data-a11y-trigger` to the component that renders the real element. If a wrapper drops unknown props, put the attribute on a plain element inside it.
+The attributes have to reach the DOM. Pass `data-a11y-trigger` to the component that renders the real element. If a component drops unknown props, use the library's documented way to render your own element in its place (for example, `asChild` in Radix, or the `as` prop in Headless UI), and put the attribute on that native element. If the library has no such way, leave the archetype as a gap. Don't wrap the library's component in an element you add and mark that element, because the fixture would then test your element and not the library.
 
 ## Examples
 
@@ -42,7 +42,7 @@ For web components, make `mount(container)` the file's default export. It adds t
 
 ## Library accessibility options
 
-Some libraries ship accessibility features you have to switch on (a chart library's accessibility module, for example). Declare it in the mapping file with `"libA11y": true`. The fixture then receives a `libA11y` value, `true` or `false`. In React it's a prop. In web components it's a second argument, `mount(container, { libA11y })`. The tool runs the fixture both ways with `--lib-a11y on,off` and labels each result.
+Some libraries ship accessibility features you have to switch on (a chart library's accessibility module, for example). Declare it at the archetype level in the mapping file, next to `fixture` or `export`, for example `{ "charts": { "chart": { "libA11y": true } } }`. The first key is the target id, and the second is the archetype. The fixture then receives a `libA11y` value, `true` or `false`. In React it's a prop. In web components it's a second argument, `mount(container, { libA11y })`. The tool runs the fixture both ways with `--lib-a11y on,off` and labels each result.
 
 ```jsx
 export default function Fixture({ libA11y }) {
@@ -52,7 +52,7 @@ export default function Fixture({ libA11y }) {
 
 ## States
 
-For a dialog, menu, tooltip, or combobox, the tool tests the closed state, then activates the trigger and tests the open state. For an accordion it tests collapsed, then expanded. The tool activates the trigger by clicking it. For a tooltip it focuses the trigger instead, so a tooltip has to open on focus. If it opens only on pointer hover, the open state never appears. Make sure activating the trigger really opens the surface, and that `data-a11y-root` is visible then. If it isn't, the open state is reported as failed, with the reason. The interaction checks also press keys and hover, but they don't change how the open state is reached.
+For a dialog, menu, tooltip, or combobox, the tool tests the closed state, then activates the trigger and tests the open state. For an accordion it tests collapsed, then expanded. The tool activates the trigger by clicking it. For a tooltip it focuses the trigger instead, so a tooltip has to open on focus. If it opens only on pointer hover, the open state never appears. Make sure activating the trigger really opens the surface, and that the element with `data-a11y-root` is then attached to the document, isn't `display: none` or `hidden`, and isn't `visibility: hidden`. The tool also counts the surface as open if the trigger has `aria-expanded="true"`. If neither holds, the open state is reported as failed, with the reason. The interaction checks also press keys and hover, but they don't change how the open state is reached.
 
 ## Check your fixture
 

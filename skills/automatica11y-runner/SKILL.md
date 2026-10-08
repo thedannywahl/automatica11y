@@ -92,7 +92,7 @@ A package's components can't be guessed from its name. The first run installs th
 - Mark **exactly one** element `data-a11y-trigger`. It's what a person would focus and activate. If nothing can be activated, as with a chart, put both attributes on the same outermost element.
 - Mark the main surface `data-a11y-root`, on the element that carries the role (`dialog`, `menu`, `tooltip`), not on an overlay or portal wrapper. It may appear only after the trigger fires, and it may render in a portal.
 - Mount without console errors. Don't import CSS.
-- The attributes have to reach the DOM. If a wrapper drops unknown props, put them on a plain element inside it.
+- The attributes have to reach the DOM. If a component drops unknown props, use the library's documented way to render your own element in its place (such as `asChild` in Radix, or the `as` prop in Headless UI), and mark that element. If the library has none, leave the archetype as a gap. Don't wrap the library's component in an element you add and mark that.
 
 A React fixture. JSX works without importing React. Import the library from its package name, and the tool installs it:
 
