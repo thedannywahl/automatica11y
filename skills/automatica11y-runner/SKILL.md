@@ -70,6 +70,8 @@ Options you can set, and nothing else:
 
 Use the target and the settings the user already gave, and ask only for what's missing. If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one before you run anything. Don't pick a target for them.
 
+Pass only the options in the table above, with the values it lists. If the user names a setting the tool doesn't have, or a value outside those lists (for example, WCAG 3.0), tell them which setting is unsupported, list the supported values, and ask which to use. Don't substitute a default or invent a value.
+
 Show the user the exact command before you run it. If a target is ambiguous, ask one question, then go on.
 
 Don't set the fail flags unless the user asks for gating. They change the exit code. They don't change the results.

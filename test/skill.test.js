@@ -50,6 +50,7 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   assert.ok(bootstrap.includes("npx --yes automatica11y@latest guide"), "it sends the agent to the guide");
   assert.match(bootstrap, /node --version/);
   assert.match(bootstrap, /Keep the user's request as they gave it: the target or targets, and any settings they named/);
+  assert.match(bootstrap, /Pass only settings the guide lists as supported\. If the user names a setting the guide doesn't support, tell the user which setting is unsupported, list the supported values from the guide, and ask which to use/);
   assert.match(bootstrap, /Don't ask again for anything they've already said/);
   assert.doesNotMatch(bootstrap, /(^|\s)--(?!yes\b|version\b)[a-z]/m, "the bootstrap lists no tool flags (--yes belongs to npx and --version to node), so it can't fall out of step with the tool");
   assert.match(bootstrap, /fails or prints no version number, tell the user that Node\.js 20 or newer couldn't be verified, include the error text, and stop/);
@@ -86,6 +87,8 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(runner, /exits with an error or prints nothing, tell the user it failed, include the error text, and stop/);
   assert.match(runner, /Use the target and the settings the user already gave, and ask only for what's missing/);
   assert.match(agents, /Keep the user's request as they gave it, including the target and any settings they named/);
+  assert.match(runner, /Pass only the options in the table above, with the values it lists\. If the user names a setting the tool doesn't have, or a value outside those lists/);
+  assert.match(runner, /Don't substitute a default or invent a value/);
   // A request with no target is asked about, and a target that fails is named with its reason.
   assert.match(runner, /If the user doesn't name a target to test \(a URL, a Storybook, a local page or site, or an npm package\), ask for one before you run anything/);
   assert.match(runner, /Tell the user which target failed, using the reason from `results\.json`/);
