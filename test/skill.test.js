@@ -168,9 +168,15 @@ test("AGENTS.md bridges to the runner, and tells contributors what to run", () =
   assert.match(agents, /a run that prints skipped tests isn't a pass either/);
   assert.match(agents, /npm run lint/);
   assert.match(agents, /ships in the npm package/);
+  assert.match(agents, /If the version check in the steps reports a mismatch, stop\. Report the installed version and the version the steps expect, and don't produce an audit or compare result until the user confirms how to proceed/);
+  assert.match(agents, /If the request doesn't name a target, ask for the target once, then continue with the steps\. Use the defaults in the steps for any setting the user didn't name/);
+  assert.match(agents, /That's only another way to get the text\. If a guide command has already failed, stop as described above\. Reading the files doesn't change that/);
+  assert.match(runner, /Tell the user the version you got and the series this copy expects/);
+  assert.match(runner, /Don't run an audit until the user confirms how to proceed/);
   assert.match(agents, /print the copy that comes with the latest release, and the steps they print check that the tool's version matches/);
   assert.match(agents, /If either guide command fails, stop\. Report the exact error to the user, and don't produce an audit or compare result from memory/);
-  assert.match(agents, /Update the series named in `skills\/automatica11y-runner\/SKILL\.md` \(written like `0\.2\.x`\) whenever the version in `package\.json` moves to a new series/);
+  assert.match(agents, /The series is the major and minor version while the major version is 0 \(`0\.2`\), and the major version alone from 1\.0 on/);
+  assert.match(agents, /whenever the series of the version in `package\.json` changes, for example from `0\.2\.x` to `0\.3\.0`\. A change from `0\.2\.5` to `0\.2\.6` needs no update/);
 });
 
 test("the fixture reference mentions both hooks and both flavors", () => {
