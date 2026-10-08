@@ -81,6 +81,10 @@ test("the series the runner names is the series of the version in package.json",
   assert.equal(stated[1], series(pkg.version), "bump SKILL.md when the version series changes");
   assert.ok(runner.includes(`doesn't start with \`${stated[1]}.\``), "the stop rule uses the same series");
   assert.match(runner, /exits with an error or prints nothing, tell the user it failed, include the error text, and stop/);
+  // A request with no target is asked about, and a target that fails is named with its reason.
+  assert.match(runner, /If the user doesn't name a target to test \(a URL, a Storybook, a local page or site, or an npm package\), ask for one before you run anything/);
+  assert.match(runner, /Tell the user which target failed, using the reason from `results\.json`/);
+  assert.match(runner, /If every target failed \(exit code 4\), stop\. If others ran, report them, and list the failed target as a gap/);
   // The wording rule says when to use the phrase, and what to do when there are violations.
   assert.match(runner, /Where an engine reports zero violations for a target, say "no automated violations found" for that engine\. Where it reports violations, list them as the tool reports them/);
   assert.match(runner, /Use "no automated violations found" only for an engine that reported none for that target/);

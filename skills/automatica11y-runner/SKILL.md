@@ -68,6 +68,8 @@ Options you can set, and nothing else:
 | `--fail-on-ibm <1\|2\|3>` | off | Gating on IBM Toolkit level. |
 | `--fail-mode any\|all` | `any` | How to combine the two fail flags. |
 
+If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one before you run anything. Don't pick a target for them.
+
 Show the user the exact command before you run it. If a target is ambiguous, ask one question, then go on.
 
 Don't set the fail flags unless the user asks for gating. They change the exit code. They don't change the results.
@@ -170,7 +172,7 @@ Say these things plainly. Don't soften them, and don't fill in a result.
 - **Not testable.** The content is a canvas with no alternative, or sits in a closed shadow root. The rule engines can't see it, so the result is untested, not clean. The virtual screen reader also can't read open shadow roots.
 - **Gap.** The archetype has no usable fixture or no matching export. Say what the archetype needs.
 - **Error.** An interaction check couldn't finish. It's untested, not failed.
-- **Failed target.** Say the reason from `results.json`. Don't retry with guesses.
+- **Failed target.** The target can't be reached, isn't a web page, or couldn't be built. The tool records it as failed with a reason. Tell the user which target failed, using the reason from `results.json`. Don't retry with guesses. If every target failed (exit code 4), stop. If others ran, report them, and list the failed target as a gap in coverage.
 
 ## 8. Stay out of setup
 
