@@ -16,13 +16,13 @@ The tool is **not** an attestation or certification tool. Automated checks cover
 
 Do sections 1 and 2 before you run an audit. A question to the user about a missing target or an unsupported setting (section 3) can come before or after them.
 
-This skill works with automatica11y **0.3.x**. Run:
+This skill works with automatica11y **0.4.x**. Run:
 
 ```bash
 npx --yes automatica11y@latest --version
 ```
 
-If the command exits with an error or prints nothing, tell the user it failed, include the error text, and stop. If the output doesn't start with `0.3.`, stop. Tell the user the version you got and the series this copy expects (`0.3.x`). If this copy came from a file, offer to read the matching steps with `npx --yes automatica11y@latest guide skill`. Don't run an audit until the user confirms how to proceed.
+If the command exits with an error or prints nothing, tell the user it failed, include the error text, and stop. If the output doesn't start with `0.4.`, stop. Tell the user the version you got and the series this copy expects (`0.4.x`). If this copy came from a file, offer to read the matching steps with `npx --yes automatica11y@latest guide skill`. Don't run an audit until the user confirms how to proceed.
 
 ## 2. Check the setup
 
