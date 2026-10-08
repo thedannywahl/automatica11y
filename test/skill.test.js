@@ -50,8 +50,11 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   assert.ok(bootstrap.includes("npx --yes automatica11y@latest guide"), "it sends the agent to the guide");
   assert.match(bootstrap, /node --version/);
   assert.match(bootstrap, /Keep the user's request as they gave it: the target or targets, and any settings they named/);
-  assert.match(bootstrap, /Pass only settings the guide lists as supported\. If the user names a setting the guide doesn't support, tell the user which setting is unsupported, list the supported values from the guide, and ask which to use/);
+  assert.match(bootstrap, /After reading the guide and the steps it sends you to, pass only settings they list as supported\. If the user named a setting they don't list as supported, tell the user which setting is unsupported, list the supported values from the guide, and ask which to use/);
   assert.match(bootstrap, /Don't ask again for anything they've already said/);
+  // The check comes after the guide is read, so the agent has the supported values when it needs them.
+  assert.ok(bootstrap.indexOf("guide\n   ```") < bootstrap.indexOf("After reading the guide and the steps"), "the unsupported-setting check comes after the guide command");
+  assert.doesNotMatch(bootstrap.slice(0, bootstrap.indexOf("npx --yes")), /supported/, "nothing before the guide asks the agent to know the supported values");
   assert.doesNotMatch(bootstrap, /(^|\s)--(?!yes\b|version\b)[a-z]/m, "the bootstrap lists no tool flags (--yes belongs to npx and --version to node), so it can't fall out of step with the tool");
   assert.match(bootstrap, /fails or prints no version number, tell the user that Node\.js 20 or newer couldn't be verified, include the error text, and stop/);
   assert.match(bootstrap, /Don't guess at results/);
