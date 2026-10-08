@@ -49,6 +49,7 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   assert.ok(bootstrap.split("\n").length < 40, "the bootstrap fits on a screen");
   assert.ok(bootstrap.includes("npx --yes automatica11y@latest guide"), "it sends the agent to the guide");
   assert.match(bootstrap, /node --version/);
+  assert.match(bootstrap, /fails or prints no version number, tell the user that Node\.js 20 or newer couldn't be verified, include the error text, and stop/);
   assert.match(bootstrap, /Don't guess at results/);
   assert.match(bootstrap, /exits with an error or prints no usable output, tell the user it failed, include the error text, and stop/);
   assert.match(bootstrap, /Don't continue with partial instructions/);
