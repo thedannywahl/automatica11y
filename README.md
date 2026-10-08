@@ -95,23 +95,22 @@ One failing target doesn't stop a comparison. It's recorded with its reason, and
 
 The tool installs each package into its own temporary folder (with install scripts turned off), loads it in the browser, and finds its exports or custom elements. It writes its guesses to `mapping.json`.
 
-It builds `button` and `link` tests on its own. Every other archetype is built from parts that differ by library (`Dialog.Root`, `Dialog.Trigger`, and so on), so it needs a **fixture**: a small file you or Claude write, following [references/fixtures.md](references/fixtures.md). Put fixtures at `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) and run again. An archetype without a fixture is a gap in the report.
+It builds `button` and `link` tests on its own. Every other archetype is built from parts that differ by library (`Dialog.Root`, `Dialog.Trigger`, and so on), so it needs a **fixture**: a small file you or your agent write, following [references/fixtures.md](references/fixtures.md). Put fixtures at `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) and run again. An archetype without a fixture is a gap in the report.
 
 Fixtures are code that the tool bundles and runs in a browser on your machine. Write them from the library's documentation, and read ones you didn't write.
 
-## Use it with Claude.
+## Use it with an AI agent.
 
-```bash
-npx automatica11y init-skill
-```
+`SKILL.md` in this repository is an agent skill: a Markdown file with `name` and `description` at the top, plus [references/fixtures.md](references/fixtures.md). It isn't tied to one agent. It tells an agent how to turn a request into an automatica11y command, run it, write fixtures for npm packages, and write the report from `results.json`. It works with any agent that can run shell commands and read and write files.
 
-This installs a skill into `~/.claude/skills/automatica11y`. Use `--dest ./.claude/skills` to install for one project, and `--force` to replace an older copy. Then ask Claude things like:
+- If your agent loads skills from a folder, copy `SKILL.md` and `references/` into a folder named `automatica11y` there.
+- Otherwise, give your agent the contents of `SKILL.md` as instructions, or point it at the file.
 
-- "How accessible is Radix Dialog?"
-- "Compare the accessibility of React Aria and Headless UI."
-- `/automatica11y audit https://example.com`
+A copy also ships in the npm package, at `node_modules/automatica11y/SKILL.md`.
 
-The skill turns your request into a command, shows it, runs it, writes fixtures for npm packages when they're needed, and writes the report from `results.json`. It checks that its version matches the tool's, and stops if they're out of step.
+Then ask for things like "How accessible is Radix Dialog?" or "Compare the accessibility of React Aria and Headless UI."
+
+The skill states which version series of automatica11y it works with, and tells the agent to stop if `npx automatica11y@latest --version` doesn't match. Update the skill when you update the tool.
 
 ## Limits.
 

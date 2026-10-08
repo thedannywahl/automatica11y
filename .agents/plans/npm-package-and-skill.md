@@ -11,7 +11,7 @@ Build an accessibility testing and comparison tool that answers two questions:
 
 It's **not** an attestation or certification tool. Automated checks cover only part of WCAG, so every report says "no automated violations found," never "accessible."
 
-Users invoke it as `/automatica11y <prompt>` in a Claude host, or as a CLI in a shell or CI.
+Users invoke it through any AI agent that loads `SKILL.md` and can run shell commands, or as a CLI in a shell or CI. The skill isn't tied to one agent.
 
 ### Non-goals (v1).
 
@@ -42,7 +42,9 @@ Users invoke it as `/automatica11y <prompt>` in a Claude host, or as a CLI in a 
 automatica11y/
   package.json
   README.md
-  SKILL.md                      # source of truth; copied by init-skill
+  SKILL.md                      # the agent skill; plain Markdown, not tied to one agent
+  references/
+    fixtures.md                 # the fixture contract the skill points to
   bin/
     automatica11y.js            # calls main() in src/cli.js
   src/
@@ -52,7 +54,6 @@ automatica11y/
       audit.js
       compare.js
       doctor.js
-      init-skill.js
     plan/
       classify.js               # target classification
       build-plan.js             # classify every target, assemble plan.json
@@ -93,7 +94,6 @@ automatica11y audit <target> [options]
 automatica11y compare <target> <target> [<target>...] [options]
 automatica11y run --plan <plan.json>
 automatica11y doctor
-automatica11y init-skill [--dest <dir>]
 automatica11y --version
 ```
 
@@ -433,15 +433,15 @@ Each milestone ends with working tests.
 - Coverage matrix, gap handling, mixed-evidence warning, `--lib-a11y` on and off, chart archetype with canvas detection.
 
 **M8. Skill and packaging.**
-- `SKILL.md`, `init-skill`, version handshake, README, `npm link` smoke test, then publish.
+- `SKILL.md` and its references, version handshake, README, a tarball install smoke test, then publish.
 
 ## 11. SKILL.md outline.
 
-1. **Frontmatter.** Name `automatica11y`. Description triggers: accessibility audit, WCAG check, compare accessibility, "how accessible is."
-2. **Version handshake.** State the expected CLI major version. Run `npx automatica11y@latest --version` and stop with a clear message on a mismatch.
+1. **Frontmatter.** Name `automatica11y`. Description triggers: accessibility audit, WCAG check, compare accessibility, "how accessible is." The file names no agent, vendor, or agent-specific path, and says it needs an agent that can run shell commands and read and write files.
+2. **Version handshake.** State the version series the skill works with (`0.2.x` while the major version is 0, the major version after that). The file is static, so bump the series by hand when the tool's series changes. A test fails if they disagree. Run `npx automatica11y@latest --version` and stop with a clear message on a mismatch.
 3. **Preflight.** Run `automatica11y doctor`. Relay fixes.
 4. **Translate the prompt.** Map free-form text to `audit` or `compare`. Show the command. If a target is ambiguous, ask one question.
-5. **Plan first for npm targets.** Run with `--plan`, review the candidate mapping, author compound-component fixtures where needed, and rerun with `--mapping`.
+5. **Fixtures for npm targets.** Run once. Review the candidate mapping the run writes, author compound-component fixtures where needed, and run again. The runner finds fixtures in `fixtures/<target id>/`, or takes `--mapping`.
 6. **Run and read.** Execute, then read `results.json`.
 7. **Write the report.** Follow section 9. Use the structure of the CLI's `report.md` output.
 8. **Limits.** Short list of what to say when a target is unsupported, not applicable, or not testable.
@@ -463,7 +463,7 @@ Each milestone ends with working tests.
 - Canvas-only chart output reports `not-testable`, never clean.
 - A missing Chrome or Chromium produces exit code 3 with the install command.
 - Every report records the run date, the resolved tool versions, and the resolved target versions.
-- `init-skill` installs a working skill with one command.
+- `SKILL.md` is in the repository, names the version series it works with, and doesn't depend on any one agent.
 
 ## 14. Open questions for the owner.
 

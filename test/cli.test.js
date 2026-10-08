@@ -160,9 +160,8 @@ test("doctor: exits 0 with a browser, 3 without", { skip: !onUnix }, async () =>
   assert.match(missing.stderr, /npx playwright-core install --only-shell chromium/);
 });
 
-test("init-skill takes its own flags, and rejects unknown ones", async () => {
-  assert.equal((await run(["init-skill", "--help"])).code, 0);
-  await usageError(["init-skill", "--bogus"], /bogus/);
+test("init-skill is gone: the skill is a file in the repository, not a command", async () => {
+  await usageError(["init-skill"], /Unknown command "init-skill"/);
 });
 
 test("plan.json isn't written when the command line is invalid", async () => {

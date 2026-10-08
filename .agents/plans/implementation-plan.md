@@ -11,7 +11,7 @@ The handoff is solid. Scope, non-goals, CLI contract, plan and results schemas, 
 `npm view automatica11y` returns an "Unpublished" tombstone. Someone published `0.1.1` on October 31, 2016 and unpublished it on July 17, 2020. npm usually lets a new owner publish a fresh name after unpublish, but it permanently blocks the old version number.
 
 - Start at `0.2.0` or higher. Never `0.1.1`.
-- Run `npm publish --dry-run` in M1, not M8. If npm refuses the name, we need a fallback (a scoped name like `@instructure/automatica11y`) before the CLI, `SKILL.md`, and `init-skill` hard-code it.
+- Run `npm publish --dry-run` in M1, not M8. If npm refuses the name, we need a fallback (a scoped name like `@instructure/automatica11y`) before the CLI and `SKILL.md` hard-code it.
 - This also feeds open question 2 (public or private). A scoped name solves both.
 
 ### Finding 2: the vsr spike is mostly answered.
@@ -156,7 +156,7 @@ Exit: five short notes, one yes or no on the package name, and one schema librar
 ### M1. Skeleton (done).
 
 - [x] `package.json` (`"type": "module"`, Node 20 or newer, `bin`, `files`), `jsconfig.json` for editor checks, test runner (`node:test`).
-- [x] `cli.js` with `audit`, `compare`, `run`, `doctor`, `init-skill`, `--version`. Usage errors exit 2.
+- [x] `cli.js` with `audit`, `compare`, `run`, `doctor`, `--version`. Usage errors exit 2. (`init-skill` was built in M1 as a stub and removed in M8.)
 - [x] `plan/classify.js` with one test per row in the section 4 table, plus the label syntax and the "bare `button` is a package" rule.
 - [x] `schema.js` (valibot, holds plan, mapping, and results schemas), `env/versions.js`, `env/browser.js`.
 - [x] `doctor` checks Node version and for Chrome or Chromium. A missing browser exits 3 with the install command.
@@ -172,7 +172,7 @@ Exit: acceptance criteria for `--plan` and exit code 3 pass. They do: `npm test`
 - A directory or URL counts as Storybook only when its `index.json` or `stories.json` has the Storybook shape (an `entries` or `stories` object). A random `index.json` in a static site stays a static site. A real Storybook (Carbon's) classified correctly.
 - npm targets stay `kind: "npm"` in the plan with `resolved.version: null` and the requested range. `--plan` can't tell React from web components without reading the package, so M4 fills in the framework and the resolved version. Web components are in scope for v1.
 - `doctor` and real runs find a browser without importing Playwright: an `AUTOMATICA11Y_CHROME` override, then Chrome or Chromium in the usual places, then Playwright's headless shell cache. A test traces module resolution in a child process and fails if `--version`, `doctor`, or `--plan` loads a heavy package. Nothing heavy is installed yet, so the guard protects later milestones.
-- Real runs write `plan.json`, check the environment, then exit 70 with "tiers arrive in M2." `init-skill` exits 70 until M8. Exit 70 is temporary and goes away in M2.
+- Real runs write `plan.json`, check the environment, then exit 70 with "tiers arrive in M2." Exit 70 was temporary and goes away in M2.
 - `run --plan` re-runs a saved plan and warns when installed tool versions differ.
 - `package.json` has `"private": true`, so nothing publishes by accident. Remove it at M8. The package is public on npm under the MIT license (`license`, `publishConfig.access`, and a `LICENSE` file are set).
 - `jsconfig.json` runs with `strict: false`. Strict mode demanded annotations on every helper and gave no real bugs. The lint still checks calls and property names.
@@ -337,7 +337,7 @@ Exit: two-library comparison meets the acceptance criterion.
 ### M8. Skill and packaging (done, except the release itself).
 
 - [x] `SKILL.md` per spec section 11, including the version handshake.
-- [x] `init-skill` installs `SKILL.md` and its references.
+- [x] ~~`init-skill` installs `SKILL.md`~~ Dropped. `SKILL.md` lives in the repository as a plain file, and the CLI has no command for it.
 - [x] README: install, usage, limits, the fixture-trust note, and the "no automated violations found" language.
 - [x] Pack the tarball and install it in a clean directory. (`npm link` was skipped on purpose. See below.)
 - [x] CI: unit and fixture tests on every push. Scheduled latest-dependency job that opens an issue on failure.
@@ -345,17 +345,17 @@ Exit: two-library comparison meets the acceptance criterion.
 
 Exit: all acceptance criteria in spec section 13. They hold. See the check at the end of this section.
 
-**Results.** `npm test` runs 182 tests in about two minutes, and `npm run lint` is clean.
+**Results.** `npm test` runs 175 tests in about two minutes, and `npm run lint` is clean.
 
 - **Skill.** `SKILL.md` walks a model through the version check, `doctor`, turning a request into a command, the fixture loop for npm packages, running and reading `results.json`, the report rules from the spec's section 9, and what to say when a target can't be tested. `references/fixtures.md` holds the fixture contract with React and web component examples. A guard test checks that every `--flag` and command the skill mentions exists, that its exit-code table matches, and that its archetype list matches the tool's, so the skill can't drift from the CLI unnoticed.
-- **Version handshake.** `SKILL.md` has a `{{SERIES}}` placeholder. `init-skill` fills it with the installed version's series: `0.2` while the major version is 0 (a minor version can change behavior then), and the major version from 1.0 on. The skill runs `npx --yes automatica11y@latest --version`, and stops with an update command if the output doesn't start with that series.
-- **`init-skill`.** It installs to `~/.claude/skills/automatica11y` by default, or `--dest <dir>`, and expands `~`. Running it again changes nothing. It refuses to overwrite a file that differs unless you pass `--force`, and it leaves other files in the folder alone.
+- **Version handshake.** `SKILL.md` states the series it works with (`0.2.x`: in the 0.x series a minor version can change behavior, and from 1.0 the major version is enough). It runs `npx --yes automatica11y@latest --version` and stops if the output doesn't start with that series, telling the user to get a matching copy of the skill. The file is static now, so a test fails if its series disagrees with the version in `package.json`. Bump both together.
+- **Agent-agnostic.** `SKILL.md` and `references/fixtures.md` name no agent, vendor, or agent-specific path, and a test fails if one appears. The skill says it needs an agent that can run shell commands (including `npx`) and read and write files. The README tells readers to copy `SKILL.md` and `references/` into their agent's skills folder, or to give the file to the agent as instructions. A copy also ships in the npm package.
 - **Packaging.** `private` is gone, `license` is MIT, `files` covers `bin`, `src`, `SKILL.md`, and `references`, and `prepublishOnly` runs the type check. A test checks the real tarball contents with `npm pack --dry-run`, that every import in `src` is a declared dependency, that the README documents every flag and exit code, and that the version and the skill series agree. The tarball is about 66 KB.
-- **Clean install.** I packed the tarball, installed it into an empty folder, and ran `--version`, `doctor`, an `audit` with a fail flag on a local page, an `audit` of the real Shoelace package from the registry, and `init-skill`. All worked. `npm link` would have changed the global npm prefix, and the tarball install tests the same bin entry more faithfully, so I didn't link.
+- **Clean install.** I packed the tarball, installed it into an empty folder, and ran `--version`, `doctor`, an `audit` with a fail flag on a local page, an `audit` of the real Shoelace package from the registry, and `audit` on a real npm package. All worked. `npm link` would have changed the global npm prefix, and the tarball install tests the same bin entry more faithfully, so I didn't link.
 - **CI.** `.github/workflows/test.yml` runs lint and tests on Node 20, 22, and 24 on every push. `latest-deps.yml` runs weekly against the latest of every tool and opens (or comments on) an issue labeled `latest-deps` when a test fails. **Neither workflow has run on GitHub.** The YAML parses, but only the first real run shows whether the steps work, and I've only run the suite on Node 24.
-- **Not tested.** The skill hasn't run in a live Claude session. The guard tests check it against the CLI, but not how a model follows it.
+- **Not tested.** The skill hasn't run in a live agent session. The guard tests check it against the CLI, but not how a model follows it.
 
-**Release.** `automatica11y@0.0.0-stage` is on npm (a placeholder published by thedannywahl), so the name is claimed. `0.2.0` isn't published. When it is, `npm publish` runs the type check first. After publishing, `npx automatica11y@latest --version` should print `0.2.0`, and `init-skill` and the skill's handshake will work as written.
+**Release.** `automatica11y@0.0.0-stage` is on npm (a placeholder published by thedannywahl), so the name is claimed. `0.2.0` isn't published. When it is, `npm publish` runs the type check first. After publishing, `npx automatica11y@latest --version` should print `0.2.0`, and the skill's handshake will work as written.
 
 **Acceptance criteria (spec section 13).**
 
@@ -365,7 +365,7 @@ Exit: all acceptance criteria in spec section 13. They hold. See the check at th
 - Canvas-only output reports `not-testable`, never clean. Yes.
 - A missing browser exits 3 with the install command. Yes.
 - Every report records the run date, tool versions, and resolved target versions. Yes. Versions apply to npm targets. Pages and Storybooks have no version to record.
-- `init-skill` installs a working skill with one command. Yes, in tests. Not tried in a live session.
+- `SKILL.md` is in the repository, names the version series it works with, and doesn't depend on one agent. Yes, in tests. Not tried in a live session.
 
 ## 4. Order and parallelism.
 
@@ -383,4 +383,4 @@ M0 then M1 are strictly first. After M2, M3 and M4 can run in parallel. M5 needs
 
 ## 6. Status.
 
-All nine milestones are built. What's left is the release (`npm publish` of `0.2.0`, Danny's step), the first real run of the two GitHub workflows, and trying the skill in a live Claude session.
+All nine milestones are built. What's left is the release (`npm publish` of `0.2.0`, Danny's step), the first real run of the two GitHub workflows, and trying the skill in a live agent session.

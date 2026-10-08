@@ -7,23 +7,19 @@ description: Test and compare web accessibility. Use when someone asks how acces
 
 This skill turns a request into an `automatica11y` command, runs it, and writes a report from the results. The tool does the testing. This skill never guesses at results.
 
+It's plain Markdown, and it isn't tied to one agent. It needs an agent that can run shell commands (including `npx`) and read and write files. Paths such as `references/fixtures.md` are relative to this file.
+
 The tool is **not** an attestation or certification tool. Automated checks cover only part of WCAG. Say "no automated violations found." Never say a target is "accessible" or "compliant."
 
 ## 1. Check the version
 
-This skill works with automatica11y **{{SERIES}}.x**. Run:
+This skill works with automatica11y **0.2.x**. Run:
 
 ```bash
 npx --yes automatica11y@latest --version
 ```
 
-If the output doesn't start with `{{SERIES}}.`, stop. Tell the user the skill and the tool are out of step, and give them this command to update the skill:
-
-```bash
-npx --yes automatica11y@latest init-skill --force
-```
-
-Don't run the audit with a mismatched version.
+If the output doesn't start with `0.2.`, stop. Tell the user this skill and the tool are out of step. They need a copy of this skill that matches the tool: the `SKILL.md` and `references/` folder from the project repository, or from `node_modules/automatica11y/` if the package is installed. Don't run the audit with a mismatched version.
 
 ## 2. Check the setup
 

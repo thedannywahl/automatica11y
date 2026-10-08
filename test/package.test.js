@@ -74,13 +74,8 @@ test("the README documents every flag, every exit code, and the skill install", 
   assert.ok(flags.length >= 12);
   for (const flag of flags) assert.ok(readme.includes(`--${flag}`), `README documents --${flag}`);
   for (const code of ["0", "1", "2", "3", "4"]) assert.match(readme, new RegExp(`\\| ${code} \\|`), `README explains exit code ${code}`);
-  assert.match(readme, /init-skill/);
+  assert.match(readme, /SKILL\.md/);
+  assert.doesNotMatch(readme, /init-skill/);
   assert.match(readme, /no automated violations found/i);
   assert.doesNotMatch(readme, /\bis (fully )?(accessible|compliant)\b/i);
-});
-
-test("the version in package.json and the series SKILL.md will be installed with agree", async () => {
-  const { skillFiles, skillSeries } = await import("../src/commands/init-skill.js");
-  const series = skillSeries(pkg.version);
-  assert.match(skillFiles(pkg.version)["SKILL.md"], new RegExp(`automatica11y \\*\\*${series.replace(".", "\\.")}\\.x\\*\\*`));
 });
