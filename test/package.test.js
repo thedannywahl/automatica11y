@@ -22,7 +22,8 @@ test("the package is ready to publish: public, MIT, ESM, Node 20 or newer", () =
   assert.equal(pkg.publishConfig.access, "public");
   assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
   assert.ok(pkg.description.length > 20);
-  assert.deepEqual(Object.keys(pkg.bin), ["automatica11y"]);
+  assert.deepEqual(Object.keys(pkg.bin), ["automatica11y", "a11y"]);
+  assert.equal(pkg.bin.a11y, pkg.bin.automatica11y, "the short name runs the same file");
   assert.ok(existsSync(join(root, pkg.bin.automatica11y)));
   assert.match(readFileSync(join(root, pkg.bin.automatica11y), "utf8"), /^#!\/usr\/bin\/env node\n/);
   assert.ok(statSync(join(root, pkg.bin.automatica11y)).mode & 0o111, "the bin file is executable");

@@ -7,6 +7,7 @@ import { generateFixture } from "./generate-fixture.js";
 import { settleAnimations } from "../harness/settle.js";
 import { installExtraPackages, installOptionalPeers, installPackage } from "../harness/npm-install.js";
 import { adapterFor, adapterForKind } from "../frameworks/index.js";
+import { subpathProblem } from "../plan/subpath.js";
 import { closedShadowHosts, notTestableEntries } from "../harness/shadow.js";
 import { serveStatic } from "../harness/static-serve.js";
 import { openPage } from "../harness/url.js";
@@ -215,12 +216,18 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     let flavor = adapterForKind(planTarget.kind)?.id ?? "unknown";
     const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor });
     const warnings = [...installed.warnings];
+    // What fixtures and templates import: the package, or the sub-path of it that was asked for.
+    const importSpec = resolved.subpath ? `${resolved.name}/${resolved.subpath}` : resolved.name;
+    if (resolved.subpath) {
+      const problem = subpathProblem(workDir, resolved.name, resolved.subpath, installed.version ?? resolved.version);
+      if (problem) throw new Error(problem);
+    }
 
     // Packages the mapping names (a token stylesheet, a theme) go in beside the library, so a fixture can import them.
     const extras = await installExtraPackages({ dir: workDir, specs: Object.values(planTarget.mapping ?? {}).flatMap((entry) => entry.install ?? []) });
     warnings.push(...extras.warnings);
 
-    const found = await discover({ browser, workDir, flavor: flavor === "unknown" ? "wc" : flavor, pkg: resolved.name, buildDir, warnings });
+    const found = await discover({ browser, workDir, flavor: flavor === "unknown" ? "wc" : flavor, pkg: importSpec, buildDir, warnings });
     if (flavor === "unknown") {
       if (found.tags.length > 0) flavor = "wc";
       else if (installed.react && found.exports.some((e) => /^[A-Z]/.test(e.name))) flavor = "react";
@@ -269,7 +276,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
         entry.status = "needs-fixture";
         entry.reason = `The mapping names ${user.fixture}, but that file doesn't exist.`;
       } else if (entry.status === "template" || (user.export || user.tag) && ["button", "link"].includes(archetype)) {
-        const source = adapter.template(archetype, resolved.name, flavor === "wc" ? entry.tag : entry.export);
+        const source = adapter.template(archetype, importSpec, flavor === "wc" ? entry.tag : entry.export);
         if (source) {
           entry.status = "template";
           delete entry.reason;
@@ -283,7 +290,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       let generationTried = false;
       // Nothing authored and no template: build candidates from what the package exports, and keep one only if it works.
       if (!fixture && !user.fixture && plan.options.generate !== false && GENERATABLE.has(archetype) && !(entry.status === "no-match" && flavor === "wc")) {
-        const generated = await generateFixture({ browser, adapter, archetype, entry, found, explicit: Boolean(user.export), pkg: resolved.name, tmp, workDir, buildDir, getServer, bundle: (options) => bundleWithPeers(options, warnings) });
+        const generated = await generateFixture({ browser, adapter, archetype, entry, found, explicit: Boolean(user.export), pkg: importSpec, tmp, workDir, buildDir, getServer, bundle: (options) => bundleWithPeers(options, warnings) });
         attempts = generated.attempts;
         generationTried = attempts.length > 0;
         if (generated.ok && generated.winner) {
@@ -313,7 +320,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       }
       const entryFile = join(tmp, "entries", `${archetype}-entry.js`);
       mkdirSync(join(tmp, "entries"), { recursive: true });
-      writeFileSync(entryFile, adapter.entry(fixture, resolved.name));
+      writeFileSync(entryFile, adapter.entry(fixture, importSpec));
       try {
         await bundleWithPeers({ entries: { [archetype]: entryFile }, outdir: buildDir, workDir, framework: adapter }, warnings);
         runnable[archetype] = `/${archetype}.html`;
@@ -355,6 +362,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
         archetypes: ordered,
         npm: {
           name: resolved.name,
+          subpath: resolved.subpath ?? null,
           version: installed.version ?? resolved.version,
           flavor,
           framework: resolved.framework ?? null,

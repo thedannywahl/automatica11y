@@ -496,3 +496,14 @@ The React and web component code that was spread through the audit flow is now o
 - **Bug found along the way.** The web component template took the tag as its second argument while the uniform adapter interface passes the package name second. The closed shadow root test caught it.
 
 Checked on real packages with no fixtures written: Reka UI generated a dialog, tooltip, tabs, accordion, menu, and form field. Headless UI Vue generated a dialog (controlled with `open` and `update:open`) and a field, and reported its menu, tabs, and disclosure as gaps with the reason. An authored Vue fixture for the Reka dialog passed all seven dialog interaction checks, and that example is now in the runner skill. Not covered: Svelte and Angular (see the sizing notes), and Vue libraries that need plugin installation, which need an authored fixture with `setup(app)`.
+
+### npm sub-paths.
+
+`npm:name[@version][/sub/path]` tests one entry of a package, such as `npm:@scope/ui-buttons/button` or `npm:@scope/ui-buttons@11.7.8/button/v2`, so two versions of a component can be compared side by side. The sub-path is part of the import specifier: discovery, templates, generated fixtures, and the mount entries import `name/sub/path`, while install and registry lookups use the bare name. The default target id includes the sub-path (`scope-pkg-button-v2`).
+
+- **Parsing.** The version stops at the first slash. A sub-path can't contain empty parts, `.`, `..`, or backslashes, so it can't point outside the package. Capital letters are fine (`closeButton`).
+- **Validation, twice.** At plan time the registry's `exports` field is checked, so `--plan` fails a wrong sub-path before anything is installed. After install the package's own `package.json` is checked, and a package with no exports map is checked against its files (extensions can be left off, and a folder with an index file works). Exact keys, patterns (`./es/*`, `./feat/*.js`), and `null` entries are handled, and a string or array `exports` means the root only.
+- **The message.** A wrong sub-path names the package and version, suggests the closest exports (a shared start, a shared last part, or a typo of it), lists up to twelve exports and a few patterns, and says when a package exports only its main entry.
+- **Results.** `results.npm.subpath`, and the report says which entry was tested. A package name that says what it is still counts: `pkg/dialog` makes a dialog family eligible for generation.
+
+Checked on the real `@instructure/ui-buttons@11.7.8`: `v11_6`, `v11_7`, and `es/Button/v2/index.js` all ran from templates, and `button/v2` was rejected at plan time with the real exports listed, because that version doesn't export that sub-path.

@@ -48,7 +48,7 @@ Use `audit` for one target and `compare` for two or more, even when they're diff
 | A live page | `https://example.com/page` |
 | A local page or site | `./page.html` or `./dist`. A path with no prefix is relative to the working folder. |
 | A Storybook | its URL, or a local folder with `index.json` |
-| An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version` |
+| An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. To test one entry of a package, add a sub-path after the version: `npm:@scope/pkg/button` or `npm:@scope/pkg@1.2.3/button/v2`. The sub-path is what a person would import (`import ... from "@scope/pkg/button"`), and it has to be something the package exports. |
 
 A bare word such as `button` is a path: the folder or file `./button`. Always write an npm package with the `npm:` prefix. If a word could mean a package or a folder, ask the user which one before you run anything.
 

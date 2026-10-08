@@ -178,7 +178,7 @@ test("the docs write npm packages with the npm: prefix, as the tool requires", (
     assert.doesNotMatch(text, /=(react-aria-components|@radix-ui)/, `${name} labels no bare package`);
   }
   assert.match(readme, /compare radix=npm:@radix-ui\/react-dialog aria=npm:react-aria-components/);
-  assert.match(runner, /\| An npm package \| `npm:name`, `npm:@scope\/name`, or `npm:name@version` \|/);
+  assert.match(runner, /\| An npm package \| `npm:name`, `npm:@scope\/name`, or `npm:name@version`\. To test one entry of a package, add a sub-path after the version: `npm:@scope\/pkg\/button` or `npm:@scope\/pkg@1\.2\.3\/button\/v2`/);
   assert.match(runner, /A bare word such as `button` is a path: the folder or file `\.\/button`\. Always write an npm package with the `npm:` prefix/);
   assert.match(readme, /Write `npm:button` to pick the package/);
 });

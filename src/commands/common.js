@@ -122,7 +122,7 @@ export function parseRunArgs(command, argv) {
 export function describeTarget(target) {
   if (target.status === "failed") return `failed: ${target.reason}`;
   const r = target.resolved ?? {};
-  if (target.kind?.startsWith("npm")) return `${r.name}@${r.version ?? r.requested ?? "latest"}${r.framework ? ` (${r.framework})` : ""}`;
+  if (target.kind?.startsWith("npm")) return `${r.name}@${r.version ?? r.requested ?? "latest"}${r.subpath ? `/${r.subpath}` : ""}${r.framework ? ` (${r.framework})` : ""}`;
   return r.url ?? r.path ?? "";
 }
 

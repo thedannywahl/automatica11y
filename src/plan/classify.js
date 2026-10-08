@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { cleanSubpath } from "./subpath.js";
 
 /**
  * @typedef {"npm" | "storybook" | "url" | "html-file" | "static-dir"} TargetKind
@@ -22,7 +23,7 @@ import { fileURLToPath } from "node:url";
 const LOCAL_PATH = /^(\.{1,2}(\/|$)|\/|~(\/|$)|file:)/;
 const LABEL = /^([A-Za-z0-9][\w.-]*)=(.+)$/;
 const HTTP_URL = /^https?:\/\//i;
-const NPM_NAME = /^(?:@([a-z0-9][a-z0-9._~-]*)\/)?([a-z0-9][a-z0-9._~-]*)(?:@(.*))?$/;
+const NPM_NAME = /^(?:@([a-z0-9][a-z0-9._~-]*)\/)?([a-z0-9][a-z0-9._~-]*)(?:@([^/]*))?(?:\/(.+))?$/;
 const COMPONENT_SOURCE = new Set([".tsx", ".jsx", ".ts", ".js", ".mjs", ".cjs", ".vue", ".svelte"]);
 
 /**
@@ -129,17 +130,23 @@ function classifyNpm(spec, base) {
     if (/[A-Z]/.test(spec) && NPM_NAME.test(spec.toLowerCase())) return failed(`"${spec}" isn't a valid package name. npm package names are lowercase.`, base);
     return failed(`"${spec}" isn't a valid npm package name. Write npm:name, npm:@scope/name, or npm:name@version.`, base);
   }
-  const [, scope, name, version] = match;
+  const [, scope, name, version, rawSubpath] = match;
   if (version === "") return failed(`"${spec}" ends with @ but has no version.`, base);
+  let subpath = null;
+  if (rawSubpath !== undefined) {
+    const cleaned = cleanSubpath(rawSubpath);
+    if ("reason" in cleaned) return failed(`"${spec}" isn't a valid sub-path: ${cleaned.reason}. Write npm:name/sub/path or npm:name@version/sub/path.`, base);
+    subpath = /** @type {{ subpath: string }} */ (cleaned).subpath;
+  }
   const full = scope ? `@${scope}/${name}` : name;
   return {
     ...base,
-    name: base.name || full,
+    name: base.name || (subpath ? `${full}/${subpath}` : full),
     status: "ok",
     reason: null,
     kind: "npm",
     evidenceLevel: "component",
-    resolved: { name: full, requested: version ?? null, version: null },
+    resolved: { name: full, requested: version ?? null, version: null, subpath },
   };
 }
 

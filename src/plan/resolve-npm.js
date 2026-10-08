@@ -1,7 +1,8 @@
 import { execFile } from "node:child_process";
 import { ADAPTERS } from "../frameworks/index.js";
+import { checkExports, notExportedMessage } from "./subpath.js";
 
-const FIELDS = ["name", "version", "peerDependencies", "dependencies", "keywords", "customElements", "deprecated"];
+const FIELDS = ["name", "version", "peerDependencies", "dependencies", "keywords", "customElements", "deprecated", "exports"];
 const OTHER_FRAMEWORKS = {
   "@angular/core": "Angular",
   svelte: "Svelte",
@@ -73,9 +74,14 @@ export function detectFlavor(meta) {
  */
 export async function resolveNpmTarget(target, view) {
   if (target.status !== "ok" || target.kind !== "npm" || !target.resolved) return target;
-  const { name, requested } = target.resolved;
+  const { name, requested, subpath } = target.resolved;
   try {
     const meta = await view(`${name}@${requested ?? "latest"}`);
+    // The registry lists a package's exports, so a wrong sub-path is caught here, before anything is installed.
+    if (subpath) {
+      const result = checkExports(meta.exports, subpath);
+      if (result.checked && !result.ok) throw new Error(notExportedMessage({ name, version: meta.version ?? null, subpath, exact: result.exact, patterns: result.patterns }));
+    }
     const flavor = detectFlavor(meta);
     return {
       ...target,

@@ -227,6 +227,8 @@ export const TargetResultSchema = v.object({
   npm: v.optional(
     v.object({
       name: v.string(),
+      /** The sub-path of the package that was tested, such as `button/v2`, or null for the package itself. */
+      subpath: v.optional(nullableString),
       version: nullableString,
       flavor: v.picklist(FLAVORS),
       framework: nullableString,

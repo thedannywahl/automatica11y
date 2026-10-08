@@ -16,6 +16,8 @@ export const REGISTRY = {
   "closed-wc": { name: "closed-wc", version: "2.0.0" },
   "quiet-wc": { name: "quiet-wc", version: "1.0.0" },
   "plain-utils": { name: "plain-utils", version: "3.0.0" },
+  "fake-subpaths": { name: "fake-subpaths", version: "2.0.0", peerDependencies: { react: "*", "react-dom": "*" }, exports: { ".": "./index.js", "./button": "./button.js", "./button/v2": "./button-v2.js", "./dialog": "./dialog.js", "./es/*": "./es/*", "./internal/*": null, "./package.json": "./package.json" } },
+  "fake-legacy": { name: "fake-legacy", version: "1.0.0", peerDependencies: { react: "*", "react-dom": "*" } },
   "fake-vue-ui": { name: "fake-vue-ui", version: "1.0.0", peerDependencies: { vue: "^3.4.0" } },
   "fake-vue-controlled": { name: "fake-vue-controlled", version: "1.0.0", peerDependencies: { vue: "^3.4.0" } },
   "vue-two-lib": { name: "vue-two-lib", version: "1.0.0", peerDependencies: { vue: "^2.7.0" } },

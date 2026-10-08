@@ -129,7 +129,9 @@ test("a bare word that isn't a path fails, and the message says how to ask for a
 test("npm: with a bad name fails with a reason", async () => {
   const cwd = makeTree();
   assert.match((await classifyTarget("npm:React", { cwd })).reason, /lowercase/);
-  assert.match((await classifyTarget("npm:foo/bar", { cwd })).reason, /isn't a valid npm package name\. Write npm:name/);
+  assert.match((await classifyTarget("npm:@scope", { cwd })).reason, /isn't a valid npm package name\. Write npm:name/);
+  assert.match((await classifyTarget("npm:foo bar", { cwd })).reason, /isn't a valid npm package name/);
+  assert.equal((await classifyTarget("npm:foo/bar", { cwd })).resolved.subpath, "bar", "a second part is a sub-path");
   assert.match((await classifyTarget("npm:react@", { cwd })).reason, /no version/);
   assert.match((await classifyTarget("npm:", { cwd })).reason, /isn't a valid npm package name/);
 });
