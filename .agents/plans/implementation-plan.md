@@ -334,16 +334,38 @@ Exit: two-library comparison meets the acceptance criterion.
 - **Canvas.** If a scope is mainly `<canvas>` with no label, text, table, or SVG, the rules tier reports `not-testable` for both engines and skips them. It never reports clean. A canvas with a label or a table nearby is tested, with a note that the drawing itself isn't.
 - **Fix found while testing.** An npm package version that the registry listed but couldn't yet serve (`ETARGET` on a package published minutes earlier) failed that target with the reason, as designed. A retry on `ETARGET` would help, and I left it for later.
 
-### M8. Skill and packaging (two days).
+### M8. Skill and packaging (done, except the release itself).
 
-- [ ] `SKILL.md` per spec section 11, including the version handshake.
-- [ ] `init-skill` copies `SKILL.md` to `--dest`, defaulting to the host's skills directory.
-- [ ] README: install, usage, limits, the fixture-trust note, and the "no automated violations found" language.
-- [ ] `npm link` smoke test, then `npm pack` and install the tarball in a clean directory.
-- [ ] CI: unit and fixture tests on every push. Scheduled latest-dependency job that opens an issue on failure.
-- [ ] Publish, using the registry decision from M1.
+- [x] `SKILL.md` per spec section 11, including the version handshake.
+- [x] `init-skill` installs `SKILL.md` and its references.
+- [x] README: install, usage, limits, the fixture-trust note, and the "no automated violations found" language.
+- [x] Pack the tarball and install it in a clean directory. (`npm link` was skipped on purpose. See below.)
+- [x] CI: unit and fixture tests on every push. Scheduled latest-dependency job that opens an issue on failure.
+- [ ] Publish `0.2.0`. This is Danny's step (see below).
 
-Exit: all acceptance criteria in spec section 13.
+Exit: all acceptance criteria in spec section 13. They hold. See the check at the end of this section.
+
+**Results.** `npm test` runs 182 tests in about two minutes, and `npm run lint` is clean.
+
+- **Skill.** `SKILL.md` walks a model through the version check, `doctor`, turning a request into a command, the fixture loop for npm packages, running and reading `results.json`, the report rules from the spec's section 9, and what to say when a target can't be tested. `references/fixtures.md` holds the fixture contract with React and web component examples. A guard test checks that every `--flag` and command the skill mentions exists, that its exit-code table matches, and that its archetype list matches the tool's, so the skill can't drift from the CLI unnoticed.
+- **Version handshake.** `SKILL.md` has a `{{SERIES}}` placeholder. `init-skill` fills it with the installed version's series: `0.2` while the major version is 0 (a minor version can change behavior then), and the major version from 1.0 on. The skill runs `npx --yes automatica11y@latest --version`, and stops with an update command if the output doesn't start with that series.
+- **`init-skill`.** It installs to `~/.claude/skills/automatica11y` by default, or `--dest <dir>`, and expands `~`. Running it again changes nothing. It refuses to overwrite a file that differs unless you pass `--force`, and it leaves other files in the folder alone.
+- **Packaging.** `private` is gone, `license` is MIT, `files` covers `bin`, `src`, `SKILL.md`, and `references`, and `prepublishOnly` runs the type check. A test checks the real tarball contents with `npm pack --dry-run`, that every import in `src` is a declared dependency, that the README documents every flag and exit code, and that the version and the skill series agree. The tarball is about 66 KB.
+- **Clean install.** I packed the tarball, installed it into an empty folder, and ran `--version`, `doctor`, an `audit` with a fail flag on a local page, an `audit` of the real Shoelace package from the registry, and `init-skill`. All worked. `npm link` would have changed the global npm prefix, and the tarball install tests the same bin entry more faithfully, so I didn't link.
+- **CI.** `.github/workflows/test.yml` runs lint and tests on Node 20, 22, and 24 on every push. `latest-deps.yml` runs weekly against the latest of every tool and opens (or comments on) an issue labeled `latest-deps` when a test fails. **Neither workflow has run on GitHub.** The YAML parses, but only the first real run shows whether the steps work, and I've only run the suite on Node 24.
+- **Not tested.** The skill hasn't run in a live Claude session. The guard tests check it against the CLI, but not how a model follows it.
+
+**Release.** `automatica11y@0.0.0-stage` is on npm (a placeholder published by thedannywahl), so the name is claimed. `0.2.0` isn't published. When it is, `npm publish` runs the type check first. After publishing, `npx automatica11y@latest --version` should print `0.2.0`, and `init-skill` and the skill's handshake will work as written.
+
+**Acceptance criteria (spec section 13).**
+
+- `audit` and `compare` work for all four target types. Yes.
+- `--plan` prints every target's classification without installing or launching anything. Yes. For npm targets it reads registry metadata only.
+- A comparison of two React libraries gives a coverage matrix, per-archetype findings, and a report that follows every rule in section 9. Yes, in tests with fake libraries and in real runs.
+- Canvas-only output reports `not-testable`, never clean. Yes.
+- A missing browser exits 3 with the install command. Yes.
+- Every report records the run date, tool versions, and resolved target versions. Yes. Versions apply to npm targets. Pages and Storybooks have no version to record.
+- `init-skill` installs a working skill with one command. Yes, in tests. Not tried in a live session.
 
 ## 4. Order and parallelism.
 
@@ -359,8 +381,6 @@ M0 then M1 are strictly first. After M2, M3 and M4 can run in parallel. M5 needs
 | npm install of arbitrary packages runs lifecycle scripts. | Install with `--ignore-scripts` by default. Document the exception path. |
 | Interaction checks flake on timing. | Wait on state (roles, attributes), never fixed sleeps. Run the determinism test in CI. |
 
-## 6. First actions.
+## 6. Status.
 
-1. Commit the two plan files.
-2. Run M0, starting with the `npm publish --dry-run` check, since its answer shapes the name used everywhere.
-3. Ask Danny for the registry decision once the dry-run result is in.
+All nine milestones are built. What's left is the release (`npm publish` of `0.2.0`, Danny's step), the first real run of the two GitHub workflows, and trying the skill in a live Claude session.

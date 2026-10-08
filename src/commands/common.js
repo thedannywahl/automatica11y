@@ -8,7 +8,7 @@ import { loadMappingFile } from "../plan/mapping.js";
 import { runPlan } from "../run/run-plan.js";
 import { ARCHETYPES, ENGINES, FAIL_MODES, IMPACTS, LEVELS, LIB_A11Y, TIERS, TOOLKIT_LEVELS, WCAG_VERSIONS, parsePlan } from "../schema.js";
 
-export const EXIT = { OK: 0, FAIL_THRESHOLD: 1, USAGE: 2, ENVIRONMENT: 3, ALL_TARGETS_FAILED: 4, NOT_IMPLEMENTED: 70 };
+export const EXIT = { OK: 0, FAIL_THRESHOLD: 1, USAGE: 2, ENVIRONMENT: 3, ALL_TARGETS_FAILED: 4 };
 
 /** A bad command line. The CLI prints the message plus a usage hint and exits 2. */
 export class UsageError extends Error {}
@@ -266,7 +266,7 @@ export function usage(command) {
   automatica11y compare <target> <target> [<target>...] [options]
   automatica11y run --plan <plan.json>
   automatica11y doctor
-  automatica11y init-skill [--dest <dir>]
+  automatica11y init-skill [--dest <dir>] [--force]
   automatica11y --version
 
 Run a command with --help for its options.

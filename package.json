@@ -4,21 +4,22 @@
   "description": "Test and compare the accessibility of web pages, Storybook builds, and npm component libraries.",
   "license": "MIT",
   "type": "module",
-  "private": true,
   "bin": {
     "automatica11y": "bin/automatica11y.js"
   },
   "files": [
     "bin",
     "src",
-    "SKILL.md"
+    "SKILL.md",
+    "references"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "test": "node --test test/*.test.js",
-    "lint": "tsc -p jsconfig.json"
+    "lint": "tsc -p jsconfig.json",
+    "prepublishOnly": "npm run lint"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -37,5 +38,15 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "axe-core",
+    "testing",
+    "storybook",
+    "web-components",
+    "react"
+  ]
 }

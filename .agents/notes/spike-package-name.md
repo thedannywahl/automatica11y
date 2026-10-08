@@ -8,3 +8,7 @@ Result: unconfirmed. `npm publish --dry-run` passes, but a dry run can't prove t
 - `@instructure/automatica11y` returns 404. That says the package doesn't exist, not whether the `@instructure` scope is ours to publish under.
 
 Next step for Danny: decide the registry and scope (public npm, scoped, or GitHub Packages). Then confirm the name with a real publish from a logged-in account. We haven't published anything.
+
+## Update, October 7, 2026
+
+Danny published `automatica11y@0.0.0-stage` (maintainer thedannywahl), a placeholder with the description "Temporary package placeholder for staged publishing." That claims the name, so the name question is settled. `0.2.0` and later are still unpublished. The tombstone from 2016 only blocks version 0.1.1.
