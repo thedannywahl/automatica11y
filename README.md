@@ -111,7 +111,7 @@ npx automatica11y@latest guide fixtures  # how to write the fixtures an npm pack
 
 The guidance ships with the tool, so it always matches the version you run. Tell your agent to run `npx automatica11y@latest guide` and follow it, then ask for things like "How accessible is Radix Dialog?" or "Compare the accessibility of React Aria and Headless UI." The agent needs to run shell commands and read and write files. Nothing here is tied to one agent.
 
-**Skills.** If your agent loads skills from a folder, copy [`skills/automatica11y`](skills/automatica11y) into it. That's one small file, `SKILL.md`. It advertises the tool to the agent, and sends it to `guide`. It names no version, so it doesn't go stale. The full steps are the [`automatica11y-runner`](skills/automatica11y-runner) skill, which ships in the package and is what `guide skill` prints. Copy it too if you want the steps available without the network.
+**Skills.** If your agent loads skills from a folder, copy [`skills/automatica11y`](skills/automatica11y) into it. That's one small file, `SKILL.md`. It advertises the tool to the agent, and sends it to `guide skill`. It names no version, so it doesn't go stale. The full steps are the [`automatica11y-runner`](skills/automatica11y-runner) skill, which ships in the package and is what `guide skill` prints. Copy it too if you want the steps available without the network.
 
 **AGENTS.md.** [`AGENTS.md`](AGENTS.md) is for agents that read it but don't load skills. It points to the same steps, and tells contributors how to run and change the code.
 

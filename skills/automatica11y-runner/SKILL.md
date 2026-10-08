@@ -14,6 +14,8 @@ The tool is **not** an attestation or certification tool. Automated checks cover
 
 ## 1. Check the version
 
+Do sections 1 and 2 before you run an audit. A question to the user about a missing target or an unsupported setting (section 3) can come before or after them.
+
 This skill works with automatica11y **0.3.x**. Run:
 
 ```bash
@@ -39,7 +41,7 @@ npx --yes automatica11y@latest audit <target> [options]
 npx --yes automatica11y@latest compare <target> <target> [<target>...] [options]
 ```
 
-Use `audit` for one target and `compare` for two or more. A target is `[label=]<spec>`. The label is optional and names the target in the report.
+Use `audit` for one target and `compare` for two or more, even when they're different kinds, such as a live page and an npm package. The report then opens with a warning that the evidence isn't equivalent. A target is `[label=]<spec>`. The label is optional and names the target in the report.
 
 | The user means | The spec is |
 |---|---|
@@ -72,7 +74,7 @@ Use the target and the settings the user already gave, and ask only for what's m
 
 Pass only the options in the table above, with the values it lists. If the user names a setting the tool doesn't have, or a value outside those lists (for example, WCAG 3.0), tell them which setting is unsupported, list the supported values, and ask which to use. Don't substitute a default or invent a value.
 
-Show the user the exact command before you run it. If a target is ambiguous, ask one question, then go on.
+Show the user the exact command before you run it. If you have questions (a target that could mean two things, a missing target, an unsupported setting), ask them together in one message, then go on.
 
 Don't set the fail flags unless the user asks for gating. They change the exit code. They don't change the results.
 
@@ -82,9 +84,9 @@ A package's components can't be guessed from its name. The first run installs th
 
 1. Run the audit once. Read `<out>/mapping.json` and the report's **Archetypes** table.
 2. Treat the mapping as a guess. Check each `export` or `tag` against what the user asked about.
-3. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow the contract and the examples below. `references/fixtures.md` has more: the mapping file, states, and library accessibility options. It should sit next to this file. If you can't open it, run `npx --yes automatica11y@latest guide fixtures` to print it. The contract here is enough for the first fixture.
+3. Each archetype in `mapping.json` has a status. `needs-fixture` means the tool found the component but can't build it from a template. `no-match` means no export or custom element looks like that archetype. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow the contract and the examples below. `references/fixtures.md` has more: the mapping file, states, and library accessibility options. It should sit next to this file. If you can't open it, run `npx --yes automatica11y@latest guide fixtures` to print it. The contract here is enough for the first fixture.
 4. Run the same command again. The tool finds fixtures in that folder without `--mapping`.
-5. Don't invent fixtures for archetypes the user didn't ask about. A gap is an honest result.
+5. Don't invent fixtures for archetypes the user didn't ask about. For a `no-match` archetype, write a fixture only if the library's documentation names a component, or a documented way, to make it. Otherwise leave it as a gap. A gap is an honest result.
 
 **The fixture contract, in brief.**
 
@@ -138,7 +140,7 @@ Run the command. Note the exit code:
 
 | Code | Meaning |
 |---|---|
-| 0 | The run completed. Findings don't change this unless a fail flag was set. |
+| 0 | The run completed. Findings don't change this unless a fail flag was set. A target that failed while others ran still exits 0, and the failure is in the results. |
 | 1 | The run completed and a fail flag tripped. |
 | 2 | The command was wrong. Read the message, fix it, and run again. |
 | 3 | An environment problem. Relay the fix. |
@@ -154,7 +156,7 @@ Write the narrative from `results.json`. Never write from memory, and never repe
 2. For a comparison, say that every target used the same archetypes, WCAG version, level, and rules.
 3. Open with the coverage matrix (target by archetype by tier). Then give the findings.
 4. Keep violations, needs-review items, and passes in separate lists. Never merge them.
-5. Break findings out by archetype and by impact.
+5. Break findings out by archetype. Within an archetype, order axe-core findings by impact and IBM findings by Toolkit level.
 6. Use "no automated violations found" only for an engine that reported none for that target. For an engine that reported violations, list them as the tool reports them. Never say "accessible," "compliant," or "passes WCAG."
 7. Don't print a single score. If someone insists, pair any number with the coverage matrix and the automated-coverage caveat.
 8. Label virtual screen reader output **simulated**. Label library accessibility options **on** or **off** on every result that has one.
@@ -174,7 +176,7 @@ Say these things plainly. Don't soften them, and don't fill in a result.
 - **Not testable.** The content is a canvas with no alternative, or sits in a closed shadow root. The rule engines can't see it, so the result is untested, not clean. The virtual screen reader also can't read open shadow roots.
 - **Gap.** The archetype has no usable fixture or no matching export. Say what the archetype needs.
 - **Error.** An interaction check couldn't finish. It's untested, not failed.
-- **Failed target.** The target can't be reached, isn't a web page, or couldn't be built. The tool records it as failed with a reason. Tell the user which target failed, using the reason from `results.json`. Don't retry with guesses. If every target failed (exit code 4), stop. If others ran, report them, and list the failed target as a gap in coverage.
+- **Failed target.** The target can't be reached, isn't a web page, or couldn't be built. The tool records it as failed with a reason. Tell the user which target failed, using the reason from `results.json`. Don't retry with guesses. If an npm target failed with a network or install error (for example `ETARGET`), you may run the same command once more. If it fails again, report it. If every target failed (exit code 4), stop. If others ran, report them, and list the failed target as a gap in coverage.
 
 ## 8. Stay out of setup
 

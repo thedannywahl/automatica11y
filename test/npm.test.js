@@ -10,6 +10,7 @@ import { candidateMapping } from "../src/plan/mapping.js";
 import { parseResults } from "../src/schema.js";
 import { makeIo, makeTree } from "./helpers/fixtures.js";
 import { installPackage, npmView } from "./helpers/npm-fakes.js";
+import { installPackage as realInstall } from "../src/harness/npm-install.js";
 
 // Other test files run at the same time and make their own temporary folders. Give this file its own, so counting leftovers is exact.
 process.env.TMPDIR = makeTree();
@@ -67,6 +68,40 @@ test("detectFlavor: React wins, then web components, then other frameworks, then
   assert.equal(vue.framework, "Vue");
   assert.equal(detectFlavor({ peerDependencies: { "@angular/core": "*" } }).framework, "Angular");
   assert.equal(detectFlavor({}).kind, "npm");
+});
+
+test("detectFlavor says whether react is a peer dependency or a dependency", () => {
+  assert.equal(detectFlavor({ peerDependencies: { react: "^18" } }).reason, "The package lists react as a peer dependency.");
+  assert.equal(detectFlavor({ dependencies: { react: "^18" } }).reason, "The package lists react as a dependency.");
+});
+
+test("an install that says a version doesn't exist is retried once with fresh package data", async () => {
+  const calls = [];
+  const stale = async (args) => {
+    calls.push(args);
+    if (args.includes("--prefer-offline")) throw Object.assign(new Error("npm error code ETARGET\nnpm error notarget No matching version found for pkg@1.2.3."), { code: "NPM_FAILED" });
+    return "";
+  };
+  const result = await realInstall({ dir: makeTree(), name: "pkg", version: "1.2.3", flavor: "wc", run: stale });
+  assert.equal(calls.length, 2);
+  assert.ok(calls[0].includes("--prefer-offline") && !calls[0].includes("--prefer-online"));
+  assert.ok(calls[1].includes("--prefer-online") && !calls[1].includes("--prefer-offline"));
+  assert.deepEqual(calls[0].filter((a) => a !== "--prefer-offline"), calls[1].filter((a) => a !== "--prefer-online"), "only the cache flag changes");
+  assert.match(result.warnings[0], /local list of pkg versions was out of date, so the install refreshed it and tried again/);
+});
+
+test("an install that fails for another reason isn't retried, and a retry that fails says why", async () => {
+  const calls = [];
+  const down = async (args) => {
+    calls.push(args);
+    throw new Error("npm error code ENOTFOUND\nnpm error network request failed");
+  };
+  await assert.rejects(realInstall({ dir: makeTree(), name: "pkg", version: "1.0.0", flavor: "wc", run: down }), /npm couldn't install pkg@1\.0\.0: .*ENOTFOUND/);
+  assert.equal(calls.length, 1, "a network failure isn't treated as a stale list");
+  const alwaysMissing = async () => {
+    throw new Error("npm error code ETARGET\nnpm error notarget No matching version found for pkg@9.9.9.");
+  };
+  await assert.rejects(realInstall({ dir: makeTree(), name: "pkg", version: "9.9.9", flavor: "wc", run: alwaysMissing }), /npm couldn't install pkg@9\.9\.9/);
 });
 
 test("candidateMapping: matches by name, marks compound parts, and leaves the rest as gaps", () => {

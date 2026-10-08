@@ -388,3 +388,14 @@ M0 then M1 are strictly first. After M2, M3 and M4 can run in parallel. M5 needs
 ## 6. Status.
 
 All nine milestones are built. What's left is the release (`npm publish` of `0.2.0`, Danny's step), the first real run of the two GitHub workflows, and trying the skill in a live agent session.
+
+### End-to-end run of 0.3.1 and the fixes.
+
+Five subagent scenarios plus a real `npx` smoke test of the published 0.3.1. Fixes made on main:
+
+- The install retries once with `--prefer-online` when npm reports ETARGET from a stale local cache, and adds a warning.
+- The bootstrap skill runs `guide skill` directly and retries `npx` with `--prefer-online` on ETARGET.
+- The runner skill states the order of sections 1 and 2, asks for missing information in one message, handles mixed-kind compares, defines `needs-fixture` versus `no-match`, notes that a partly failed run still exits 0, orders findings, and allows one retry.
+- The React detection reason now says whether react is a peer dependency or a dependency.
+
+Still open: the first run of the weekly latest-deps workflow, a trial in a live agent session, and the Radix open-state `aria-hidden-focus` finding on the trigger (unclear if it's a Radix defect or a harness artifact). Version 0.3.0 on npm is broken, so deprecate it.

@@ -19,6 +19,9 @@ export function runNpm(args, cwd, { timeoutMs = 300_000 } = {}) {
   });
 }
 
+/** npm's local copy of a package list can lag behind the registry, so a version that exists looks missing. */
+const STALE_CACHE = /ETARGET|notarget|No matching version/i;
+
 /** The version of an installed package, or null. */
 export function installedVersion(dir, name) {
   try {
@@ -39,11 +42,23 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
   if (!existsSync(join(dir, "package.json"))) writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "automatica11y-target", private: true }));
   /** @type {string[]} */
   const warnings = [];
+  let refreshed = false;
+  /** Run npm. If it says a version doesn't exist, ask once more with fresh package data, since the version came from the registry. */
+  const npm = async (args) => {
+    try {
+      return await run(args, dir);
+    } catch (error) {
+      if (!STALE_CACHE.test(String(error.message)) || !args.includes("--prefer-offline")) throw error;
+      if (!refreshed) warnings.push(`npm's local list of ${name} versions was out of date, so the install refreshed it and tried again.`);
+      refreshed = true;
+      return run(args.map((arg) => (arg === "--prefer-offline" ? "--prefer-online" : arg)), dir);
+    }
+  };
   try {
-    await run(["install", `${name}@${version}`, ...NPM_FLAGS], dir);
+    await npm(["install", `${name}@${version}`, ...NPM_FLAGS]);
   } catch (error) {
     if (!/ERESOLVE|peer dep/i.test(String(error.message))) throw new Error(`npm couldn't install ${name}@${version}: ${firstLine(error.message)}`);
-    await run(["install", `${name}@${version}`, "--legacy-peer-deps", ...NPM_FLAGS], dir).catch((retry) => {
+    await npm(["install", `${name}@${version}`, "--legacy-peer-deps", ...NPM_FLAGS]).catch((retry) => {
       throw new Error(`npm couldn't install ${name}@${version}: ${firstLine(retry.message)}`);
     });
     warnings.push(`npm couldn't satisfy ${name}'s peer dependencies, so it installed them loosely (--legacy-peer-deps). Results may not match a supported setup.`);
@@ -51,10 +66,10 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
   if (flavor === "react") {
     const react = installedVersion(dir, "react");
     if (!react) {
-      await run(["install", "react", "react-dom", ...NPM_FLAGS, "--legacy-peer-deps"], dir);
+      await npm(["install", "react", "react-dom", ...NPM_FLAGS, "--legacy-peer-deps"]);
       warnings.push(`${name} didn't bring in react, so the latest react and react-dom were added.`);
     } else if (!installedVersion(dir, "react-dom")) {
-      await run(["install", `react-dom@${react}`, ...NPM_FLAGS, "--legacy-peer-deps"], dir);
+      await npm(["install", `react-dom@${react}`, ...NPM_FLAGS, "--legacy-peer-deps"]);
     }
   }
   return { dir, warnings, react: installedVersion(dir, "react"), reactDom: installedVersion(dir, "react-dom"), version: installedVersion(dir, name) };

@@ -50,15 +50,18 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   assert.ok(bootstrap.includes("npx --yes automatica11y@latest guide"), "it sends the agent to the guide");
   assert.match(bootstrap, /node --version/);
   assert.match(bootstrap, /Keep the user's request as they gave it: the target or targets, and any settings they named/);
-  assert.match(bootstrap, /After reading the guide and the steps it sends you to, pass only settings they list as supported\. If the user named a setting they don't list as supported, tell the user which setting is unsupported, list the supported values from the guide, and ask which to use/);
+  assert.match(bootstrap, /After reading the steps, pass only settings they list as supported\. If the user named a setting they don't list as supported, tell the user which setting is unsupported, list the supported values from the steps, and ask which to use/);
   assert.match(bootstrap, /Don't ask again for anything they've already said/);
+  assert.ok(bootstrap.includes("npx --yes automatica11y@latest guide skill"), "it runs the steps directly, with no detour through the overview");
+  assert.match(bootstrap, /If the error mentions `ETARGET` \(npm says a version doesn't exist, usually because its local list is out of date\), run the command once more with `--prefer-online`: `npx --yes --prefer-online automatica11y@latest guide skill`/);
+  assert.match(bootstrap, /If the command exits with an error or prints no usable output, including after that retry, tell the user it failed, include the error text, and stop/);
   // The check comes after the guide is read, so the agent has the supported values when it needs them.
-  assert.ok(bootstrap.indexOf("guide\n   ```") < bootstrap.indexOf("After reading the guide and the steps"), "the unsupported-setting check comes after the guide command");
+  assert.ok(bootstrap.indexOf("guide skill\n   ```") < bootstrap.indexOf("After reading the steps"), "the unsupported-setting check comes after the command that prints the steps");
   assert.doesNotMatch(bootstrap.slice(0, bootstrap.indexOf("npx --yes")), /supported/, "nothing before the guide asks the agent to know the supported values");
-  assert.doesNotMatch(bootstrap, /(^|\s)--(?!yes\b|version\b)[a-z]/m, "the bootstrap lists no tool flags (--yes belongs to npx and --version to node), so it can't fall out of step with the tool");
+  assert.doesNotMatch(bootstrap, /(^|\s)--(?!yes\b|version\b|prefer-online\b)[a-z]/m, "the bootstrap lists no tool flags (--yes and --prefer-online belong to npx, --version to node), so it can't fall out of step with the tool");
   assert.match(bootstrap, /fails or prints no version number, tell the user that Node\.js 20 or newer couldn't be verified, include the error text, and stop/);
   assert.match(bootstrap, /Don't guess at results/);
-  assert.match(bootstrap, /exits with an error or prints no usable output, tell the user it failed, include the error text, and stop/);
+  assert.match(bootstrap, /exits with an error or prints no usable output, including after that retry, tell the user it failed, include the error text, and stop/);
   assert.match(bootstrap, /Don't continue with partial instructions/);
   assert.doesNotMatch(bootstrap, /no automated violations found|attestation/, "the wording rules live in the runner");
   assert.equal(existsSync(join(bootstrapDir, "references")), false, "the bootstrap has no references to lose");
@@ -92,6 +95,15 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(agents, /Keep the user's request as they gave it, including the target and any settings they named/);
   assert.match(runner, /Pass only the options in the table above, with the values it lists\. If the user names a setting the tool doesn't have, or a value outside those lists/);
   assert.match(runner, /Don't substitute a default or invent a value/);
+  // What the five end-to-end runs showed was missing.
+  assert.match(runner, /Do sections 1 and 2 before you run an audit\. A question to the user about a missing target or an unsupported setting \(section 3\) can come before or after them/);
+  assert.match(runner, /ask them together in one message, then go on/);
+  assert.match(runner, /even when they're different kinds, such as a live page and an npm package/);
+  assert.match(runner, /`needs-fixture` means the tool found the component but can't build it from a template\. `no-match` means no export or custom element looks like that archetype/);
+  assert.match(runner, /For a `no-match` archetype, write a fixture only if the library's documentation names a component, or a documented way, to make it/);
+  assert.match(runner, /A target that failed while others ran still exits 0, and the failure is in the results/);
+  assert.match(runner, /order axe-core findings by impact and IBM findings by Toolkit level/);
+  assert.match(runner, /you may run the same command once more\. If it fails again, report it/);
   // A request with no target is asked about, and a target that fails is named with its reason.
   assert.match(runner, /If the user doesn't name a target to test \(a URL, a Storybook, a local page or site, or an npm package\), ask for one before you run anything/);
   assert.match(runner, /Tell the user which target failed, using the reason from `results\.json`/);
@@ -124,8 +136,8 @@ function knownFlags() {
   const common = read("src/commands/common.js");
   const defs = /OPTION_DEFS = [^{]*\{([\s\S]*?)\n\}\);/.exec(common)[1];
   const names = [...defs.matchAll(/^\s*"?([a-z0-9-]+)"?: \{/gm)].map((m) => `--${m[1]}`);
-  // --yes belongs to npx, and --plan also takes a file under `run`.
-  return new Set([...names, "--version", "--plan", "--yes"]);
+  // --yes and --prefer-online belong to npx, and --plan also takes a file under `run`.
+  return new Set([...names, "--version", "--plan", "--yes", "--prefer-online"]);
 }
 
 test("every flag the docs mention is a real flag", () => {

@@ -53,7 +53,8 @@ export function detectFlavor(meta) {
   const peers = meta.peerDependencies ?? {};
   const deps = meta.dependencies ?? {};
   if ("react" in peers || "react-dom" in peers || "react" in deps) {
-    return { kind: "npm-react", framework: "React", reason: "The package lists react as a dependency." };
+    const how = "react" in peers || "react-dom" in peers ? "peer dependency" : "dependency";
+    return { kind: "npm-react", framework: "React", reason: `The package lists react as a ${how}.` };
   }
   if (meta.customElements) return { kind: "npm-wc", framework: "Web components", reason: "The package has a customElements manifest." };
   for (const [name, label] of Object.entries(OTHER_FRAMEWORKS)) {
