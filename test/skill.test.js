@@ -191,6 +191,20 @@ test("AGENTS.md bridges to the runner, and tells contributors what to run", () =
   assert.match(agents, /whenever the series of the version in `package\.json` changes, for example from `0\.2\.x` to `0\.3\.0`\. A change from `0\.2\.5` to `0\.2\.6` needs no update/);
 });
 
+test("the fixture guide says what to do when the documentation falls short, names the command, and agrees with its own examples", () => {
+  const fixtures = referenceFiles.find((f) => f.name === "references/fixtures.md").text;
+  assert.match(fixtures, /If the documentation doesn't cover the API you need, or you can't read it, don't guess\. Leave the archetype without a fixture, so the report lists it as a gap/);
+  assert.match(fixtures, /Don't stand in a plain element for the library's component/);
+  assert.match(runner, /don't guess, and don't stand in a plain element for the library's component/);
+  assert.match(fixtures, /in the working folder: the folder where you run `automatica11y audit` or `automatica11y compare`/);
+  assert.match(fixtures, /If nothing in the archetype can be activated, as with a chart, put `data-a11y-trigger` and `data-a11y-root` on the same element/);
+  assert.match(runner, /If nothing can be activated, as with a chart, put both hooks on the same outermost element/);
+  assert.match(fixtures, /Include every part the library's documentation marks as required/);
+  // The contract says one trigger, so no example may leave it out.
+  for (const [, code] of fixtures.matchAll(/```jsx\n([\s\S]*?)```/g)) assert.match(code, /data-a11y-trigger/, "every example in the guide marks a trigger");
+  for (const [, code] of runner.matchAll(/```jsx\n([\s\S]*?)```/g)) assert.match(code, /data-a11y-trigger/, "every example in the runner marks a trigger");
+});
+
 test("the fixture reference mentions both hooks and both flavors", () => {
   const fixtures = referenceFiles.find((f) => f.name === "references/fixtures.md").text;
   for (const must of ["data-a11y-trigger", "data-a11y-root", "mount(container", "libA11y", "fixtures/<target id>/<archetype>"]) assert.ok(fixtures.includes(must), must);

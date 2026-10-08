@@ -2,11 +2,11 @@
 
 A fixture renders one archetype (a dialog, a set of tabs, a menu) in its starting state, so the tool can test it. You write one when the tool can't build the component from a template. The tool only fills in `button` and `link`.
 
-Write fixtures from the library's public documentation. Don't copy from memory when you aren't sure of the API.
+Write fixtures from the library's public documentation. Don't copy from memory when you aren't sure of the API. If the documentation doesn't cover the API you need, or you can't read it, don't guess. Leave the archetype without a fixture, so the report lists it as a gap, and tell the user what you couldn't find. Don't stand in a plain element for the library's component. That would test the plain element, and the result would say nothing about the library.
 
 ## Where fixtures go
 
-`fixtures/<target id>/<archetype>.jsx` for React, in the folder where you run the command. Use `.js` for web components. The target id is the label (`radix=npm:@radix-ui/react-dialog` has the id `radix`), or the package name with `/` turned into `-`, such as `radix-ui-react-dialog`. The report's **Targets** list shows each id.
+`fixtures/<target id>/<archetype>.jsx` for React, in the working folder: the folder where you run `automatica11y audit` or `automatica11y compare`. Use `.js` for web components. The target id is the label (`radix=npm:@radix-ui/react-dialog` has the id `radix`), or the package name with `/` turned into `-`, such as `radix-ui-react-dialog`. The report's **Targets** list shows each id.
 
 To keep a fixture somewhere else, name it in a mapping file and pass `--mapping`:
 
@@ -24,11 +24,11 @@ The keys are target ids, then archetypes. `export` (React) or `tag` (web compone
 ## The contract
 
 1. The file's default export renders the archetype in its **initial state**.
-2. Mark **exactly one** element with `data-a11y-trigger`. This is what a person would focus and activate: the button that opens a dialog, the first tab, the combobox input, the form control.
+2. Mark **exactly one** element with `data-a11y-trigger`. This is what a person would focus and activate: the button that opens a dialog, the first tab, the combobox input, the form control. If nothing in the archetype can be activated, as with a chart, put `data-a11y-trigger` and `data-a11y-root` on the same element: the outermost one the library renders.
 3. Mark the **primary surface** with `data-a11y-root`. Put it on the element that carries the role (`role="dialog"`, `role="menu"`, `role="tooltip"`), not on an overlay or a portal wrapper. It's fine if the root doesn't exist until the trigger fires, and fine if it renders in a portal. The tool looks in the whole document.
 4. Mount without console errors. The tool treats errors as a broken fixture.
 5. Don't import CSS. The tool doesn't link it.
-6. Include the parts the library warns about (for example, a dialog title and description), so its warnings stay quiet.
+6. Include every part the library's documentation marks as required (for example, a dialog's title and description), so the component doesn't log warnings.
 
 The attributes have to reach the DOM. Pass `data-a11y-trigger` to the component that renders the real element. If a wrapper drops unknown props, put the attribute on a plain element inside it.
 
@@ -46,7 +46,7 @@ Some libraries ship accessibility features you have to switch on (a chart librar
 
 ```jsx
 export default function Fixture({ libA11y }) {
-  return <Chart data-a11y-root accessibility={libA11y} />;
+  return <Chart data-a11y-trigger data-a11y-root accessibility={libA11y} />;
 }
 ```
 

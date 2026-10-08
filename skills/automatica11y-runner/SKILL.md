@@ -89,7 +89,7 @@ A package's components can't be guessed from its name. The first run installs th
 **The fixture contract, in brief.**
 
 - The default export renders the archetype in its starting state. For web components it's a function, `mount(container)`.
-- Mark **exactly one** element `data-a11y-trigger`. It's what a person would focus and activate.
+- Mark **exactly one** element `data-a11y-trigger`. It's what a person would focus and activate. If nothing can be activated, as with a chart, put both hooks on the same outermost element.
 - Mark the main surface `data-a11y-root`, on the element that carries the role (`dialog`, `menu`, `tooltip`), not on an overlay or portal wrapper. It may appear only after the trigger fires, and it may render in a portal.
 - Mount without console errors. Don't import CSS.
 - The attributes have to reach the DOM. If a wrapper drops unknown props, put them on a plain element inside it.
@@ -128,7 +128,7 @@ export default function mount(container) {
 }
 ```
 
-Fixtures are code that the tool bundles and runs in a browser on the user's machine. Write them from the library's public documentation. Tell the user the files exist and where. Package installs run with scripts turned off.
+Fixtures are code that the tool bundles and runs in a browser on the user's machine. Write them from the library's public documentation. If the documentation doesn't cover the API you need, don't guess, and don't stand in a plain element for the library's component, which would test the element and not the library. Leave the archetype as a gap and tell the user what you couldn't find. Tell the user the files exist and where. Package installs run with scripts turned off.
 
 If the user asked for a comparison, give every target the same archetypes.
 
