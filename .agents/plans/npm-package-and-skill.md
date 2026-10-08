@@ -42,6 +42,7 @@ Users invoke it through any AI agent that loads `SKILL.md` and can run shell com
 automatica11y/
   package.json
   README.md
+  AGENTS.md                     # always-on bridge: points agents to the skill, and tells contributors how to work here
   skills/
     automatica11y/              # one self-contained folder, named for the skill
       SKILL.md                  # the agent skill; plain Markdown, not tied to one agent

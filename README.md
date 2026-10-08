@@ -108,6 +108,8 @@ Fixtures are code that the tool bundles and runs in a browser on your machine. W
 
 A copy also ships in the npm package, at `node_modules/automatica11y/skills/automatica11y/`.
 
+[`AGENTS.md`](AGENTS.md) is the bridge for agents that read it but don't load skills. It tells an agent to use the skill whenever it's asked to check or compare accessibility, and tells contributors how to run and change the code.
+
 Then ask for things like "How accessible is Radix Dialog?" or "Compare the accessibility of React Aria and Headless UI."
 
 The skill states which version series of automatica11y it works with, and tells the agent to stop if `npx automatica11y@latest --version` doesn't match. Update the skill when you update the tool.

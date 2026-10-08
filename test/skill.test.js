@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -85,6 +85,24 @@ test("the archetypes SKILL.md lists match the tool's", async () => {
   const { ARCHETYPES } = await import("../src/schema.js");
   const line = /Choose from ([^.|]+)\./.exec(skillSource)[1].split(",").map((s) => s.trim());
   assert.deepEqual(line, ARCHETYPES);
+});
+
+test("the skill carries a React example and a web component example, so it works without its references", () => {
+  assert.match(skillSource, /```jsx[\s\S]*export default function Fixture\(\)[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);
+  assert.match(skillSource, /```js\nexport default function mount\(container\)[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);
+  assert.match(skillSource, /If you can't open it, the contract here is enough/);
+  assert.match(skillSource, /node_modules\/automatica11y\/skills\/automatica11y\/references\/fixtures\.md/);
+});
+
+test("AGENTS.md bridges to the skill, names no vendor, and tells contributors what to run", () => {
+  const agents = readFileSync(join(root, "AGENTS.md"), "utf8");
+  assert.match(agents, /skills\/automatica11y\/SKILL\.md/);
+  assert.match(agents, /skills\/automatica11y\/references\/fixtures\.md/);
+  for (const path of [...agents.matchAll(/`(skills\/[^`]+)`/g)].map((m) => m[1])) assert.ok(existsSync(join(root, path)), `${path} exists`);
+  assert.match(agents, /npm test/);
+  assert.match(agents, /npm run lint/);
+  assert.doesNotMatch(agents, /claude|anthropic|openai|chatgpt|gemini|copilot|cursor|codex/i);
+  assert.match(agents, new RegExp(`\\(\`${series(pkg.version).replace(".", "\\.")}\\.x\`\\)`), "AGENTS.md names the same version series as the skill");
 });
 
 test("the fixture reference mentions both hooks and both flavors", () => {

@@ -78,7 +78,7 @@ A package's components can't be guessed from its name. The first run installs th
 
 1. Run the audit once. Read `<out>/mapping.json` and the report's **Archetypes** table.
 2. Treat the mapping as a guess. Check each `export` or `tag` against what the user asked about.
-3. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow the contract below, and see `references/fixtures.md` for React and web component examples, states, and library accessibility options.
+3. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow the contract and the examples below. `references/fixtures.md` has more: the mapping file, states, and library accessibility options. It should sit next to this file. If you can't open it, the contract here is enough. The same guide ships in the npm package at `node_modules/automatica11y/skills/automatica11y/references/fixtures.md`.
 4. Run the same command again. The tool finds fixtures in that folder without `--mapping`.
 5. Don't invent fixtures for archetypes the user didn't ask about. A gap is an honest result.
 
@@ -89,6 +89,40 @@ A package's components can't be guessed from its name. The first run installs th
 - Mark the main surface `data-a11y-root`, on the element that carries the role (`dialog`, `menu`, `tooltip`), not on an overlay or portal wrapper. It may appear only after the trigger fires, and it may render in a portal.
 - Mount without console errors. Don't import CSS.
 - The attributes have to reach the DOM. If a wrapper drops unknown props, put them on a plain element inside it.
+
+A React fixture. JSX works without importing React. Import the library from its package name, and the tool installs it:
+
+```jsx
+import * as Dialog from "@radix-ui/react-dialog";
+
+export default function Fixture() {
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger data-a11y-trigger>Open dialog</Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay />
+        <Dialog.Content data-a11y-root>
+          <Dialog.Title>Edit profile</Dialog.Title>
+          <Dialog.Description>Update your details.</Dialog.Description>
+          <Dialog.Close>Close</Dialog.Close>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+```
+
+A web component fixture. The tool imports the package first, so its elements are defined before `mount` runs. Hooks can sit on a host, a slotted child, or an element inside an open shadow root. A closed shadow root hides its content from every tool:
+
+```js
+export default function mount(container) {
+  container.innerHTML = `
+    <my-dialog>
+      <button slot="trigger" data-a11y-trigger type="button">Open</button>
+      <div slot="content" data-a11y-root role="dialog" aria-label="Details">...</div>
+    </my-dialog>`;
+}
+```
 
 Fixtures are code that the tool bundles and runs in a browser on the user's machine. Write them from the library's public documentation. Tell the user the files exist and where. Package installs run with scripts turned off.
 

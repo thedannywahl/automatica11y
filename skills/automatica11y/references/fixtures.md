@@ -32,45 +32,13 @@ The keys are target ids, then archetypes. `export` (React) or `tag` (web compone
 
 The attributes have to reach the DOM. Pass `data-a11y-trigger` to the component that renders the real element. If a wrapper drops unknown props, put the attribute on a plain element inside it.
 
-## React example
+## Examples
 
-```jsx
-import * as Dialog from "@radix-ui/react-dialog";
+A React example and a web component example are in `SKILL.md`, in the section on npm packages. They follow the contract above.
 
-export default function Fixture() {
-  return (
-    <Dialog.Root>
-      <Dialog.Trigger data-a11y-trigger>Open dialog</Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay />
-        <Dialog.Content data-a11y-root>
-          <Dialog.Title>Edit profile</Dialog.Title>
-          <Dialog.Description>Update your details.</Dialog.Description>
-          <Dialog.Close>Close</Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
-}
-```
+For React, JSX works without importing React. Import the library from its package name. The tool installs it for you.
 
-JSX works without a React import. Import the library from its package name. The tool installs it for you.
-
-## Web component example
-
-The tool imports the package first, so its elements are defined before `mount` runs. Export a `mount` function that adds the archetype to the container:
-
-```js
-export default function mount(container) {
-  container.innerHTML = `
-    <my-dialog>
-      <button slot="trigger" data-a11y-trigger type="button">Open</button>
-      <div slot="content" data-a11y-root role="dialog" aria-label="Details">...</div>
-    </my-dialog>`;
-}
-```
-
-Hooks can sit on a host element, a slotted child, or an element inside an **open** shadow root. A **closed** shadow root hides its content from every tool, so the report lists it as not testable.
+For web components, export a function, `mount(container)`, that adds the archetype to the container. The tool imports the package first, so its elements are defined before `mount` runs. Hooks can sit on a host element, a slotted child, or an element inside an **open** shadow root. A **closed** shadow root hides its content from every tool, so the report lists it as not testable.
 
 ## Library accessibility options
 
