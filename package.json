@@ -5,7 +5,8 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "automatica11y": "bin/automatica11y.js"
+    "automatica11y": "bin/automatica11y.js",
+    "a11y": "bin/automatica11y.js"
   },
   "files": [
     "bin",
