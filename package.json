@@ -10,8 +10,7 @@
   "files": [
     "bin",
     "src",
-    "SKILL.md",
-    "references"
+    "skills"
   ],
   "engines": {
     "node": ">=20"

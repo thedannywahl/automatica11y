@@ -61,7 +61,7 @@ Every result says what it ran, or why it didn't. A gap, a failure, or a result t
 | `--engine axe,ibm` | both | Which rule engines run. |
 | `--tiers rules,interactions,vsr` | all | Which tiers run. |
 | `--archetypes a,b` | all | Limit npm and Storybook targets to these archetypes. |
-| `--lib-a11y on,off` | both | For libraries with opt-in accessibility features. See [fixtures](references/fixtures.md). |
+| `--lib-a11y on,off` | both | For libraries with opt-in accessibility features. See [the fixture guide](skills/automatica11y/references/fixtures.md). |
 | `--mapping <file>` | none | A mapping file for npm targets. |
 | `--max-stories <n>` | `200` | The Storybook story cap. The cap spreads over components. |
 | `--out <dir>` | `./a11y-report` | Where results go. |
@@ -95,18 +95,18 @@ One failing target doesn't stop a comparison. It's recorded with its reason, and
 
 The tool installs each package into its own temporary folder (with install scripts turned off), loads it in the browser, and finds its exports or custom elements. It writes its guesses to `mapping.json`.
 
-It builds `button` and `link` tests on its own. Every other archetype is built from parts that differ by library (`Dialog.Root`, `Dialog.Trigger`, and so on), so it needs a **fixture**: a small file you or your agent write, following [references/fixtures.md](references/fixtures.md). Put fixtures at `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) and run again. An archetype without a fixture is a gap in the report.
+It builds `button` and `link` tests on its own. Every other archetype is built from parts that differ by library (`Dialog.Root`, `Dialog.Trigger`, and so on), so it needs a **fixture**: a small file you or your agent write, following [the fixture guide](skills/automatica11y/references/fixtures.md). Put fixtures at `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) and run again. An archetype without a fixture is a gap in the report.
 
 Fixtures are code that the tool bundles and runs in a browser on your machine. Write them from the library's documentation, and read ones you didn't write.
 
 ## Use it with an AI agent.
 
-`SKILL.md` in this repository is an agent skill: a Markdown file with `name` and `description` at the top, plus [references/fixtures.md](references/fixtures.md). It isn't tied to one agent. It tells an agent how to turn a request into an automatica11y command, run it, write fixtures for npm packages, and write the report from `results.json`. It works with any agent that can run shell commands and read and write files.
+[`skills/automatica11y`](skills/automatica11y) in this repository is an agent skill: a folder with a `SKILL.md` (Markdown with `name` and `description` at the top) and a [fixture guide](skills/automatica11y/references/fixtures.md) it loads when it needs one. It isn't tied to one agent. It tells an agent how to turn a request into an automatica11y command, run it, write fixtures for npm packages, and write the report from `results.json`. It works with any agent that can run shell commands and read and write files.
 
-- If your agent loads skills from a folder, copy `SKILL.md` and `references/` into a folder named `automatica11y` there.
-- Otherwise, give your agent the contents of `SKILL.md` as instructions, or point it at the file.
+- If your agent loads skills from a folder, copy the whole `skills/automatica11y` folder into that skills folder.
+- Otherwise, give your agent the contents of `SKILL.md` as instructions, or point it at the file. It carries the essentials of the fixture contract, so it works without the guide.
 
-A copy also ships in the npm package, at `node_modules/automatica11y/SKILL.md`.
+A copy also ships in the npm package, at `node_modules/automatica11y/skills/automatica11y/`.
 
 Then ask for things like "How accessible is Radix Dialog?" or "Compare the accessibility of React Aria and Headless UI."
 

@@ -4,8 +4,9 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 const root = new URL("../", import.meta.url).pathname;
-const skillSource = readFileSync(join(root, "SKILL.md"), "utf8");
-const referenceFiles = readdirSync(join(root, "references")).map((name) => ({ name, text: readFileSync(join(root, "references", name), "utf8") }));
+const skillDir = join(root, "skills", "automatica11y");
+const skillSource = readFileSync(join(skillDir, "SKILL.md"), "utf8");
+const referenceFiles = readdirSync(join(skillDir, "references")).map((name) => ({ name, text: readFileSync(join(skillDir, "references", name), "utf8") }));
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 
 /** The version series a skill expects. In 0.x a minor version can change behavior, so it counts. From 1.0, the major version is enough. */
@@ -14,12 +15,26 @@ function series(version) {
   return major === "0" ? `${major}.${minor}` : major;
 }
 
-test("SKILL.md has the frontmatter a skill needs", () => {
-  const match = /^---\nname: (.+)\ndescription: (.+)\n---\n/.exec(skillSource);
+test("SKILL.md has the frontmatter a skill needs, and its folder is named for the skill", () => {
+  const match = /^---\nname: (.+)\n(?:compatibility: (.+)\n)?description: (.+)\n---\n/.exec(skillSource);
   assert.ok(match, "frontmatter with name and description");
-  assert.equal(match[1], "automatica11y");
-  assert.ok(match[2].length <= 1024, "description fits in 1,024 characters");
-  for (const trigger of ["accessib", "WCAG", "compare"]) assert.match(match[2], new RegExp(trigger, "i"), `description mentions ${trigger}`);
+  const [, name, compatibility, description] = match;
+  assert.match(name, /^[a-z0-9]+(-[a-z0-9]+)*$/, "the name is lowercase letters, numbers, and single hyphens");
+  assert.ok(name.length <= 64);
+  assert.equal(name, "automatica11y");
+  assert.equal(skillDir.split("/").pop(), name, "the folder is named for the skill");
+  assert.ok(description.length <= 1024, "description fits in 1,024 characters");
+  assert.ok(compatibility && compatibility.length <= 500, "compatibility says what the skill needs, in 500 characters or fewer");
+  assert.match(compatibility, /Node 20/);
+  for (const trigger of ["accessib", "WCAG", "compare"]) assert.match(description, new RegExp(trigger, "i"), `description mentions ${trigger}`);
+  assert.ok(skillSource.split("\n").length < 500, "the body stays under 500 lines");
+});
+
+test("every file the skill points to exists, one level below SKILL.md", () => {
+  const pointers = new Set([...skillSource.matchAll(/`(references\/[a-z-]+\.md)`/g)].map((m) => m[1]));
+  assert.ok(pointers.size > 0);
+  for (const pointer of pointers) assert.ok(readFileSync(join(skillDir, pointer), "utf8").length > 100, `${pointer} exists`);
+  for (const { name, text } of referenceFiles) assert.doesNotMatch(text, /`references\//, `${name} points to no further reference`);
 });
 
 test("the skill isn't tied to one agent", () => {

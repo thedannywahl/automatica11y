@@ -31,7 +31,7 @@ test("the package is ready to publish: public, MIT, ESM, Node 20 or newer", () =
 test("the tarball holds the tool, the skill, the docs, and the license, and nothing else", () => {
   const { files } = packed();
   const names = files.map((f) => f.path);
-  for (const must of ["package.json", "README.md", "LICENSE", "SKILL.md", "references/fixtures.md", "bin/automatica11y.js", "src/cli.js", "src/tiers/rules/index.js", "src/tiers/interactions/archetypes.js", "src/tiers/vsr.js", "src/report/comparison.js"]) {
+  for (const must of ["package.json", "README.md", "LICENSE", "skills/automatica11y/SKILL.md", "skills/automatica11y/references/fixtures.md", "bin/automatica11y.js", "src/cli.js", "src/tiers/rules/index.js", "src/tiers/interactions/archetypes.js", "src/tiers/vsr.js", "src/report/comparison.js"]) {
     assert.ok(names.includes(must), `${must} is in the tarball`);
   }
   for (const path of names) {
@@ -74,7 +74,7 @@ test("the README documents every flag, every exit code, and the skill install", 
   assert.ok(flags.length >= 12);
   for (const flag of flags) assert.ok(readme.includes(`--${flag}`), `README documents --${flag}`);
   for (const code of ["0", "1", "2", "3", "4"]) assert.match(readme, new RegExp(`\\| ${code} \\|`), `README explains exit code ${code}`);
-  assert.match(readme, /SKILL\.md/);
+  assert.match(readme, /skills\/automatica11y/);
   assert.doesNotMatch(readme, /init-skill/);
   assert.match(readme, /no automated violations found/i);
   assert.doesNotMatch(readme, /\bis (fully )?(accessible|compliant)\b/i);

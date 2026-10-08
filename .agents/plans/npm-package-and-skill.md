@@ -42,9 +42,11 @@ Users invoke it through any AI agent that loads `SKILL.md` and can run shell com
 automatica11y/
   package.json
   README.md
-  SKILL.md                      # the agent skill; plain Markdown, not tied to one agent
-  references/
-    fixtures.md                 # the fixture contract the skill points to
+  skills/
+    automatica11y/              # one self-contained folder, named for the skill
+      SKILL.md                  # the agent skill; plain Markdown, not tied to one agent
+      references/
+        fixtures.md             # loaded only when the skill needs fixture examples
   bin/
     automatica11y.js            # calls main() in src/cli.js
   src/

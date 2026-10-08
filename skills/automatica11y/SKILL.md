@@ -1,5 +1,6 @@
 ---
 name: automatica11y
+compatibility: Needs Node 20 or newer, Chrome or Chromium, a shell that can run npx, and network access to the npm registry.
 description: Test and compare web accessibility. Use when someone asks how accessible a web page, Storybook, or npm component library is, asks for an accessibility or WCAG check or audit, or asks to compare the accessibility of two or more sites or component libraries (for example "how accessible is Radix Dialog?" or "compare React Aria and Headless UI").
 ---
 
@@ -19,7 +20,7 @@ This skill works with automatica11y **0.2.x**. Run:
 npx --yes automatica11y@latest --version
 ```
 
-If the output doesn't start with `0.2.`, stop. Tell the user this skill and the tool are out of step. They need a copy of this skill that matches the tool: the `SKILL.md` and `references/` folder from the project repository, or from `node_modules/automatica11y/` if the package is installed. Don't run the audit with a mismatched version.
+If the output doesn't start with `0.2.`, stop. Tell the user this skill and the tool are out of step. They need a copy of this skill that matches the tool: the `skills/automatica11y/` folder from the project repository, or from `node_modules/automatica11y/skills/automatica11y/` if the package is installed. Don't run the audit with a mismatched version.
 
 ## 2. Check the setup
 
@@ -77,9 +78,17 @@ A package's components can't be guessed from its name. The first run installs th
 
 1. Run the audit once. Read `<out>/mapping.json` and the report's **Archetypes** table.
 2. Treat the mapping as a guess. Check each `export` or `tag` against what the user asked about.
-3. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow `references/fixtures.md` exactly, including the two hooks, `data-a11y-trigger` and `data-a11y-root`.
+3. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow the contract below, and see `references/fixtures.md` for React and web component examples, states, and library accessibility options.
 4. Run the same command again. The tool finds fixtures in that folder without `--mapping`.
 5. Don't invent fixtures for archetypes the user didn't ask about. A gap is an honest result.
+
+**The fixture contract, in brief.**
+
+- The default export renders the archetype in its starting state. For web components it's a function, `mount(container)`.
+- Mark **exactly one** element `data-a11y-trigger`. It's what a person would focus and activate.
+- Mark the main surface `data-a11y-root`, on the element that carries the role (`dialog`, `menu`, `tooltip`), not on an overlay or portal wrapper. It may appear only after the trigger fires, and it may render in a portal.
+- Mount without console errors. Don't import CSS.
+- The attributes have to reach the DOM. If a wrapper drops unknown props, put them on a plain element inside it.
 
 Fixtures are code that the tool bundles and runs in a browser on the user's machine. Write them from the library's public documentation. Tell the user the files exist and where. Package installs run with scripts turned off.
 
