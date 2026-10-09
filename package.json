@@ -46,10 +46,13 @@
     "@pantoken/components": "^2.0.2",
     "@pantoken/css": "^0.4.3",
     "@pantoken/plugin-custom-theme-colors": "^0.3.3",
+    "@shikijs/langs": "^4.5.0",
+    "@shikijs/themes": "^4.5.0",
     "@types/node": "^26.6.4",
     "marked": "^18.1.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "shiki": "^4.5.0",
     "typescript": "^7.0.2",
     "vue": "^3.5.43"
   },

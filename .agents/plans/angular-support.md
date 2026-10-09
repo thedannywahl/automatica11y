@@ -1,105 +1,145 @@
 # Plan: Angular support.
 
-Status: proposed. Based on [the Angular spike](../notes/spike-angular.md), which showed that real Angular Material (versions 18 and 22) bundles with the tool's existing esbuild step and runs in the browser with no Angular linker and no TypeScript step. Angular becomes the fourth framework adapter, after React, Vue 3, and web components.
+Status: proposed, revised October 9, 2026. Based on [the Angular spike](../notes/spike-angular.md), which showed that real Angular Material (versions 18 and 22) bundles with the tool's existing esbuild step and runs in the browser with no Angular linker and no TypeScript step. Angular becomes the fourth framework adapter, after React, Vue 3, and web components.
 
-## 1. What works already, and what doesn't.
+**Scope: every archetype.** Archetypes are the standard building blocks of HTML and ARIA patterns (button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, live-region, and chart). They aren't a list of components. Angular support means each archetype can be tested on an Angular library, by an authored fixture, a template, or a generated fixture, with the same evidence labels as every other framework. Library names in this plan (Material, PrimeNG) are test subjects, never recipes.
+
+## 1. What a fixture is, for Angular.
+
+A fixture renders one archetype using the library under test. It marks the control a keyboard user presses with `data-a11y-trigger` and the surface that appears with `data-a11y-root`. The five tiers run against it. For Angular, a fixture is a plain JavaScript file that defines a standalone component by calling the `Component` decorator as a function (the spike ran this), with a template that uses the library:
+
+```js
+import { Component, inject } from "@angular/core";
+import { DialogService, DialogContent } from "some-ui-kit/dialog";
+
+class Fixture { dialog = inject(DialogService); open() { this.dialog.open(DialogContent); } }
+Component({ selector: "app-fixture", standalone: true,
+  template: `<button data-a11y-trigger type="button" (click)="open()">Open dialog</button>` })(Fixture);
+export default Fixture;
+```
+
+A fixture comes from the first of these that applies:
+
+1. **Authored.** A person or an agent writes it from the library's documentation. It works for every archetype from day one, because the tool doesn't care which archetype a fixture is for.
+2. **Template.** The tool builds `button` and `link` from the export alone, because one element is enough to render them. For Angular the element and attributes come from the component's selector.
+3. **Generated.** The tool builds candidates from the evidence discovery found, and keeps one only if the probe confirms it: one trigger, no errors, a root that appears with a fitting role.
+
+## 2. What works already, and what doesn't.
 
 Nothing in the browser, the five tiers, the probe, the marking code, the reports, sub-path targets, or the install and mapping flow knows about a framework. The adapter interface (`src/frameworks/`) was built for this. What's Angular-specific is the adapter itself and a few places that still say "React or Vue" in prose.
 
 | Part | Angular needs |
 |---|---|
 | Detection | `@angular/core` as a peer dependency or dependency means `npm-angular`. It leaves the "unsupported framework" list. A custom elements manifest still wins, so Angular Elements packages stay web components. |
-| Install | The runtime set, aligned to the installed `@angular/core`: `@angular/common`, `@angular/compiler`, `@angular/platform-browser`, `rxjs`, and `zone.js` when the version needs it. Added when the peers left them out, and pinned so a loose install can't prune them. |
-| Bundling | Plain esbuild. No linker, no TypeScript, no `ngDevMode` define. One copy of each `@angular/*` package, `rxjs`, and `zone.js` through aliases, so a fixture that imports shared local files can't load a second copy. |
-| Mounting | An entry that loads the compiler first, then `zone.js` when installed, then bootstraps the fixture component with the providers the version needs. |
-| Discovery | Read each export's Ivy definition: kind, selectors, inputs, `exportAs`, standalone. |
-| Templates | Derived from selectors, not from names: `button[matButton]` gives `<button matButton ...>`. |
-| Generation | Recipes built on selectors, inputs, and `exportAs`. Later phase. |
+| Install | The runtime set, aligned to the installed `@angular/core`: `@angular/common`, `@angular/compiler`, `@angular/platform-browser`, `rxjs`, and `zone.js` when needed. Added when the peers left them out, and pinned so a loose install can't prune them. |
+| Bundling | Plain esbuild. No linker, no TypeScript, no `ngDevMode` define. One copy of each `@angular/*` package, `rxjs`, and `zone.js` through aliases. |
+| Mounting | An entry that loads the compiler first, then `zone.js` when installed, then bootstraps the fixture with the providers the installed version needs. |
+| Discovery | Read each export's Ivy definition, and for services their methods. This is the evidence recipes use (see section 4). |
+| Templates | Derived from selectors, not names: `button[matButton]` gives `<button matButton ...>`. |
+| Generation | Recipes per archetype and per wiring pattern, over selectors, inputs, outputs, `exportAs`, and service methods. |
 | Fixtures | Plain JavaScript that calls the `Component` decorator as a function. TypeScript with decorators later. |
 
-## 2. Decisions I'd make, and why.
+## 3. Decisions I'd make, and why.
 
-1. **The fixture is JavaScript, with the decorator called as a function.** It needs no TypeScript transform and no decorator metadata. `Component({...})(Fixture)` is what the decorator compiles to, and the spike ran it. State and injection use `inject()` and signals, which need no constructor type metadata.
+1. **The fixture is JavaScript, with the decorator called as a function.** No TypeScript transform, no decorator metadata. State and injection use `inject()` and signals, which need no constructor type metadata.
 2. **The compiler runs in the browser.** It makes the bundle about 2.7 MB and costs about 100 ms of start-up. That's fine for a test harness, and it's the only way to avoid a build step.
-3. **Zone.js follows what's installed, not a guess.** The entry imports `zone.js` when it's installed. The install step adds it for older Angular versions and whenever a library peers on it. The spike ran 18 with zone.js, and 22 both with and without it. The exact version where zone.js stops being needed isn't known yet, and the version matrix in phase 3 settles it.
-4. **Add `provideNoopAnimations()` when `@angular/animations` is installed.** It's needed on 18, harmless on 22, and it makes motion deterministic for the checks. The entry reads what's installed, so it doesn't hard-code a version.
-5. **Test the sub-path, not the root.** Material, CDK, PrimeNG, and most Angular libraries put components in secondary entry points. The docs and the "no rendering surface" message should say so, and list the sub-paths from the `exports` map.
-6. **Support floor: Angular 15.** Standalone components arrived in 14 and stabilized in 15, and NgModule libraries work through a standalone fixture's `imports`. The floor is confirmed by a version matrix in phase 3, not assumed.
+3. **Zone.js follows what's installed, not a guess.** The entry imports `zone.js` when it's installed. The install step adds it for older Angular versions and whenever a library peers on it. The spike ran 18 with zone.js, and 22 both with and without it. The exact version where zone.js stops being needed isn't known yet, and the version matrix settles it.
+4. **Add `provideNoopAnimations()` when `@angular/animations` is installed.** It's needed on 18, harmless on 22, and it makes motion deterministic for the checks. The entry reads what's installed instead of hard-coding a version.
+5. **Test the sub-path, not the root.** Most Angular libraries put components in secondary entry points. The "no rendering surface" message and the docs should say so, and list the sub-paths from the `exports` map.
+6. **Support floor: Angular 15,** pending the version matrix. Standalone components stabilized in 15, and NgModule libraries work through a standalone fixture's `imports`.
+7. **Dev dependencies, like React and Vue.** The Angular core set (about 50 MB installed) plus `@angular/material` and `@angular/cdk` (about 13 MB) for one integration test that proves the partly compiled path with a real library. Nothing ships in the package.
+8. **Generation ships with the adapter, for all eight generatable archetypes.** Authored and template support land first inside the same release, and the recipes land behind them. The first release is the whole set.
 
-## 3. Phases.
+## 4. The evidence discovery collects.
 
-Each phase ends with the full test suite and lint passing, and with a commit that can ship.
+Discovery loads the compiler, imports the target, and for each export records what recipes need:
 
-### Phase 1: the adapter, authored fixtures, and button and link templates.
+| Export is | Recorded |
+|---|---|
+| A component or directive | kind, every selector (as element and attributes), inputs (with their public names), outputs, `exportAs`, standalone |
+| A service | its method names (`open`, `show`, `close`) |
+| An NgModule | the declarations and exports it names, so a recipe can import the module |
+| Anything else | ignored |
 
-The smallest thing that's useful: a person (or an agent) can write a fixture for an Angular library and get every tier.
+A selector comes in Ivy's array form (`[["button", "matButton", ""]]`). A small parser turns the simplest alternative into an element and attributes, and skips `:not()` forms. Inputs, outputs, and `exportAs` are what wire one part to another: an input named like its own attribute selector is a directive that takes a value on the host. An input whose name ends in `For` points at a template reference. A service with `open` shows something.
 
-- **Detection.** Add an `angular` adapter with `detect(meta)`. Remove `@angular/core` from `OTHER_FRAMEWORKS` in `src/plan/resolve-npm.js`. Return `npm-angular` with the reason "The package lists @angular/core as a peer dependency." A package whose range excludes every supported major is reported with its range, like Vue 2.
-- **Schema and registry.** Add `angular` to `FLAVORS`, `npm-angular` to `TARGET_KINDS`, and an optional `angular` version string to `results.npm`. Register the adapter in `src/frameworks/index.js`. The existing consistency test then covers it.
-- **Install** (`src/harness/npm-install.js`). After the package installs, ensure the runtime set. Take the installed `@angular/core` version and install matching versions of `@angular/common`, `@angular/compiler`, and `@angular/platform-browser`, plus `rxjs` and `zone.js` as needed. Extend `pinnedRuntime` to keep all of them. Return the Angular version and a record of what's installed.
-- **A context from the install.** The adapter's `entry` needs to know what's installed (zone.js, animations, major version). Add an optional `inspect(workDir)` to the adapter interface that returns those facts, and pass the result to `entry(fixturePath, pkg, context)`. React, Vue, and web components ignore it.
-- **The entry.** Compiler first, then `zone.js` if installed, then `bootstrapApplication` with `provideNoopAnimations()` when animations are installed. Create a host element for the fixture's selector in `#root`. Report a bootstrap failure on `window.__error` so a failure says why.
-- **The fixture contract.** The default export is the component class, with its `selector` optional (the entry reads it from the compiled definition, or sets one). An optional `providers` export adds application providers, the same role `setup(app)` has for Vue. A fixture marks its trigger and root with `data-a11y-trigger` and `data-a11y-root`, as everywhere.
-- **Discovery.** `discoverEntry` loads the compiler, imports the target, and lists each export with its kind, selectors, inputs, `exportAs`, and standalone flag. The mapping already takes `exports`, so the existing scoring works on class names (`MatButton`, `MatAnchor`).
-- **Templates for button and link.** Parse the chosen export's selector (Ivy's array form) into an element and attributes, and write `<tag attrs data-a11y-trigger data-a11y-root>Save</tag>` with the class in `imports`. Skip selectors with `:not()` parts. Prefer the simplest alternative. A component with required inputs is a gap that says which input.
-- **Bundling.** The adapter's `bundle(workDir)` returns aliases for each installed `@angular/*` package, `rxjs`, and `zone.js`, and no defines.
-- **Report.** `describe` says "Angular (core 22.2.2)".
-- **A better message when a package has no root components.** When discovery finds no components and the package's `exports` lists sub-paths, say so and list a few: "Its components are in sub-paths such as `@angular/material/button`." This helps every framework, not just Angular.
-- **Tests.** Add Angular packages as dev dependencies, the way Vue was added (`@angular/core`, `common`, `compiler`, `platform-browser`, `forms`, `rxjs`, `zone.js`). Write two fake libraries in plain JavaScript that define components by calling `Component` (one standalone, one NgModule-based) with selector-based templates and a trigger. Cover detection, install pinning, the entry for each combination (zone or not, animations or not), discovery output, template derivation from selectors, an authored fixture in a real browser, and the "wrong selector" gap. Add one integration test against the real `@angular/material/button` sub-path, to prove the partial-declaration path.
-- **Docs.** Add Angular to the frameworks table, the runner skill (an Angular example fixture and the sub-path advice), and the fixtures guide. Update every "React, Vue 3, and web components" sentence, and the unsupported-framework wording.
-- **Exit criteria.** `npx automatica11y audit npm:@angular/material/button` runs the button template through all five tiers. An authored fixture for a Material menu runs the interaction checks. Both are checked on a real run, not just in tests.
+## 5. Phases.
 
-### Phase 2: generated fixtures from selectors, inputs, and `exportAs`.
+Each phase ends with the full test suite and lint passing, and with a commit. The first release is phases 1 and 2 together.
 
-Angular has no compound parts to match by name. It has selectors, inputs, and template references. The recipes read those.
+### Phase 1: the adapter, the evidence, and the simple archetypes.
 
-- **Tooltip.** A directive whose name fits the tooltip pattern and whose input matches its own attribute selector (`matTooltip`). Template: `<button data-a11y-trigger matTooltip="Saves your work.">Save</button>`.
-- **Menu.** A trigger directive with a `…For` input (`matMenuTriggerFor`), a menu component with an `exportAs`, and an item component or directive. Template: the trigger button with `[xTriggerFor]="m"`, then `<menu-selector #m="exportAs">` with two items.
-- **Tabs and accordion.** Components found by name and selector, wired by their inputs (a `label` input on a tab). These are the least certain, and each candidate is probed like any generated fixture.
-- **Dialog.** A service whose name fits the dialog pattern and which has an `open` method. The recipe defines a small content component and calls `inject(Service).open(Content)` from the trigger's click handler. The spike showed the shape works.
-- **Form field.** A wrapper component with a label child and an input directive, or a label wired to a native `<input>` with a directive attribute. Highest risk. Ship it only if real libraries confirm the pattern.
-- **Everything goes through the existing probe.** A candidate must bundle, bootstrap, show one trigger, and show a root with a fitting role. Angular adds one failure message worth a clear sentence: a missing provider (`NG05105`, `NG0201`), which the probe turns into a reason such as "the library needs the animations provider" or "needs an `@angular/forms` import."
-- **Marking.** The shared marking code works unchanged. The fixture starts it outside Angular's zone (`NgZone.runOutsideAngular`) so its 50 ms polling doesn't trigger change detection.
-- **Exit criteria.** Without any fixture written, `compare` on `@angular/material/menu`, `/tooltip`, and `/dialog` produces generated results marked as such, and the report says what was tried for anything that fell back to a gap.
+- **Detection.** Add an `angular` adapter with `detect(meta)`. Remove `@angular/core` from `OTHER_FRAMEWORKS` in `src/plan/resolve-npm.js`. A package whose range excludes every supported major is reported with its range, like Vue 2.
+- **Schema and registry.** `angular` in `FLAVORS`, `npm-angular` in `TARGET_KINDS`, an optional `angular` version in `results.npm`. The existing consistency test covers the registry.
+- **Install** (`src/harness/npm-install.js`). Ensure the runtime set at the installed core's version, and extend `pinnedRuntime` to keep it. Return the Angular version and what's installed.
+- **A context from the install.** Add an optional `inspect(workDir)` to the adapter interface that returns what's installed (zone.js, animations, major version), and pass it to `entry(fixturePath, pkg, context)`. React, Vue, and web components ignore it.
+- **The entry.** Compiler first, then `zone.js` if installed, then `bootstrapApplication` with `provideNoopAnimations()` when animations are installed and the fixture's own providers. It creates a host element in `#root` and reports a bootstrap failure on `window.__error`.
+- **The fixture contract.** The default export is the component class. An optional `providers` export adds application providers, the same role `setup(app)` has for Vue. It marks trigger and root as everywhere.
+- **Discovery** as in section 4, and the mapping's existing scoring works on class names (`MatButton`, `MatAnchor`).
+- **Templates for button and link,** derived from selectors. A component with required inputs is a gap that names the input.
+- **Authored fixtures for every archetype.** Tests write one authored fixture per archetype against fake libraries and run them in Chrome, so every archetype is proven to work with an Angular fixture before generation exists.
+- **A better message when a package has no root components,** for every framework: list a few sub-paths from the `exports` map.
+- **Bundling, report line, docs.** Aliases for each installed `@angular/*` package, `rxjs`, and `zone.js`. The report says "Angular (core 22.2.2)". Update the frameworks table, the runner skill (an Angular fixture example and the sub-path advice), the fixtures guide, and every "React, Vue 3, and web components" sentence.
+- **Tests.** Angular dev dependencies, two fake libraries in plain JavaScript (one standalone, one NgModule-based), pure-function tests (selector parsing, version rules, entry text, pinning), real-browser tests, and one integration test against the real `@angular/material/button` sub-path.
+
+### Phase 2: generated fixtures for every archetype.
+
+Each archetype gets recipes per wiring pattern. Every candidate goes through the existing probe, so a wrong guess becomes a gap with a reason, not a wrong result.
+
+| Archetype | Patterns |
+|---|---|
+| tooltip | A directive with a text input that matches its own attribute selector. The trigger is a plain `<button>` with the attribute. |
+| live-region | A message component shown with `@if` when the trigger is pressed, a component with a visibility input, or a service with a `show` or `open` method. |
+| form-field | A wrapper component with a label child and an input directive, a native `<input>` with a directive attribute and a `<label>`, or a component that is itself the field. |
+| tabs | A group component with child tab components that take a `label` or `value` input, or a data-driven component with an items input. |
+| accordion | A container with panel components and a header part, with a disclosure panel as the single-item case, or a data-driven component. |
+| menu | A trigger directive with a `…For` input and a menu component with `exportAs` plus item parts, or a data-driven component with an items input. |
+| combobox | An input directive linked to a panel component by template reference, with option parts, or a declarative component with a suggestions input. |
+| dialog | A service with an `open` method and a small content component the recipe defines, a declarative component with a visibility input and a close output, or a trigger directive plus a template. |
+
+- **Wiring for template references.** A recipe emits `#ref="exportAs"` on the part that owns it and passes `[input]="ref"` to the one that points at it. The pairs come from `…For`-style inputs and matching `exportAs` names, not from fixed names.
+- **Data-driven patterns.** A recipe builds a small array for the items input and uses the simplest shape that the input name suggests (`label`, `value`). If the input's shape can't be inferred, it's a gap that names the input.
+- **Marking.** The shared marking code works unchanged. The fixture starts it inside `NgZone.runOutsideAngular`, so its 50 ms polling doesn't trigger change detection.
+- **Clear probe reasons for Angular's own errors.** A missing provider (`NG05105`, `NG0201`, `NG0200`) becomes a reason such as "the library needs the animations provider" or "needs a forms module."
+- **Attempt limit.** The existing limit of eight candidates per archetype applies, with the families ranked as for React and Vue.
+- **Tests.** Fake libraries that implement each pattern in plain JavaScript, one good and one deliberately wrong per archetype (a menu with no role, a dialog service that never opens), so a candidate is proven to be rejected as well as accepted.
 
 ### Phase 3: real libraries and a version matrix.
 
-- **Real libraries.** Material and CDK first, then PrimeNG, ng-bootstrap, Spartan UI, and Taiga UI. For each, record what worked with no fixture, what needed an authored one, and what failed and why. Expect gaps. A library that needs global setup (a theme, a config provider, a locale) uses the same `providers` export and `install` mapping field that Vue's `setup(app)` and companion packages use.
-- **Version matrix.** Run the same authored fixtures on Angular 15, 16, 17, 18, 19, 20, 21, and 22 with a library of the same era. Record the floor and any provider differences. The result goes in the docs as the supported range, and in the adapter's `detect` as the unsupported-range message.
-- **Styles.** Theme CSS (Material's prebuilt themes) comes in through `install` and a CSS import in the fixture, as it did for the pantoken tokens. Add that case to the fixtures guide.
-- **Weekly job.** Add the Angular set to `.github/workflows/latest-deps.yml`, so a new Angular release that breaks the private `ɵ` members discovery reads (`ɵcmp`, `ɵdir`, `ɵmod`) opens an issue before a user hits it.
-- **Exit criteria.** A written compatibility table, and a real `compare` of two Angular libraries' buttons and menus that I'd be willing to put in the docs.
+- **Real libraries,** Material and CDK first, then PrimeNG, ng-bootstrap, Spartan UI, and Taiga UI. For each: what generated with no fixture, what needed an authored one, and what failed and why. Expect gaps. A library that needs global setup (a theme, a config provider, a locale) uses the `providers` export and the `install` mapping field.
+- **Version matrix.** The same authored fixtures on Angular 15 through 22 with a library of the same era. The result sets the supported range in the docs and in `detect`.
+- **Styles.** Theme CSS comes in through `install` and a CSS import in the fixture, as it did for the pantoken tokens. Add that case to the fixtures guide.
+- **Weekly job.** Add the Angular set to `.github/workflows/latest-deps.yml`, so a release that breaks the private `ɵ` members discovery reads (`ɵcmp`, `ɵdir`, `ɵmod`, `ɵprov`) opens an issue before a user hits it.
+- **Exit criteria.** A written compatibility table, and a real `compare` of two Angular libraries across several archetypes that I'd be willing to put in the docs.
 
-### Phase 4: polish.
+### Phase 4: polish and release.
 
-- **TypeScript fixtures.** Allow `fixtures/<id>/<archetype>.ts` with `@Component` decorators. esbuild strips the types. It needs `tsconfigRaw` with `experimentalDecorators: true` and `useDefineForClassFields: false`. Add `ts` to the adapter's accepted extensions and the fixtures lookup. Keep it behind its own test, because decorator semantics differ by Angular version.
-- **Error messages.** Turn the common Angular bootstrap errors into plain sentences in the gap reason.
-- **Zoneless checks.** On 21 and later, run the conditions checks once with zone.js and once without, to be sure the polling and the animation settle behave the same.
-- **Report wording.** Make sure the generated-fixture note and the page-versus-component warning read correctly for Angular targets.
-- **Release.** A minor bump (the runner skill's series moves with it, for example `0.4.x` to `0.5.x`), a changelog line, and the docs site rebuild.
+- **TypeScript fixtures.** Allow `fixtures/<id>/<archetype>.ts` with `@Component` decorators. esbuild strips the types, with `tsconfigRaw` set to `experimentalDecorators: true` and `useDefineForClassFields: false`. Own tests, because decorator semantics differ by version.
+- **Error messages.** Plain sentences for the common bootstrap errors.
+- **Zoneless checks.** On the versions where it's the default, run the conditions checks with and without zone.js and confirm the polling and animation settle behave the same.
+- **Release.** A minor bump (0.5.0), the runner skill's series moves with it (`0.4.x` to `0.5.x`), and the docs site rebuilds.
 
-## 4. Risks.
+## 6. Risks.
 
 | Risk | Likelihood | What reduces it |
 |---|---|---|
-| The `ɵ` members that discovery reads change in a new Angular release. | Medium. They're private, and have been stable for years. | Read defensively and fall back to "unknown kind". Run the weekly latest-deps job. Pin the test versions. |
-| Runtime JIT differs from the library's AOT behavior (for example, tree-shaken providers). | Low to medium. | Say in the report's method note that Angular runs through the runtime compiler. Compare against a Storybook build for the first real libraries. |
-| Libraries that need app-level configuration have no generated fixture that works. | High. | Authored fixtures with the `providers` export, and a clear gap reason. Don't pretend a generated one is right. |
-| Bundle size and start-up make slow tests. | Low. The spike was 223 ms to build and about 120 ms to bootstrap. | None needed now. Re-measure in phase 3 with a larger library. |
-| Peer dependency ranges on older libraries pick an old Angular that needs an older Node or TypeScript. | Low. Nothing here compiles TypeScript. | The version matrix. |
+| The `ɵ` members that discovery reads change in a new Angular release. | Medium. They're private, and have been stable for years. | Read defensively and fall back to "unknown kind". The weekly latest-deps job. Pinned test versions. |
+| Runtime JIT differs from the library's AOT behavior. | Low to medium. | Say so in the report's method note. Compare against a Storybook build for the first real libraries. |
+| Libraries that need app-level configuration have no generated fixture that works. | High. | Authored fixtures with the `providers` export, and a clear gap reason. A generated fixture is never presented as more than a guess. |
+| Data-driven components with inputs of unknown shape. | High. | Infer from the input name, and otherwise report a gap that names the input. |
+| Template-reference wiring picks the wrong pair. | Medium. | The probe confirms a root with a fitting role before a candidate counts. |
 | Generation recipes produce false results because the wiring is wrong. | Medium. | The same labeling as every generated fixture (lower evidence, source written to `generated/`), and the probe. |
+| Bundle size and start-up make slow tests. | Low. The spike was 223 ms to build and about 120 ms to bootstrap. | Re-measure in phase 3 with a larger library. |
 
-## 5. Test and dependency cost.
+## 7. Test and dependency cost.
 
-Dev dependencies grow by the Angular packages (about 50 MB installed) and, for the integration test, `@angular/material` and `@angular/cdk`. CI install time grows by a few seconds. The tests that need a browser already skip when Chrome is missing. Each phase adds roughly 15 to 30 tests: pure functions (selector parsing, version rules, the entry text) run without a browser, and the rest run in Chrome.
+Dev dependencies grow by the Angular core set (about 50 MB installed) and, for the integration test, `@angular/material` and `@angular/cdk` (about 13 MB), against 301 MB total today. CI install time grows by a few seconds. Nothing ships in the package. Each phase adds roughly 15 to 40 tests. Pure functions (selector parsing, version rules, the entry text, recipe text) run without a browser, and the rest run in Chrome and skip when it's missing.
 
-## 6. What I need from you.
+## 8. Sizing.
 
-1. **Dev dependency weight.** Are the Angular packages and Material as dev dependencies acceptable? The alternative is fake libraries only, which would not prove the partial-declaration path.
-2. **Scope of generation.** Is phase 2 (generated fixtures for Angular) in scope for the first release, or should the first release be authored fixtures and templates only? I'd ship phase 1 alone as 0.5.0, and the rest as 0.5.x.
-3. **Support floor.** Is Angular 15 and newer the right promise, pending the version matrix?
-4. **Priority libraries.** Which Angular libraries do you most want to see evaluated first? I'd start with Material and CDK, and add PrimeNG and Spartan UI.
+My estimate, as focused sessions, not calendar time: phase 1 is two, phase 2 is two to three, phase 3 is one to two (most of it waiting on real libraries to surprise us), and phase 4 is one. The spike removed the biggest unknown, which was whether the runtime compiler would work at all.
 
-## 7. Sizing.
+## 9. Still open.
 
-My estimate, as focused sessions, not calendar time: phase 1 is one to two, phase 2 is two, phase 3 is one to two (most of it waiting on real libraries to surprise us), and phase 4 is one. The spike removed the biggest unknown, which was whether the runtime compiler would work at all.
+1. **Support floor.** Is Angular 15 and newer the right promise, pending the version matrix?
+2. **Priority libraries.** Which Angular libraries matter most to you? I'd start with Material and CDK, then PrimeNG and Spartan UI.

@@ -8,6 +8,14 @@ import { createRequire } from "node:module";
 import { dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Marked } from "marked";
+import { createHighlighterCoreSync } from "shiki/core";
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import bash from "@shikijs/langs/bash";
+import js from "@shikijs/langs/js";
+import json from "@shikijs/langs/json";
+import jsx from "@shikijs/langs/jsx";
+import githubDark from "@shikijs/themes/github-dark";
+import githubLight from "@shikijs/themes/github-light";
 
 const require = createRequire(import.meta.url);
 
@@ -48,11 +56,28 @@ const escapeHtml = (text) => String(text).replace(/&/g, "&amp;").replace(/</g, "
 const slug = (text) => text.toLowerCase().replace(/<[^>]+>/g, "").replace(/&[a-z]+;/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "section";
 const plain = (html) => html.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
+const highlighter = createHighlighterCoreSync({
+  themes: [githubLight, githubDark],
+  langs: [bash, js, json, jsx],
+  engine: createJavaScriptRegexEngine(),
+});
+
 /** Render one Markdown source to the article HTML, with its title and a short description. */
 function renderMarkdown(source, sourceFile) {
   const used = new Set();
   const marked = new Marked({
     renderer: {
+      code({ text, lang }) {
+        const name = (lang ?? "").split(/\s/)[0];
+        return highlighter.codeToHtml(text, {
+          lang: highlighter.getLoadedLanguages().includes(name) ? name : "text",
+          themes: { light: "github-light", dark: "github-dark" },
+          defaultColor: false,
+          // github-light's orange is 3.5:1 on white, below the 4.5:1 text needs.
+          colorReplacements: { "github-light": { "#e36209": "#c24e00" } },
+          transformers: [{ pre(node) { delete node.properties.tabindex; } }],
+        }) + "\n";
+      },
       heading({ tokens, depth }) {
         const html = this.parser.parseInline(tokens);
         let id = slug(html);
@@ -97,14 +122,16 @@ function pantokenCss() {
 }
 
 // The surfaces read pantoken tokens, which switch between light and dark themselves through light-dark().
+// Page, header, sidebar, inline code and code block colors follow the pantoken docs site.
 const STYLE = `
-:root { color-scheme: light dark; --bg: var(--instui-color-background-page); --fg: var(--instui-color-text-base); --muted: var(--instui-color-text-muted); --link: var(--instui-color-text-interactive-navigation-primary-base); --rule: var(--instui-color-stroke-base); --code: var(--instui-color-background-muted); --nav: var(--instui-color-background-container); --focus: var(--instui-focus-outline-color); }
+:root { color-scheme: light dark; --bg: light-dark(var(--instui-color-background-container), var(--instui-color-background-page)); --fg: var(--instui-color-text-base); --muted: var(--instui-color-text-muted); --link: var(--instui-color-text-interactive-navigation-primary-base); --rule: var(--instui-color-stroke-base); --code: var(--instui-color-background-muted); --block: var(--instui-color-background-container); --header: var(--instui-color-background-base); --nav: light-dark(var(--instui-color-background-muted), var(--instui-color-background-container)); --focus: var(--instui-focus-outline-color); }
+html { background: var(--bg); }
 * { box-sizing: border-box; }
 a { text-underline-offset: 0.15em; }
 a:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .skip { position: absolute; left: 1rem; top: -4rem; background: var(--bg); color: var(--fg); padding: 0.5rem 1rem; border: 2px solid var(--fg); z-index: 10; }
 .skip:focus { top: 1rem; }
-header.site { padding: 1rem; border-bottom: 1px solid var(--rule); }
+header.site { padding: 1rem; background: var(--header); border-bottom: 1px solid var(--rule); }
 header.site p { margin: 0; font-weight: 700; font-size: 1.25rem; }
 header.site a { color: inherit; text-decoration: none; }
 .layout { display: block; }
@@ -116,10 +143,11 @@ main { padding: 1.5rem 1rem 3rem; max-width: 52rem; }
 main:focus { outline: none; }
 h1 { margin-top: 0; }
 h2 { margin-top: 2.5rem; }
-code { background: var(--code); padding: 0.1em 0.3em; border-radius: var(--instui-border-radius-sm); font-family: var(--instui-font-family-code); font-size: 0.9em; overflow-wrap: anywhere; }
+code { color: var(--link); background: var(--code); padding: 3px 6px; border-radius: 4px; font-family: var(--instui-font-family-code); font-size: 0.875em; overflow-wrap: anywhere; }
 /* Long lines wrap instead of scrolling, so a code block never needs focus to be read, and it reflows at 320 pixels. */
-pre { background: var(--code); padding: 1rem; border-radius: 0.5rem; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 1rem; border: 1px solid var(--rule); }
-pre code { background: none; padding: 0; overflow-wrap: inherit; white-space: inherit; }
+pre { background: var(--block); padding: 1rem; border-radius: 0.5rem; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 1rem; border: 1px solid var(--rule); }
+pre code { color: inherit; background: none; padding: 0; font-size: 0.875em; overflow-wrap: inherit; white-space: inherit; }
+.shiki, .shiki span { color: light-dark(var(--shiki-light), var(--shiki-dark)); }
 .scroll { overflow-x: auto; margin: 0 0 1rem; border: 1px solid var(--rule); border-radius: 0.5rem; }
 table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
 th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--rule); }
