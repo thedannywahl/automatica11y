@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { PAGES, buildDocs } from "../scripts/build-docs.js";
+import { DOMAIN, PAGES, buildDocs } from "../scripts/build-docs.js";
 import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { parseResults } from "../src/schema.js";
@@ -86,8 +86,8 @@ test("tables and code can be read without a mouse", () => {
 
 test("the README points at the site, and the pages it names exist", () => {
   const readme = readFileSync(join(root, "README.md"), "utf8");
-  assert.match(readme, /\(https:\/\/thedannywahl\.github\.io\/automatica11y\/\)/);
-  for (const [, page] of readme.matchAll(/thedannywahl\.github\.io\/automatica11y\/([a-z-]+\.html)/g)) assert.ok(html[page] !== undefined, `the README links to ${page}`);
+  assert.match(readme, /\(https:\/\/automatica11y\.dev\/\)/);
+  for (const [, page] of readme.matchAll(/automatica11y\.dev\/([a-z-]+\.html)/g)) assert.ok(html[page] !== undefined, `the README links to ${page}`);
   assert.ok(readme.split("\n").length < 100, "the README stays short: the details live in the docs");
 });
 
@@ -102,4 +102,17 @@ test("the site passes the tool's own checks: no axe-core or IBM violations, and 
     for (const [engine, result] of Object.entries(tiers.rules.engines)) assert.deepEqual(result.violations.map((v) => v.ruleId), [], `${page}: ${engine} violations`);
     assert.deepEqual(tiers.conditions.checks.filter((c) => c.result === "fail" || c.result === "error").map((c) => `${c.name}: ${c.detail}`), [], `${page}: conditions`);
   }
+});
+
+test("the site is served from automatica11y.dev: a CNAME in every build, and no reference to the old address", () => {
+  assert.equal(DOMAIN, "automatica11y.dev");
+  assert.equal(readFileSync(join(out, "CNAME"), "utf8"), "automatica11y.dev\n", "Pages reads the domain from this file, and each publish replaces the branch");
+  const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+  assert.equal(pkg.homepage, "https://automatica11y.dev");
+  assert.match(html["index.html"], /<link rel="canonical" href="https:\/\/automatica11y\.dev\/">/);
+  assert.match(html["targets.html"], /<link rel="canonical" href="https:\/\/automatica11y\.dev\/targets\.html">/);
+  assert.match(readFileSync(join(out, "404.html"), "utf8"), /href="https:\/\/automatica11y\.dev\/"/);
+  const sources = [join(root, "README.md"), join(root, "AGENTS.md"), join(root, "package.json"), join(root, "scripts/build-docs.js"), ...readdirSync(join(root, "docs")).map((name) => join(root, "docs", name))];
+  for (const file of sources) assert.doesNotMatch(readFileSync(file, "utf8"), /github\.io/, `${file} has no reference to the old github.io address`);
+  for (const page of PAGES) assert.doesNotMatch(html[page.out], /github\.io/, `${page.out} has no reference to the old address`);
 });

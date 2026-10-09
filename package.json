@@ -2,6 +2,14 @@
   "name": "automatica11y",
   "version": "0.4.1",
   "description": "Test and compare the accessibility of web pages, Storybook builds, and npm component libraries.",
+  "homepage": "https://automatica11y.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thedannywahl/automatica11y.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thedannywahl/automatica11y/issues"
+  },
   "license": "MIT",
   "type": "module",
   "bin": {

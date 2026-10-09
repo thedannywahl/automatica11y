@@ -10,7 +10,9 @@ import { Marked } from "marked";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO = "https://github.com/thedannywahl/automatica11y";
-const SITE = "https://thedannywahl.github.io/automatica11y/";
+/** The custom domain GitHub Pages serves the site from. The CNAME file in the built branch is what tells Pages to use it. */
+export const DOMAIN = "automatica11y.dev";
+const SITE = `https://${DOMAIN}/`;
 
 /**
  * Every page, in navigation order. A page's `file` is relative to the repository. A `stripFrontMatter` page starts with the YAML
@@ -187,6 +189,8 @@ export function buildDocs({ root = ROOT, outDir = join(root, "site") } = {}) {
   }
   // GitHub Pages runs Jekyll unless told not to, and Jekyll would hide files that start with an underscore.
   writeFileSync(join(outDir, ".nojekyll"), "");
+  // Each publish replaces the whole branch, so the CNAME has to be in every build or Pages forgets the domain.
+  writeFileSync(join(outDir, "CNAME"), `${DOMAIN}\n`);
   writeFileSync(join(outDir, "404.html"), `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Page not found - automatica11y</title><style>${STYLE}</style></head>\n<body><main id="main" style="padding:2rem 1rem"><h1>Page not found.</h1><p>That page isn't in the documentation. Start at the <a href="${SITE}">home page</a>.</p></main></body></html>\n`);
   return written;
 }

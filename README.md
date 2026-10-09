@@ -2,12 +2,17 @@
 
 Test and compare the accessibility of web pages, Storybook builds, and npm component libraries.
 
+automatica11y helps answer two questions:
+
+- How accessible is this? (`audit`)
+- How do these compare? (`compare`)
+
 ```bash
 npm i -g automatica11y
 automatica11y compare radix=npm:@radix-ui/react-dialog aria=npm:react-aria-components
 ```
 
-**[Read the documentation.](https://thedannywahl.github.io/automatica11y/)**
+**[Read the documentation.](https://automatica11y.dev/)**
 
 ## Why use it.
 
@@ -57,11 +62,11 @@ You can skip the install and put `npx` in front instead, for example `npx automa
 
 ## Use it with an AI agent.
 
-Any agent that can run shell commands can learn the tool from the tool: `automatica11y guide` prints where to start, and `automatica11y guide skill` prints the full steps. If your agent loads skills from a folder, copy [`skills/automatica11y`](skills/automatica11y) into it. It's one small file, and it sends the agent to the same steps. [`AGENTS.md`](AGENTS.md) does the same for agents that read it instead. The [documentation](https://thedannywahl.github.io/automatica11y/agents.html) has the details.
+Any agent that can run shell commands can learn the tool from the tool: `automatica11y guide` prints where to start, and `automatica11y guide skill` prints the full steps. If your agent loads skills from a folder, copy [`skills/automatica11y`](skills/automatica11y) into it. It's one small file, and it sends the agent to the same steps. [`AGENTS.md`](AGENTS.md) does the same for agents that read it instead. The [documentation](https://automatica11y.dev/agents.html) has the details.
 
 ## What it won't do.
 
-It's not an attestation or certification tool. Automated checks cover only part of WCAG. They can't judge whether alt text is meaningful, whether the reading order makes sense, or how real screen readers behave, and the screen reader it runs is simulated. A person has to check those. See [the limits](https://thedannywahl.github.io/automatica11y/limits.html).
+It's not an attestation or certification tool. Automated checks cover only part of WCAG. They can't judge whether alt text is meaningful, whether the reading order makes sense, or how real screen readers behave, and the screen reader it runs is simulated. A person has to check those. See [the limits](https://automatica11y.dev/limits.html).
 
 ## License.
 
