@@ -4,7 +4,6 @@ import { checkExports, notExportedMessage } from "./subpath.js";
 
 const FIELDS = ["name", "version", "peerDependencies", "dependencies", "keywords", "customElements", "deprecated", "exports"];
 const OTHER_FRAMEWORKS = {
-  "@angular/core": "Angular",
   svelte: "Svelte",
   "solid-js": "Solid",
   preact: "Preact",
@@ -45,10 +44,10 @@ export function npmView(spec, { timeoutMs = 60_000 } = {}) {
 }
 
 /**
- * Guess how a package renders from its metadata alone. React wins when both signals appear, then a custom elements manifest, then Vue.
+ * Guess how a package renders from its metadata alone. React wins when both signals appear, then a custom elements manifest, then Vue, then Angular.
  * `npm` means the metadata can't say, so the run decides after it installs and loads the package.
  * @param {any} meta
- * @returns {{ kind: "npm-react" | "npm-vue" | "npm-wc" | "npm-unsupported" | "npm", framework: string | null, reason: string }}
+ * @returns {{ kind: "npm-react" | "npm-vue" | "npm-angular" | "npm-wc" | "npm-unsupported" | "npm", framework: string | null, reason: string }}
  */
 export function detectFlavor(meta) {
   const peers = meta.peerDependencies ?? {};
@@ -58,6 +57,8 @@ export function detectFlavor(meta) {
   if (meta.customElements) return { kind: "npm-wc", framework: "Web components", reason: "The package has a customElements manifest." };
   const vue = /** @type {any} */ (ADAPTERS.vue.detect(meta));
   if (vue) return vue;
+  const angular = /** @type {any} */ (ADAPTERS.angular.detect(meta));
+  if (angular) return angular;
   for (const [name, label] of Object.entries(OTHER_FRAMEWORKS)) {
     if (name in peers) return { kind: "npm-unsupported", framework: label, reason: `The package needs ${label}.` };
   }

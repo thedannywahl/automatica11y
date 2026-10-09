@@ -6,8 +6,9 @@ import { GENERATABLE } from "../harness/generate/index.js";
 import { generateFixture } from "./generate-fixture.js";
 import { settleAnimations } from "../harness/settle.js";
 import { installExtraPackages, installOptionalPeers, installPackage } from "../harness/npm-install.js";
+import { ANGULAR_FLOOR } from "../frameworks/angular.js";
 import { adapterFor, adapterForKind } from "../frameworks/index.js";
-import { subpathProblem } from "../plan/subpath.js";
+import { offeredSubpaths, subpathProblem } from "../plan/subpath.js";
 import { closedShadowHosts, notTestableEntries } from "../harness/shadow.js";
 import { serveStatic } from "../harness/static-serve.js";
 import { openPage } from "../harness/url.js";
@@ -202,7 +203,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
   const base = { id: planTarget.id, reason: null, archetypes: {}, summary: { engines: {}, gaps: [], notTestable: [] }, warnings: [] };
   const resolved = planTarget.resolved ?? {};
   if (planTarget.kind === "npm-unsupported") {
-    return { result: { ...base, status: "unsupported", reason: `${resolved.framework ?? "This framework"} packages aren't supported. This version covers React, Vue 3, and web components.` }, mapping: null };
+    return { result: { ...base, status: "unsupported", reason: `${resolved.framework ?? "This framework"} packages aren't supported.${resolved.framework === "Angular" && resolved.detectedBy ? ` ${resolved.detectedBy}` : ""} This version covers React, Vue 3, Angular ${ANGULAR_FLOOR} and newer, and web components.` }, mapping: null };
   }
   const tmp = mkdtempSync(join(tmpdir(), "automatica11y-npm-"));
   const workDir = join(tmp, "install");
@@ -227,13 +228,19 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     const extras = await installExtraPackages({ dir: workDir, specs: Object.values(planTarget.mapping ?? {}).flatMap((entry) => entry.install ?? []) });
     warnings.push(...extras.warnings);
 
+    // What the install left behind that an adapter's entry needs to know about, such as whether zone.js came with the library.
+    const context = adapterForKind(planTarget.kind)?.inspect?.(workDir) ?? {};
+
     const found = await discover({ browser, workDir, flavor: flavor === "unknown" ? "wc" : flavor, pkg: importSpec, buildDir, warnings });
     if (flavor === "unknown") {
       if (found.tags.length > 0) flavor = "wc";
       else if (installed.react && found.exports.some((e) => /^[A-Z]/.test(e.name))) flavor = "react";
     }
     if (flavor === "unknown" || (flavor === "wc" && found.tags.length === 0)) {
-      return { result: { ...base, status: "not-applicable", reason: "The package has no rendering surface. It exports no components for a supported framework and defines no custom elements.", warnings }, mapping: null };
+      // Some packages keep their components in sub-paths and leave the main entry nearly empty.
+      const hints = resolved.subpath ? [] : offeredSubpaths(workDir, resolved.name);
+      const where = hints.length ? ` Some packages keep their components in sub-paths, and this one exports ${hints.join(", ")}. Try one, for example npm:${hints[0]}.` : "";
+      return { result: { ...base, status: "not-applicable", reason: `The package has no rendering surface. It exports no components for a supported framework and defines no custom elements.${where}`, warnings }, mapping: null };
     }
 
     const candidates = candidateMapping({ flavor, exports: found.exports, tags: found.tags });
@@ -276,7 +283,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
         entry.status = "needs-fixture";
         entry.reason = `The mapping names ${user.fixture}, but that file doesn't exist.`;
       } else if (entry.status === "template" || (user.export || user.tag) && ["button", "link"].includes(archetype)) {
-        const source = adapter.template(archetype, importSpec, flavor === "wc" ? entry.tag : entry.export);
+        const source = adapter.template(archetype, importSpec, flavor === "wc" ? entry.tag : entry.export, found.exports.find((e) => e.name === entry.export));
         if (source) {
           entry.status = "template";
           delete entry.reason;
@@ -290,7 +297,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       let generationTried = false;
       // Nothing authored and no template: build candidates from what the package exports, and keep one only if it works.
       if (!fixture && !user.fixture && plan.options.generate !== false && GENERATABLE.has(archetype) && !(entry.status === "no-match" && flavor === "wc")) {
-        const generated = await generateFixture({ browser, adapter, archetype, entry, found, explicit: Boolean(user.export), pkg: importSpec, tmp, workDir, buildDir, getServer, bundle: (options) => bundleWithPeers(options, warnings) });
+        const generated = await generateFixture({ browser, adapter, archetype, entry, found, explicit: Boolean(user.export), pkg: importSpec, tmp, workDir, buildDir, context, getServer, bundle: (options) => bundleWithPeers(options, warnings) });
         attempts = generated.attempts;
         generationTried = attempts.length > 0;
         if (generated.ok && generated.winner) {
@@ -320,7 +327,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       }
       const entryFile = join(tmp, "entries", `${archetype}-entry.js`);
       mkdirSync(join(tmp, "entries"), { recursive: true });
-      writeFileSync(entryFile, adapter.entry(fixture, importSpec));
+      writeFileSync(entryFile, adapter.entry(fixture, importSpec, context));
       try {
         await bundleWithPeers({ entries: { [archetype]: entryFile }, outdir: buildDir, workDir, framework: adapter }, warnings);
         runnable[archetype] = `/${archetype}.html`;
@@ -369,6 +376,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
           react: installed.react,
           reactDom: installed.reactDom,
           vue: installed.vue ?? null,
+          angular: installed.angular ?? null,
           tags: flavor === "wc" ? found.tags : [],
         },
         summary: (() => {

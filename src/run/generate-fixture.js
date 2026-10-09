@@ -17,6 +17,7 @@ const firstLine = (error) => (error instanceof Error ? error.message : String(er
  *   found: { exports: any[], tags: string[], facts: Record<string, any> },
  *   pkg: string,
  *   explicit?: boolean,
+ *   context?: Record<string, any>,
  *   tmp: string,
  *   workDir: string,
  *   buildDir: string,
@@ -25,7 +26,7 @@ const firstLine = (error) => (error instanceof Error ? error.message : String(er
  * }} input
  * @returns {Promise<{ ok: boolean, reason: string | null, attempts: Array<{ recipe: string, summary: string, ok: boolean, reason: string | null }>, winner?: { recipe: string, summary: string, used: string[], source: string, file: string, extension: string } }>}
  */
-export async function generateFixture({ browser, adapter, archetype, entry, found, explicit = false, pkg, tmp, workDir, buildDir, getServer, bundle }) {
+export async function generateFixture({ browser, adapter, archetype, entry, found, explicit = false, pkg, tmp, workDir, buildDir, context = {}, getServer, bundle }) {
   const { candidates, reason } = adapter.generate({ archetype, pkg, entry, exports: found.exports, facts: found.facts, explicit });
   if (candidates.length === 0) return { ok: false, reason, attempts: [] };
 
@@ -37,7 +38,7 @@ export async function generateFixture({ browser, adapter, archetype, entry, foun
     const file = join(tmp, "generated", `${archetype}-${index}.${extension}`);
     writeFileSync(file, candidate.source);
     const entryFile = join(tmp, "entries", `${name}.js`);
-    writeFileSync(entryFile, adapter.entry(file, pkg));
+    writeFileSync(entryFile, adapter.entry(file, pkg, context));
     return { candidate, name, file, entryFile, bundled: null };
   });
 

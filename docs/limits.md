@@ -4,7 +4,7 @@
 - Components are tested in the states a fixture shows. Dialogs, menus, tooltips, and comboboxes run closed and open, and live regions run before and after the message. Other states aren't visited.
 - Content on a canvas with no alternative, or inside a closed shadow root, can't be tested, and the report says so. The virtual screen reader can't read inside shadow roots at all.
 - Motion driven by JavaScript timers, such as a carousel that animates with `requestAnimationFrame`, isn't visible to the reduced motion check.
-- Svelte, Angular, Vue 2, and other frameworks report "unsupported framework." Their Storybooks work, because a Storybook renders stories in a page whatever the framework.
+- Svelte, Vue 2, Angular older than version 22, and other frameworks report "unsupported framework." Their Storybooks work, because a Storybook renders stories in a page whatever the framework.
 - Native screen readers aren't part of this version.
 - Results are a snapshot. The tools run at their latest versions, and the report records them.
 

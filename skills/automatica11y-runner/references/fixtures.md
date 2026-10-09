@@ -46,6 +46,24 @@ For React, JSX works without importing React. Import the library from its packag
 
 For Vue 3, a fixture is also JSX, and the default export is a component: a function that returns JSX is a functional component, or you can export a component object. The tool turns JSX into `h()` calls and supplies `h` and `Fragment` itself, so don't import them. Importing `h` fails the bundle with "symbol already declared". JSX children become the default slot. Vue's reactivity works, so `import { ref } from "vue"` for state, and wrap the JSX in `defineComponent({ setup() { ... return () => (<jsx/>) } })`. A library that needs a plugin, a theme, or global components can export a function named `setup(app)`, which runs before the app mounts, for example `export function setup(app) { app.use(plugin) }`. Named slots and `v-model` aren't JSX syntax. Pass a slots object as the children, or set `modelValue` and `onUpdate:modelValue` with a spread, for example `{...{ "onUpdate:open": (next) => (open.value = next) }}`.
 
+For Angular 22 and newer, a fixture is a plain `.js` file with no decorator syntax. Define each component by calling the decorator as a function, and make the component class the default export. The tool loads Angular's runtime compiler, so libraries that ship partly compiled work as they are. Import what you use in the component's `imports` list, and export `providers` (an array) when the library needs application providers. State lives in signals. For example:
+
+```js
+import { Component, signal } from "@angular/core";
+import { MatMenu, MatMenuItem, MatMenuTrigger } from "@angular/material/menu";
+
+class Fixture { shown = signal(false); }
+Component({
+  selector: "app-fixture",
+  imports: [MatMenu, MatMenuItem, MatMenuTrigger],
+  template: `<button type="button" data-a11y-trigger [matMenuTriggerFor]="m">Actions</button>
+    <mat-menu #m="matMenu"><button mat-menu-item>Copy</button></mat-menu>`,
+})(Fixture);
+export default Fixture;
+```
+
+Angular libraries split their parts across sub-paths, so audit them with a sub-path target, for example `npm:@angular/material/menu`.
+
 For web components, make `mount(container)` the file's default export. It adds the archetype to the container. The tool imports the package first, so its elements are defined before `mount` runs. The `data-a11y-trigger` and `data-a11y-root` attributes can sit on a host element, a slotted child, or an element inside an **open** shadow root. A **closed** shadow root hides its content from every tool, so the report lists it as not testable.
 
 ## Library accessibility options

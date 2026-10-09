@@ -1,0 +1,7 @@
+{
+  "name": "fake-ng-split",
+  "version": "1.0.0",
+  "type": "module",
+  "peerDependencies": { "@angular/core": "^22.0.0" },
+  "exports": { ".": "./index.js", "./button": "./button.js", "./package.json": "./package.json" }
+}

@@ -18,6 +18,12 @@ export const REGISTRY = {
   "plain-utils": { name: "plain-utils", version: "3.0.0" },
   "fake-subpaths": { name: "fake-subpaths", version: "2.0.0", peerDependencies: { react: "*", "react-dom": "*" }, exports: { ".": "./index.js", "./button": "./button.js", "./button/v2": "./button-v2.js", "./dialog": "./dialog.js", "./es/*": "./es/*", "./internal/*": null, "./package.json": "./package.json" } },
   "fake-legacy": { name: "fake-legacy", version: "1.0.0", peerDependencies: { react: "*", "react-dom": "*" } },
+  "fake-ng-ui": { name: "fake-ng-ui", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" } },
+  "fake-ng-modules": { name: "fake-ng-modules", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" } },
+  "fake-ng-old": { name: "fake-ng-old", version: "1.0.0", peerDependencies: { "@angular/core": "^20.0.0 || ^21.0.0" } },
+  "fake-ng-split": { name: "fake-ng-split", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" }, exports: { ".": "./index.js", "./button": "./button.js", "./package.json": "./package.json" } },
+  // The real Angular Material, linked from the repository's dev dependencies, to prove a partly compiled library runs.
+  "@angular/material": { name: "@angular/material", version: "22.2.2", peerDependencies: { "@angular/core": "^22.0.0 || ^23.0.0", "@angular/cdk": "22.2.2" }, exports: { ".": "./index.js", "./button": "./button.js", "./menu": "./menu.js", "./tooltip": "./tooltip.js", "./package.json": "./package.json" } },
   "fake-vue-ui": { name: "fake-vue-ui", version: "1.0.0", peerDependencies: { vue: "^3.4.0" } },
   "fake-vue-controlled": { name: "fake-vue-controlled", version: "1.0.0", peerDependencies: { vue: "^3.4.0" } },
   "vue-two-lib": { name: "vue-two-lib", version: "1.0.0", peerDependencies: { vue: "^2.7.0" } },
@@ -35,7 +41,11 @@ export const npmView = async (spec) => {
 export async function installPackage({ dir, name, version, flavor }) {
   if (!REGISTRY[name]) throw new Error(`npm couldn't install ${name}@${version}: not found`);
   mkdirSync(join(dir, "node_modules"), { recursive: true });
-  cpSync(join(packages, name), join(dir, "node_modules", name), { recursive: true });
+  if (flavor === "angular") {
+    // Angular's packages, rxjs, and the real Material and CDK all come from the repository's dev dependencies.
+    for (const dep of ["@angular", "rxjs"]) if (existsSync(join(repoModules, dep))) symlinkSync(join(repoModules, dep), join(dir, "node_modules", dep));
+  }
+  if (!name.startsWith("@angular/")) cpSync(join(packages, name), join(dir, "node_modules", name), { recursive: true });
   if (flavor === "react") {
     for (const dep of ["react", "react-dom", "scheduler"]) if (existsSync(join(repoModules, dep))) symlinkSync(join(repoModules, dep), join(dir, "node_modules", dep));
   }
@@ -44,6 +54,7 @@ export async function installPackage({ dir, name, version, flavor }) {
   }
   const react = flavor === "react" ? JSON.parse(readFileSync(join(repoModules, "react", "package.json"), "utf8")).version : null;
   const vue = flavor === "vue" ? JSON.parse(readFileSync(join(repoModules, "vue", "package.json"), "utf8")).version : null;
-  return { dir, warnings: [], react, reactDom: react, vue, version };
+  const angular = flavor === "angular" ? JSON.parse(readFileSync(join(repoModules, "@angular", "core", "package.json"), "utf8")).version : null;
+  return { dir, warnings: [], react, reactDom: react, vue, angular, version };
 }
 

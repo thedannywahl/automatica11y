@@ -51,7 +51,7 @@ test("every dependency the code imports is a real dependency", () => {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) walk(path);
       // These write code for fixtures to bundle. The imports in their templates belong to the bundle, not to this package.
-      else if (entry.name.endsWith(".js") && !["react.js", "vue.js", "wc.js", "dialects.js", "jsx-recipes.js", "wc-recipes.js"].includes(entry.name)) {
+      else if (entry.name.endsWith(".js") && !["react.js", "vue.js", "angular.js", "wc.js", "dialects.js", "jsx-recipes.js", "wc-recipes.js"].includes(entry.name)) {
         const text = readFileSync(path, "utf8");
         for (const m of text.matchAll(/(?:from|import\()\s*["']([^."'/][^"']*)["']/g)) imports.add(m[1].startsWith("@") ? m[1].split("/").slice(0, 2).join("/") : m[1].split("/")[0]);
       }
@@ -78,7 +78,7 @@ test("the docs document every flag, every exit code, and the skill install, and 
   for (const flag of flags) assert.ok(docs.includes(`--${flag}`), `the docs document --${flag}`);
   for (const code of ["0", "1", "2", "3", "4"]) assert.match(docs, new RegExp(`\\| ${code} \\|`), `the docs explain exit code ${code}`);
   assert.match(readme, /skills\/automatica11y/);
-  assert.match(readme, /automatica11y@latest guide|automatica11y guide/);
+  // The README is the short case for the tool. The guide commands live in the docs.
   assert.match(docs, /automatica11y@latest guide/);
   for (const text of [readme, docs]) {
     assert.doesNotMatch(text, /init-skill/);

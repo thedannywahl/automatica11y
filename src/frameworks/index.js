@@ -14,20 +14,22 @@
  *   extension: string,
  *   runtime: string[],
  *   detect: (meta: any) => { kind: string, framework: string, reason: string } | null,
- *   bundle: (workDir: string) => { alias: Record<string, string>, define?: Record<string, string>, esbuild: Record<string, any> },
- *   entry: (fixturePath: string, pkg: string) => string,
+ *   inspect?: (workDir: string) => Record<string, any>,
+ *   bundle: (workDir: string) => { alias: Record<string, string>, define?: Record<string, string>, plugins?: any[], esbuild: Record<string, any> },
+ *   entry: (fixturePath: string, pkg: string, context?: Record<string, any>) => string,
  *   discoverEntry: (pkg: string) => string,
- *   template: (archetype: string, pkg: string, name?: string) => string | null,
+ *   template: (archetype: string, pkg: string, name?: string, info?: any) => string | null,
  *   generate: (input: any) => { candidates: Array<{ id: string, summary: string, source: string, used: string[] }>, reason: string | null },
  *   describe: (npm: any) => string,
  * }} Adapter
  */
+import angular from "./angular.js";
 import react from "./react.js";
 import vue from "./vue.js";
 import wc from "./wc.js";
 
 /** @type {Record<string, Adapter>} */
-export const ADAPTERS = { react, vue, wc };
+export const ADAPTERS = { react, vue, angular, wc };
 
 /** The adapter for a flavor (`react`, `vue`, or `wc`). */
 export function adapterFor(id) {

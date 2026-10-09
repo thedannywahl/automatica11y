@@ -38,7 +38,7 @@ Pick two component libraries, two versions of one component, or two sites, and `
 
 ### It tests components, not just pages
 
-Point it at an npm package. It installs the package on its own, finds the components, builds the test fixtures it needs (React, Vue 3, and web components), then opens the dialogs and menus and presses the keys.
+Point it at an npm package. It installs the package on its own, finds the components, builds the test fixtures it needs (React, Vue 3, Angular 22 and newer, and web components), then opens the dialogs and menus and presses the keys.
 
 ### It's' composable
 
@@ -63,6 +63,8 @@ automatica11y generates a machine-readable json findings report, and a human-rea
 ## Limits
 
 automatica11y is not an attestation or certification tool. Automated checks cover only part of WCAG. They can't judge whether alt text is meaningful, whether the reading order makes sense, or how real screen readers behave, and the screen reader it runs is simulated. A person has to check those.
+
+A report says "no automated violations found" where an engine found none, and never says "accessible." A gap, an error, or a result that isn't testable is a finding, not a pass.
 
 ## License
 

@@ -77,6 +77,23 @@ export function subpathProblem(workDir, name, subpath, version) {
   return fileExists(packageDir, subpath) ? null : `"${name}/${subpath}" isn't a file in ${name}${version ? `@${version}` : ""}, and the package has no exports map that lists what it offers.`;
 }
 
+/**
+ * Sub-paths an installed package offers, as specs a person could pass (`@scope/pkg/button`), for a message that says where
+ * to look when a package's main entry has no components. Patterns and `package.json` are left out.
+ * @param {string} workDir
+ * @param {string} name
+ * @param {number} [limit]
+ * @returns {string[]}
+ */
+export function offeredSubpaths(workDir, name, limit = 4) {
+  try {
+    const manifest = JSON.parse(readFileSync(join(workDir, "node_modules", name, "package.json"), "utf8"));
+    return exportKeys(manifest.exports).exact.slice(0, limit).map((key) => `${name}${key.slice(1)}`);
+  } catch {
+    return [];
+  }
+}
+
 /** The extensions a file can be imported without writing, for a package with no exports map. */
 const EXTENSIONS = ["", ".js", ".mjs", ".cjs", ".json", "/index.js", "/index.mjs", "/index.cjs"];
 

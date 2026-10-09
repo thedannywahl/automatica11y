@@ -35,7 +35,7 @@ export function installedVersion(dir, name) {
  * Install a package into its own directory, never next to another target's install.
  * npm adds the peer dependencies. A React package also needs react-dom, and a Vue package needs vue, so add them when the peers left them out.
  * Install scripts stay off, because the code is untrusted until it runs in the browser sandbox.
- * @param {{ dir: string, name: string, version: string, flavor: "react" | "vue" | "wc" | "unknown", run?: typeof runNpm }} options
+ * @param {{ dir: string, name: string, version: string, flavor: "react" | "vue" | "angular" | "wc" | "unknown", run?: typeof runNpm }} options
  */
 export async function installPackage({ dir, name, version, flavor, run = runNpm }) {
   mkdirSync(dir, { recursive: true });
@@ -66,23 +66,55 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
   if (flavor === "react") {
     const react = installedVersion(dir, "react");
     if (!react) {
-      await npm(["install", "react", "react-dom", ...NPM_FLAGS, "--legacy-peer-deps"]);
+      await npm(["install", "react", "react-dom", ...pinnedRuntime(dir, ["react", "react-dom"]), ...NPM_FLAGS, "--legacy-peer-deps"]);
       warnings.push(`${name} didn't bring in react, so the latest react and react-dom were added.`);
     } else if (!installedVersion(dir, "react-dom")) {
       // Name react too. A loose install prunes a package that only arrived as a peer, and react did.
-      await npm(["install", `react@${react}`, `react-dom@${react}`, ...NPM_FLAGS, "--legacy-peer-deps"]);
+      await npm(["install", `react@${react}`, `react-dom@${react}`, ...pinnedRuntime(dir, ["react", "react-dom"]), ...NPM_FLAGS, "--legacy-peer-deps"]);
     }
   }
   if (flavor === "vue" && !installedVersion(dir, "vue")) {
-    await npm(["install", "vue", ...NPM_FLAGS, "--legacy-peer-deps"]);
+    await npm(["install", "vue", ...pinnedRuntime(dir, ["vue"]), ...NPM_FLAGS, "--legacy-peer-deps"]);
     warnings.push(`${name} didn't bring in vue, so the latest vue was added.`);
   }
-  return { dir, warnings, react: installedVersion(dir, "react"), reactDom: installedVersion(dir, "react-dom"), vue: installedVersion(dir, "vue"), version: installedVersion(dir, name) };
+  if (flavor === "angular") {
+    // The Angular packages have to be the same version as core. A library's peers usually bring in core and common, not the compiler or the platform.
+    const core = installedVersion(dir, "@angular/core");
+    const missing = ANGULAR_RUNTIME.filter((pkg) => !installedVersion(dir, pkg));
+    if (!core) {
+      await npm(["install", ...ANGULAR_RUNTIME, ...pinnedRuntime(dir, ANGULAR_RUNTIME), ...NPM_FLAGS, "--legacy-peer-deps"]);
+      warnings.push(`${name} didn't bring in @angular/core, so the latest Angular packages were added.`);
+    } else if (missing.length) {
+      // Name everything already installed too. A loose install prunes a package that only arrived as a peer.
+      const adding = missing.map((pkg) => (pkg.startsWith("@angular/") ? `${pkg}@${core}` : pkg));
+      await npm(["install", ...adding, ...pinnedRuntime(dir, adding), ...NPM_FLAGS, "--legacy-peer-deps"]);
+    }
+  }
+  return { dir, warnings, react: installedVersion(dir, "react"), reactDom: installedVersion(dir, "react-dom"), vue: installedVersion(dir, "vue"), angular: installedVersion(dir, "@angular/core"), version: installedVersion(dir, name) };
 }
 
-/** The installed framework runtimes (React, React DOM, Vue), named again so a loose install can't prune them. */
-function pinnedRuntime(dir) {
-  return ["react", "react-dom", "vue"].flatMap((name) => (installedVersion(dir, name) ? [`${name}@${installedVersion(dir, name)}`] : []));
+/** What an Angular fixture needs beside the library: core, the runtime compiler, the platform, and the pieces core uses. */
+const ANGULAR_RUNTIME = ["@angular/core", "@angular/common", "@angular/compiler", "@angular/platform-browser", "rxjs"];
+
+/**
+ * Every package installed at the top level, as exact specs. A loose install (--legacy-peer-deps) prunes a package that only arrived
+ * as someone's peer, which is how React, and then Angular's CDK, went missing. Naming everything that's already there keeps it all.
+ * A spec for a package in `except` is left out, because the caller is installing that one at a different version.
+ * @param {string} dir
+ * @param {string[]} [except] Package names, or specs such as `name@range`.
+ * @returns {string[]}
+ */
+function pinnedRuntime(dir, except = []) {
+  const skip = new Set(except.map((spec) => spec.replace(/^(@?[^@]+)@.*$/, "$1")));
+  const root = join(dir, "node_modules");
+  /** @type {string[]} */
+  const names = [];
+  for (const entry of existsSync(root) ? readdirSync(root) : []) {
+    if (entry.startsWith(".")) continue;
+    if (entry.startsWith("@")) for (const inner of readdirSync(join(root, entry))) names.push(`${entry}/${inner}`);
+    else names.push(entry);
+  }
+  return names.filter((name) => !skip.has(name)).flatMap((name) => (installedVersion(dir, name) ? [`${name}@${installedVersion(dir, name)}`] : []));
 }
 
 const PACKAGE_SPEC = /^(@[a-z0-9~][\w.~-]*\/)?[a-z0-9~][\w.~-]*(@[\w.^~<>=*|-]+)?$/i;
@@ -98,7 +130,7 @@ export async function installExtraPackages({ dir, specs, run = runNpm }) {
   if (wanted.length === 0) return { installed: [], warnings: [] };
   for (const spec of wanted) if (!PACKAGE_SPEC.test(spec)) throw new Error(`The mapping's install list has "${spec}", which isn't a package name with an optional version.`);
   try {
-    await run(["install", ...wanted, ...pinnedRuntime(dir), "--legacy-peer-deps", ...NPM_FLAGS], dir);
+    await run(["install", ...wanted, ...pinnedRuntime(dir, wanted), "--legacy-peer-deps", ...NPM_FLAGS], dir);
   } catch (error) {
     throw new Error(`npm couldn't install ${wanted.join(", ")}: ${firstLine(error.message)}`);
   }
@@ -145,8 +177,8 @@ export async function installOptionalPeers({ dir, unresolved, run = runNpm }) {
   const wanted = unresolved.filter((name) => declared.has(name) && !installedVersion(dir, name));
   if (wanted.length === 0) return { installed: [], warnings: [] };
   // A loose install prunes packages that only arrived as peers, so name the framework again to keep it.
-  const keep = pinnedRuntime(dir);
-  const specs = [...wanted.map((name) => `${name}@${declared.get(name)}`), ...keep];
+  const adding = wanted.map((name) => `${name}@${declared.get(name)}`);
+  const specs = [...adding, ...pinnedRuntime(dir, adding)];
   try {
     await run(["install", ...specs, "--legacy-peer-deps", ...NPM_FLAGS], dir);
   } catch (error) {

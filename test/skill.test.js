@@ -207,7 +207,7 @@ test("every document tells a global install how to skip npx, without dropping th
 test("the runner carries a Vue example too, and says not to import h", () => {
   const fixtures = referenceFiles.find((f) => f.name === "references/fixtures.md").text;
   assert.match(runner, /A Vue 3 fixture\. It's also JSX[\s\S]*\*\*don't import `h`\*\*[\s\S]*```jsx\nimport \{ DialogClose[\s\S]*from "reka-ui";[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);
-  assert.match(runner, /React, Vue 3, or web components\. Name it, and say which version is unsupported \(Vue 2, for example\)/);
+  assert.match(runner, /React, Vue 3, Angular 22 and newer, or web components\. Name it, and say which version is unsupported \(Vue 2 or Angular 21, for example\)/);
   assert.match(fixtures, /For Vue 3, a fixture is also JSX[\s\S]*don't import them[\s\S]*export a function named `setup\(app\)`/);
 });
 

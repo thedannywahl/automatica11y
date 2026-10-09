@@ -147,3 +147,9 @@ My estimate, as focused sessions, not calendar time: phase 1 is two, phase 2 is 
 1. **Priority libraries,** as proof that the generic adapter works, never as special cases. Which Angular libraries matter most to you? I'd start with Material and CDK, then PrimeNG and Spartan UI. The rule for all of them: a failure is fixed with a general pattern or left as a gap, never with a rule that names the library.
 
 Decided: Angular 22 and newer.
+
+## 10. Phase 1 notes (October 9, 2026).
+
+Done: detection by peer range (floor 22), install with every top-level package pinned (a loose install otherwise prunes peer-only packages such as the CDK), the entry with the runtime compiler first and zone.js only when a library brought it, discovery that records one entry per exported name (aliases such as `MatButton` and `MatAnchor` are one class), selector-derived button and link templates (module import for non-standalone classes), sub-path hints, and the unsupported message that names the range. Tests: `test/angular.test.js` runs fake libraries (`fake-ng-ui` for all archetypes, `fake-ng-modules`, `fake-ng-old`, `fake-ng-split`) and the real `@angular/material/button`. Authored fixtures pass for dialog, menu, tabs, accordion, combobox, form-field, tooltip, and live-region.
+
+Not done: generated fixtures (phase 2), `libA11y` for Angular fixtures, TypeScript fixtures.

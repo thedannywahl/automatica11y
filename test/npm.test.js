@@ -473,7 +473,7 @@ test("an unsupported framework is named, and nothing is installed", { skip }, as
   const result = await run(["audit", "npm:svelte-lib", "--tiers", "rules"]);
   assert.equal(result.code, 4);
   assert.equal(result.results.targets[0].status, "unsupported");
-  assert.match(result.results.targets[0].reason, /Svelte packages aren't supported\. This version covers React, Vue 3, and web components\./);
+  assert.match(result.results.targets[0].reason, /Svelte packages aren't supported\. This version covers React, Vue 3, Angular 22 and newer, and web components\./);
   assert.equal(leftovers().length, before);
 });
 

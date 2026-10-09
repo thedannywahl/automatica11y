@@ -6,8 +6,8 @@ The tool installs each package into its own temporary folder (with install scrip
 
 Each archetype's fixture comes from the first of these that applies:
 
-1. **Authored.** A file you or your agent write at `fixtures/<target id>/<archetype>.jsx` (`.js` for web components). The same `.jsx` works for React and for Vue 3, following [Writing fixtures](fixtures.md). It always wins.
-2. **Template.** The tool builds `button` and `link` tests from the export name alone.
+1. **Authored.** A file you or your agent write at `fixtures/<target id>/<archetype>.jsx` (`.js` for Angular and web components). The same `.jsx` works for React and for Vue 3, following [Writing fixtures](fixtures.md). It always wins.
+2. **Template.** The tool builds `button` and `link` tests from the export name alone. For Angular it reads the class's own selector, so a button written as `button[matButton]` becomes a `<button matButton>`.
 3. **Generated.** For dialog, menu, tooltip, tabs, accordion, combobox, form-field, and live-region, the tool builds candidate fixtures from what the package exports. It looks for compound parts by common names (a root, a trigger, a content part, a title, a close part, and so on), either as `Dialog.Root` or as `DialogRoot`, and it tries the usual ways of switching a component on (an `open` prop and a close handler). For web components it reads what each element says about itself: its observed attributes, its members, and its slots. It then bundles each candidate, loads it, and checks that exactly one element is the trigger, that nothing logged an error, that activating the trigger shows a root, and that the root carries a role that fits. The first candidate that passes is used. If none does, the archetype is a gap, and the report lists what was tried and why each attempt failed.
 4. **Gap.** Anything else is a gap in the report.
 
@@ -21,9 +21,10 @@ Fixtures are code that the tool bundles and runs in a browser on your machine. W
 |---|---|---|
 | React | A `react` peer dependency or dependency. | JSX. Import the library and the tool installs it. |
 | Vue 3 | A `vue` peer dependency or dependency that allows version 3. | JSX that becomes `h()` calls. Don't import `h`. An optional `setup(app)` export installs plugins. |
+| Angular 22 and newer | An Angular core peer dependency or dependency whose range allows version 22 or later. | A `.js` file. Define the component by calling `Component({ ... })(Class)`, import the library, and export the class as the default. An optional `providers` export adds application providers. |
 | Web components | A custom elements manifest, or a base library such as Lit. | A `mount(container)` function. |
 
-Svelte, Angular, and Vue 2 packages report "unsupported framework." Their Storybooks still work, because a Storybook renders stories in a page whatever the framework.
+Svelte, Vue 2, and Angular packages older than version 22 report "unsupported framework." Their Storybooks still work, because a Storybook renders stories in a page whatever the framework.
 
 ## Components that aren't an npm package.
 

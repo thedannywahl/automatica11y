@@ -9,7 +9,7 @@ export const IMPACTS = ["minor", "moderate", "serious", "critical"];
 export const TOOLKIT_LEVELS = [1, 2, 3];
 export const FAIL_MODES = ["any", "all"];
 export const ARCHETYPES = ["button", "link", "dialog", "menu", "tabs", "combobox", "form-field", "accordion", "tooltip", "live-region", "chart"];
-export const FLAVORS = ["react", "vue", "wc"];
+export const FLAVORS = ["react", "vue", "angular", "wc"];
 export const MAPPING_STATUSES = ["template", "authored", "generated", "needs-fixture", "no-match"];
 
 /** What a candidate mapping says about one archetype of one npm target. */
@@ -49,7 +49,7 @@ export function parseMappingFile(input) {
   return result.output;
 }
 
-export const TARGET_KINDS = ["npm", "npm-react", "npm-vue", "npm-wc", "npm-unsupported", "npm-non-ui", "storybook", "url", "html-file", "static-dir"];
+export const TARGET_KINDS = ["npm", "npm-react", "npm-vue", "npm-angular", "npm-wc", "npm-unsupported", "npm-non-ui", "storybook", "url", "html-file", "static-dir"];
 
 const nullableString = v.nullable(v.string());
 
@@ -235,6 +235,7 @@ export const TargetResultSchema = v.object({
       react: nullableString,
       reactDom: nullableString,
       vue: v.optional(nullableString),
+      angular: v.optional(nullableString),
       tags: v.array(v.string()),
     }),
   ),
