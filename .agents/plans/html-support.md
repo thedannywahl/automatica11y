@@ -93,3 +93,11 @@ Built: `src/frameworks/html.js` (kind `npm-html`), detection by metadata (a styl
 The entry imports the stylesheets (esbuild links them with the page), puts the markup on the root, re-creates any `<script>` in the markup so it runs, then awaits each script import in order. A script that throws sets `window.__error` and logs, so the archetype becomes a gap with the message. Verified on the published `@pantoken/components` 2.0.2 and `@pantoken/interactions` 0.5.0: authored button and live-region snippets ran, and the dialog was a gap that says a fixture has to be written.
 
 Not done: the templates (phase 3), which need the bundled Chrome checked for interest invokers.
+
+## 9. Phase 3 notes (October 9, 2026).
+
+The eight native templates are in `src/frameworks/html.js`. The bundled Chrome (155) supports `interestfor` and `popover="hint"`, and the tooltip opens on keyboard focus. The report carries a note (`NATIVE_NOTE`) that a pass on a template never means the package's own components pass.
+
+Two things the templates showed. First, the accordion checks assumed `aria-expanded`, so a native `<details>` failed them. The interactions snapshot now reads a `<summary>`'s state from its `<details>`, which fixes native disclosures for every adapter. Second, the live-region template has to keep its region in the page and change only its text, or the "region exists before the message" check fails, which is the check doing its job.
+
+Known limit: the menu template fails the arrow-key check, because a bare popover has no arrow-key behavior. I left it failing and said so in the docs and the report note, because adding our own script would test our script and not the package.

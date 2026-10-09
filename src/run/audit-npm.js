@@ -277,7 +277,8 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     if (flavor === "html") {
       // There's no component to find, so an archetype is either a fixture someone writes or a gap that says so.
       for (const [archetype, entry] of Object.entries(candidates)) {
-        if (entry.status === "no-match") Object.assign(entry, { status: "needs-fixture", reason: `Plain HTML has no component to find, so the ${archetype} archetype needs a fixture someone writes.` });
+        if (adapterFor("html").template(archetype, "")) Object.assign(entry, { status: "template", reason: undefined });
+        else if (entry.status === "no-match") Object.assign(entry, { status: "needs-fixture", reason: `Plain HTML has no component to find, so the ${archetype} archetype needs a fixture someone writes.` });
       }
     }
     const wanted = plan.options.archetypes ?? ARCHETYPES;

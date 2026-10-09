@@ -70,6 +70,63 @@ ${scripts.map((spec) => `  await import(${JSON.stringify(spec)});`).join("\n")}
 `;
 };
 
+/**
+ * The bare native markup for an archetype, with no class names and nothing guessed from a stylesheet. It tests what the target's
+ * styles and scripts do to ordinary elements. A component built on classes needs a fixture a person writes. The browser does the
+ * opening and closing (`<dialog>`, `<details>`, popovers), so a template needs no script of its own except where there's no
+ * native way (a dialog's trigger, a message that appears).
+ */
+const TEMPLATES = {
+  button: '<button type="button" data-a11y-trigger data-a11y-root>Save</button>\n',
+  link: '<a href="#top" data-a11y-trigger data-a11y-root>Read more</a>\n',
+  "form-field": `<fieldset data-a11y-root>
+  <legend>Contact details</legend>
+  <p><label for="name">Name</label> <input id="name" name="name" type="text" autocomplete="name" data-a11y-trigger></p>
+  <p><label for="about">About you</label> <textarea id="about" name="about"></textarea></p>
+  <p><label for="size">Size</label> <select id="size" name="size"><option>Small</option><option>Medium</option><option>Large</option></select></p>
+  <p><input id="news" name="news" type="checkbox"> <label for="news">Send me news</label></p>
+  <fieldset>
+    <legend>Contact me by</legend>
+    <p><input id="by-email" name="by" type="radio" value="email"> <label for="by-email">Email</label></p>
+    <p><input id="by-phone" name="by" type="radio" value="phone"> <label for="by-phone">Phone</label></p>
+  </fieldset>
+  <p><label for="email">Email address</label> <input id="email" name="email" type="email" aria-invalid="true" aria-describedby="email-error"> <span id="email-error">Enter an email address like name@example.com.</span></p>
+</fieldset>
+`,
+  dialog: `<button type="button" id="open-dialog" data-a11y-trigger>Open dialog</button>
+<dialog id="dialog" data-a11y-root aria-labelledby="dialog-title">
+  <h2 id="dialog-title">Edit profile</h2>
+  <p>Update your details.</p>
+  <form method="dialog"><button>Close</button></form>
+</dialog>
+<script>document.getElementById("open-dialog").addEventListener("click", () => document.getElementById("dialog").showModal());</script>
+`,
+  accordion: `<details name="faq">
+  <summary data-a11y-trigger>Shipping</summary>
+  <div data-a11y-root><p>Orders ship within two business days.</p></div>
+</details>
+<details name="faq">
+  <summary>Returns</summary>
+  <div><p>Returns are free for 30 days.</p></div>
+</details>
+`,
+  "live-region": `<button type="button" id="show-message" data-a11y-trigger>Show message</button>
+<div id="message-region" role="status" data-a11y-root></div>
+<script>document.getElementById("show-message").addEventListener("click", () => {
+  document.getElementById("message-region").textContent = "Saved.";
+});</script>
+`,
+  menu: `<button type="button" data-a11y-trigger popovertarget="actions" aria-haspopup="menu">Actions</button>
+<div id="actions" popover data-a11y-root role="menu" aria-label="Actions">
+  <button type="button" role="menuitem">Copy</button>
+  <button type="button" role="menuitem">Paste</button>
+</div>
+`,
+  tooltip: `<button type="button" data-a11y-trigger interestfor="save-tip">Save</button>
+<div id="save-tip" popover="hint" role="tooltip" data-a11y-root>Saves your work.</div>
+`,
+};
+
 export default {
   id: "html",
   label: "HTML",
@@ -87,7 +144,7 @@ export default {
   bundle: () => ({ alias: {}, esbuild: { loader: { ".html": /** @type {"text"} */ ("text") } } }),
   entry,
   discoverEntry: () => "window.__a11yExports = [];\n",
-  template: () => null,
+  template: (/** @type {string} */ archetype) => TEMPLATES[/** @type {keyof typeof TEMPLATES} */ (archetype)] ?? null,
   generate: () => ({ candidates: [], reason: "Plain HTML has no exports or selectors to build a fixture from." }),
   describe: (npm) => {
     const loaded = /** @type {any} */ (npm).assets;

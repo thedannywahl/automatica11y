@@ -41,7 +41,19 @@ A fixture is a snippet of markup, `fixtures/<target id>/<archetype>.html`. The t
 <button type="button" class="instui-button" data-a11y-trigger data-a11y-root>Save</button>
 ```
 
-Plain HTML has no exports or selectors to read, so nothing is generated, and an archetype with no fixture is a gap. A script that fails to load or throws makes the archetype a gap with the error. The report says how many stylesheets and scripts loaded.
+Plain HTML has no exports or selectors to read, so nothing is generated. Eight archetypes have a **template** of bare native markup, with none of the package's classes, so you get results with no fixture at all:
+
+| Archetype | Template |
+|---|---|
+| button, link | a `<button>`, an `<a href>` |
+| form-field | a `<fieldset>` with a labelled text input, a textarea, a select, a checkbox, a radio group, and an invalid field tied to its message |
+| dialog | a `<dialog>` opened with `showModal()` |
+| accordion | two `<details>` that share a `name` |
+| live-region | a `role="status"` region that gets its text when a button is pressed |
+| menu | a popover with `role="menu"` and `role="menuitem"` buttons |
+| tooltip | a `popover="hint"` with `role="tooltip"`, opened by `interestfor` (needs a recent Chrome) |
+
+These show what the package's styles and scripts do to ordinary elements. They don't test a component the package built, and the report says so. Native markup has no arrow-key menu behavior, so a menu's arrow-key check fails on it. Tabs, combobox, and chart have no native element, so they are gaps until you write a fixture. A script that fails to load or throws makes the archetype a gap with the error. The report says how many stylesheets and scripts loaded.
 
 ## Components that aren't an npm package.
 

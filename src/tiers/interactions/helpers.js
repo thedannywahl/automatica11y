@@ -120,7 +120,8 @@ export function installHelpers() {
         clicks: window.__a11yClicks,
         triggerTag: trigger?.localName ?? null,
         triggerRole: trigger?.getAttribute("role") ?? null,
-        expanded: trigger?.getAttribute("aria-expanded") ?? null,
+        // A native disclosure (<summary> in <details>) says whether it's open with the details element's own state, not an attribute.
+        expanded: trigger?.getAttribute("aria-expanded") ?? (trigger?.localName === "summary" && trigger.parentElement?.localName === "details" ? String(trigger.parentElement.open) : null),
         rootExists: Boolean(root),
         rootVisible: visible(root),
         rootModal: root?.getAttribute("aria-modal") === "true" || root?.getAttribute("role") === "alertdialog",

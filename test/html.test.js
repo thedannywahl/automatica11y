@@ -90,16 +90,17 @@ test("HTML: an authored snippet runs against the target's styles, and its script
   assert.match(result.report, /as plain HTML \(2 stylesheets, 1 script\)\./);
 });
 
-test("HTML: a package with no framework and no list runs an authored snippet, and other archetypes are gaps that say so", { skip, timeout: 240_000 }, async () => {
-  const result = await run(["audit", "css=npm:fake-html-css", "--archetypes", "button,dialog", "--tiers", "rules"], {
+test("HTML: a package with no framework and no list runs an authored snippet, a template, and a gap that says what to write", { skip, timeout: 240_000 }, async () => {
+  const result = await run(["audit", "css=npm:fake-html-css", "--archetypes", "button,dialog,tabs", "--tiers", "rules"], {
     "fixtures/css/button.html": '<button type="button" data-a11y-trigger data-a11y-root>Save</button>',
   });
   assert.equal(result.code, 0, result.stderr);
   const target = result.results.targets[0];
   assert.equal(target.npm.flavor, "html");
   assert.deepEqual([target.archetypes.button.status, target.archetypes.button.fixture.source], ["ran", "authored"]);
-  assert.equal(target.archetypes.dialog.status, "gap");
-  assert.match(target.archetypes.dialog.reason, /Plain HTML has no component to find[\s\S]*Write fixtures\/css\/dialog\.html/);
+  assert.equal(target.archetypes.tabs.status, "gap");
+  assert.match(target.archetypes.tabs.reason, /Plain HTML has no component to find[\s\S]*Write fixtures\/css\/tabs\.html/);
+  assert.deepEqual([target.archetypes.dialog.status, target.archetypes.dialog.fixture.source], ["ran", "template"]);
 });
 
 test("HTML: a script that throws is a gap with the reason, never a pass", { skip, timeout: 240_000 }, async () => {
@@ -109,4 +110,20 @@ test("HTML: a script that throws is a gap with the reason, never a pass", { skip
   const button = result.results.targets[0].archetypes.button;
   assert.equal(button.status, "gap");
   assert.match(button.reason, /This script can't start/);
+});
+
+test("HTML: bare native templates cover eight archetypes, and tabs, combobox, and chart are gaps", { skip, timeout: 400_000 }, async () => {
+  const result = await run(["audit", "css=npm:fake-html-css/base.css,fake-html-css/components.css", "--tiers", "rules,interactions"]);
+  assert.equal(result.code, 0, result.stderr);
+  const target = result.results.targets[0];
+  for (const name of ["button", "link", "form-field", "dialog", "accordion", "live-region", "menu", "tooltip"]) {
+    assert.deepEqual([target.archetypes[name].status, target.archetypes[name].fixture.source], ["ran", "template"], `${name}: ${target.archetypes[name].reason ?? ""}`);
+  }
+  for (const name of ["tabs", "combobox", "chart"]) assert.equal(target.archetypes[name].status, "gap", name);
+  assert.deepEqual(target.archetypes.dialog.configs.map((c) => c.state), ["closed", "open"]);
+  assert.deepEqual(target.archetypes.accordion.configs.map((c) => c.state), ["collapsed", "expanded"]);
+  // A native <details> exposes its state without aria-expanded, so its checks pass.
+  const failed = target.archetypes.accordion.configs.flatMap((c) => Object.values(c.tiers.interactions?.checks ?? []).filter((x) => x.result === "fail"));
+  assert.deepEqual(failed, []);
+  assert.match(result.report, /\*\*Native markup templates\.\*\*[\s\S]*never means the package's own components pass/);
 });

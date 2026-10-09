@@ -267,6 +267,14 @@ export function hasGenerated(results) {
   return results.targets.some((t) => Object.values(t.archetypes ?? {}).some((a) => a.fixture?.source === "generated"));
 }
 
+/** True when a plain HTML target ran from a native-markup template. */
+export function hasNativeTemplates(results) {
+  return results.targets.some((t) => t.npm?.flavor === "html" && Object.values(t.archetypes ?? {}).some((a) => a.fixture?.source === "template"));
+}
+
+/** What a plain HTML template is, and what it can't say about a package. */
+export const NATIVE_NOTE = "**Native markup templates.** For a plain HTML target the tool used bare native markup (a button, a link, a fieldset, a dialog, details, a popover) with none of the package's classes, so these results show what the package's styles and scripts do to ordinary elements. They don't test a component the package built, and a pass here never means the package's own components pass. A check that needs script behavior the markup doesn't have, such as arrow keys in a menu, measures the bare markup and not the package. Bring a fixture of your own to test the package's components.";
+
 /** What "generated" means, for any report that has one. */
 export const GENERATED_NOTE = "**Generated fixtures.** Where no fixture was written, the tool built one from the parts the package exports (or from what a custom element says about itself) and ran it only after it checked that the trigger and root behaved. A generated fixture is a guess about how the library is meant to be assembled, so a failure may come from how it was wired and not from the library. Treat generated results as lower evidence than an authored fixture. The source of each is in the `generated` folder beside this report. Copy one to `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) and edit it to make it an authored fixture.";
 
@@ -289,6 +297,7 @@ export function targetSection(planTarget, target, { generatedNote = true } = {})
   }
   if (target.npm) lines.push("**Archetypes.** A gap means the archetype wasn't tested, so it counts against coverage and never as a pass.", "", ...archetypeTable(target), "");
   if (generatedNote && target.npm && hasGenerated({ targets: [target] })) lines.push(GENERATED_NOTE, "");
+  if (generatedNote && target.npm && hasNativeTemplates({ targets: [target] })) lines.push(NATIVE_NOTE, "");
   /** @type {Set<string>} */
   const skipped = new Set();
   for (const [name, archetype] of Object.entries(target.archetypes)) {

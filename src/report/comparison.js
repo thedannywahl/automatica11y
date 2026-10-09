@@ -10,6 +10,8 @@ import {
   configLabel,
   finish,
   hasGenerated,
+  hasNativeTemplates,
+  NATIVE_NOTE,
   notTestableLines,
   reportFooter,
   reportHeader,
@@ -185,6 +187,7 @@ export function renderComparison({ plan, results }) {
   }
   lines.push(...notTestableLines(results));
   if (hasGenerated(results)) lines.push(GENERATED_NOTE, "");
+  if (hasNativeTemplates(results)) lines.push(NATIVE_NOTE, "");
 
   lines.push("## Findings.", "", FINDINGS_NOTE, "", ...(o.tiers.includes("rules") ? impactTables(results, o.engines) : []));
   for (const key of keys) {
