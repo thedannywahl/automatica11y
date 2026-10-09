@@ -67,12 +67,13 @@ function linked(archetype, exports, targetPattern) {
   for (const pointer of all) {
     const inputs = pointer.angular.inputs ?? [];
     const attrs = new Set((pointer.angular.selectors ?? []).flat().filter((x) => typeof x === "string"));
-    const input = inputs.find((name) => attrs.has(name) && /For$|^for$|Trigger|Target|Menu|Panel|Content|Overlay/.test(name)) ?? inputs.find((name) => /For$/.test(name)) ?? inputs.find((name) => attrs.has(name));
+    const input = inputs.find((name) => attrs.has(name) && /For$|^for$|Trigger|Target|Menu|Panel|Content|Overlay/.test(name)) ?? inputs.find((name) => /For$/.test(name)) ?? inputs.find((name) => name === archetype || /^(menu|panel|popup|listbox|content|target|overlay|origin)$/.test(name)) ?? inputs.find((name) => attrs.has(name));
     if (!input) continue;
     // A library names its parts alike (`MatMenuTrigger`, `MatMenu`), so a target that starts the same way comes first and the rest are left out.
     const prefix = pointer.name.match(/^[A-Z][a-z0-9]*/)?.[0] ?? "";
     const near = targets.filter((target) => target.name.startsWith(prefix));
-    for (const target of near.length ? near : targets) {
+    // The plainest name first: `Menu` before `MenuBar`.
+    for (const target of (near.length ? near : targets).slice().sort((a, b) => a.name.length - b.name.length)) {
       if (target !== pointer && exportRef(target) && usable(pointer, target)) pairs.push({ pointer, target, input });
     }
   }
@@ -81,8 +82,15 @@ function linked(archetype, exports, targetPattern) {
 
 const nameMatches = (parts, pattern) => parts.filter((part) => pattern.test(part.name));
 
-/** The first text-like input of a class, such as `label` or `title`, so a recipe can fill it in. */
-const textInput = (part, pattern = /^(label|title|header|heading|summary|text|value|name)$/) => (part.angular.inputs ?? []).find((name) => pattern.test(name)) ?? null;
+/**
+ * The first text-like input of a class, such as `label` or `title`, so a recipe can fill it in. A directive that carries its
+ * value on its own attribute (`brnTabsTrigger="one"`) counts too.
+ */
+const textInput = (part, pattern = /^(label|title|header|heading|summary|text|value|name)$/) => {
+  const inputs = part.angular.inputs ?? [];
+  const attrs = new Set((part.angular.selectors ?? []).flat().filter((x) => typeof x === "string"));
+  return inputs.find((name) => pattern.test(name)) ?? inputs.find((name) => attrs.has(name) && part.angular.kind === "directive") ?? null;
+};
 
 /**
  * The source of one fixture. The marking code runs outside Angular's zone, so its polling doesn't trigger change detection.
@@ -197,30 +205,56 @@ function groups(archetype, pkg, exports, { groupPattern, childPattern, childTag 
   const near = (container) => exports.filter((p) => plain(p) && p.name.startsWith(container.name.match(/^[A-Z][a-z0-9]*/)?.[0] ?? "\0"));
   // The plainest child comes first: `MatTab` before `MatTabLabel`, which only works inside the other.
   const byLength = (a, b) => a.name.length - b.name.length;
-  const headerFor = (child) => archetype !== "accordion" ? null : exports.find((p) => p.angular && usable(p) && /Header$/.test(p.name) && p.name.startsWith(child.name));
-  const panel = (child, text, header) => {
+  const stemOf = (name) => name.replace(/(Group|s)$/, "");
+  /** A part that sits beside the children (`AccordionHeader`, `TabList`): named like the child or like the container. */
+  const partOf = (pattern, child, container) => exports.find((p) => p.angular && p.angular.kind !== "service" && usable(p) && pattern.test(p.name) && (p.name.startsWith(child.name) || (container && p.name.startsWith(stemOf(container.name)))));
+  const isAccordion = archetype === "accordion";
+  const headerFor = (child, container) => (isAccordion ? partOf(/Header$/, child, container) : null);
+  const triggerFor = (child, container) => (isAccordion ? partOf(/Trigger$/, child, container) : null);
+  const contentFor = (child, container) => (archetype === "tabs" || isAccordion ? partOf(/Content$/, child, container) : null);
+  const listFor = (child, container) => (archetype === "tabs" ? partOf(/List$/, child, container) : null);
+  /** One child with its header, trigger, and content parts, when the library has them. */
+  const panel = (child, text, parts) => {
     const labelInput = textInput(child);
-    const headerMarkup = header ? element(header, { prefer: "div", inner: text }) : null;
-    return element(child, { prefer: childTag, extra: childTag === "button" ? ['type="button"'] : [], values: labelInput && !headerMarkup ? { [labelInput]: text } : {}, inner: headerMarkup ? `${headerMarkup}${text} content.` : labelInput ? `${text} content.` : text });
+    const trigger = parts.trigger ? element(parts.trigger, { prefer: "button", extra: ['type="button"'], values: textInput(parts.trigger) ? { [textInput(parts.trigger)]: text } : {}, inner: text }) : null;
+    // A header that doesn't name its own element is a heading, which is what a disclosure trigger sits in.
+    const header = parts.header ? element(parts.header, { prefer: "h3", inner: trigger ?? text }) : trigger;
+    const body = `${text} content.`;
+    const content = parts.content && archetype === "accordion" ? element(parts.content, { prefer: "div", inner: body }) : null;
+    // A text input (`label`) names the child, so the text between the tags is its content. A value input only tells children apart.
+    const named = labelInput && /^(label|title|header|heading|summary|text|name)$/.test(labelInput);
+    const markup = element(child, { prefer: childTag, extra: [], values: labelInput ? { [labelInput]: text } : {}, inner: header ? `${header}${content ?? body}` : named ? body : text });
+    return markup && childTag === "button" && markup.startsWith("<button ") ? markup.replace("<button ", '<button type="button" ') : markup;
   };
-  const seenChildren = new Set();
+  /** A tab's content panel sits outside the list, tied to its tab by the same value. */
+  const contents = (content, labels) => (content ? labels.map((text) => element(content, { prefer: "div", values: textInput(content) ? { [textInput(content)]: text } : {}, inner: `${text} content.` })).join("") : "");
   for (const container of containers.slice(0, 2)) {
     const children = [...new Set([...all.filter(plain), ...near(container)])].sort(byLength);
     for (const child of children.slice(0, 2)) {
-      const header = headerFor(child);
-      const one = panel(child, "One", header);
-      const two = panel(child, "Two", header);
-      const wrapped = one && two && element(container, { inner: `${one}${two}` });
-      if (wrapped) out.push(candidate(`${archetype}-group-${container.name}-${child.name}`, `${container.name} holding two ${child.name}`, [container, child, ...(header ? [header] : [])], fixture({ archetype, pkg, parts: [container, child, ...(header ? [header] : [])], template: wrapped })));
-      seenChildren.add(child);
+      const parts = { header: headerFor(child, container), trigger: triggerFor(child, container), content: contentFor(child, container) };
+      const list = listFor(child, container);
+      const one = panel(child, "One", parts);
+      const two = panel(child, "Two", parts);
+      const valueInput = textInput(container);
+      const first = valueInput ? { [valueInput]: "One" } : {};
+      const used = [container, child, ...[parts.header, parts.trigger, parts.content, list].filter(Boolean)];
+      if (!one || !two) continue;
+      if (list) {
+        const wrappedList = element(list, { prefer: "div", inner: `${one}${two}` });
+        const nested = wrappedList && element(container, { values: first, inner: `${wrappedList}${contents(parts.content, ["One", "Two"])}` });
+        if (nested) out.push(candidate(`${archetype}-list-${container.name}-${list.name}-${child.name}`, `${container.name} holding ${list.name} with two ${child.name}`, used, fixture({ archetype, pkg, parts: used, template: nested })));
+      }
+      const wrapped = element(container, { values: first, inner: `${one}${two}` });
+      if (wrapped) out.push(candidate(`${archetype}-group-${container.name}-${child.name}`, `${container.name} holding two ${child.name}`, used, fixture({ archetype, pkg, parts: used, template: wrapped })));
     }
   }
   if (archetype === "accordion") {
     // A single disclosure panel, with no container around it.
     for (const child of [...new Set([...all.filter(plain), ...containers.flatMap(near)])].sort(byLength).slice(0, 2)) {
-      const header = headerFor(child);
-      const alone = panel(child, "Details", header);
-      if (alone) out.push(candidate(`${archetype}-single-${child.name}`, `${child.name} on its own`, [child, ...(header ? [header] : [])], fixture({ archetype, pkg, parts: [child, ...(header ? [header] : [])], template: alone })));
+      const parts = { header: headerFor(child, null), trigger: triggerFor(child, null), content: contentFor(child, null) };
+      const alone = panel(child, "Details", parts);
+      const used = [child, ...[parts.header, parts.trigger, parts.content].filter(Boolean)];
+      if (alone) out.push(candidate(`${archetype}-single-${child.name}`, `${child.name} on its own`, used, fixture({ archetype, pkg, parts: used, template: alone })));
     }
   }
   for (const part of all.filter((p) => itemsInput(p))) {
@@ -231,7 +265,7 @@ function groups(archetype, pkg, exports, { groupPattern, childPattern, childTag 
   return out;
 }
 
-const tabs = (pkg, exports) => groups("tabs", pkg, exports, { groupPattern: /(Tabs|TabGroup|TabList|TabNav|TabNavBar|TabBar|TabView)$|^Tab(s|List|Group|Nav|Bar)$/, childPattern: /Tab(Link|Item|Label|Panel)?$|Tab$/, childTag: "button" });
+const tabs = (pkg, exports) => groups("tabs", pkg, exports, { groupPattern: /(Tabs|TabGroup|TabList|TabNav|TabNavBar|TabBar|TabView)$|^Tab(s|List|Group|Nav|Bar)$/, childPattern: /Tabs?(Link|Item|Label|Panel|Trigger)?$/, childTag: "button" });
 
 function accordions(pkg, exports) {
   const out = groups("accordion", pkg, exports, { groupPattern: /(Accordion|Expansion|Collapse|Collapsible)s?$/, childPattern: /(Panel|Item|Section|Tab|Disclosure)$/, childTag: "div" });

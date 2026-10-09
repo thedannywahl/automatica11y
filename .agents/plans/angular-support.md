@@ -155,3 +155,17 @@ Done: detection by peer range (floor 22), install with every top-level package p
 Phase 2 (generated fixtures) is in `src/harness/generate/angular-recipes.js`: selector and `exportAs` driven recipes for all eight generatable archetypes, probed like React and Vue. The fake library `fake-ng-ui` generates all eight, `fake-ng-wrong` shows a bad menu and a dead dialog service are rejected, and the real Material menu, dialog, tabs, and expansion panel generate. Known gaps on Material: the tooltip is aria-hidden with its role on a hidden description (a true finding, so a gap), and the autocomplete and form field need parts from other entry points (`MatOption`, `MatInput`), which a one-target run can't import. The probe now retries a tooltip with keyboard focus, because some libraries ignore programmatic focus.
 
 Not done: `libA11y` for Angular fixtures, TypeScript fixtures.
+
+## 11. Phase 3 notes (October 9, 2026).
+
+Real libraries on Angular 22, run through the tool with no library-specific code (the same selector and `exportAs` recipes):
+
+| Library | Generated | Gap, and why |
+|---|---|---|
+| Angular Material | menu, dialog, tabs, accordion | tooltip (the visible tooltip is `aria-hidden`), autocomplete and form field (need `MatOption` and `MatInput` from other entry points) |
+| CDK | menu, dialog | not tried further |
+| PrimeNG | dialog, tabs, accordion, form field, button template | menu, tooltip, autocomplete (a role isn't set or the parts don't assemble); message isn't matched by the live-region name pattern |
+| Spartan (brain) | dialog, tabs, accordion | not tried further |
+| Angular Aria | menu, tabs | accordion and combobox need providers from parent parts |
+
+What those runs changed in the recipes: parts that keep their own element (`mat-tab`, `p-button`), a list part between a container and its children (`TabList`), header, trigger, and content parts for accordions (the header becomes a heading), a value carried on a directive's own attribute (`brnTabsTrigger="One"`), and pointer inputs named `menu` or `panel`. The weekly latest-dependencies job now installs the latest Angular, CDK, and Material.

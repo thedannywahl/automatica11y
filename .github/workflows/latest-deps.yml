@@ -26,6 +26,8 @@ jobs:
           npm install --no-package-lock --no-save
           axe-core@latest @axe-core/playwright@latest accessibility-checker-engine@latest
           playwright-core@latest @guidepup/virtual-screen-reader@latest esbuild@latest valibot@latest
+          @angular/core@latest @angular/common@latest @angular/compiler@latest @angular/platform-browser@latest
+          @angular/cdk@latest @angular/material@latest rxjs@latest
       - run: npx playwright-core install --with-deps --only-shell chromium
       - name: Record the versions
         run: npm ls --depth=0 | tee versions.txt

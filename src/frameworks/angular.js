@@ -97,12 +97,13 @@ export function template(archetype, pkg, exportName, info) {
   const want = { button: "button", link: "a" }[archetype];
   const angular = info?.angular;
   if (!want || !angular || (angular.kind !== "component" && angular.kind !== "directive")) return null;
-  const match = markupFor(angular.selectors, { prefer: want });
-  if (!match || match.tag !== want) return null;
+  // A button class may name its own element (`p-button`), which a link class may not: a link has to be an anchor.
+  const match = markupFor(angular.selectors, { prefer: want }) ?? (archetype === "button" ? markupFor(angular.selectors, {}) : null);
+  if (!match || (archetype === "link" && match.tag !== want)) return null;
   const imports = angular.standalone ? [exportName] : angular.moduleName ? [angular.moduleName] : null;
   if (!imports) return null;
   const attrs = [attributeText(match.attrs), "data-a11y-trigger", "data-a11y-root", want === "a" ? 'href="#top"' : 'type="button"'].filter(Boolean).join(" ");
-  const html = `<${want} ${attrs}>${want === "a" ? "Read more" : "Save"}</${want}>`;
+  const html = `<${match.tag} ${attrs}>${want === "a" ? "Read more" : "Save"}</${match.tag}>`;
   return `import { Component } from "@angular/core";
 import { ${imports.join(", ")} } from ${JSON.stringify(pkg)};
 

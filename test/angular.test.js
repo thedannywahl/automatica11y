@@ -212,3 +212,24 @@ test("Angular: the real Angular Material menu and tabs are generated from their 
     assert.deepEqual([found.status, found.fixture.source, found.fixture.recipe], ["ran", "generated", recipe], name);
   }
 });
+
+test("a button that names its own element keeps it, a link doesn't, and nested tabs and accordions are built from their parts", () => {
+  const own = { angular: { kind: "component", standalone: true, selectors: [["p-button"]] } };
+  assert.match(angular.template("button", "x", "Button", own), /<p-button [^>]*data-a11y-trigger/);
+  assert.equal(angular.template("link", "x", "Button", own), null, "a link has to be an anchor");
+  const tabs = [
+    record("Tabs", "component", { selectors: [["p-tabs"]], inputs: ["value"] }),
+    record("TabList", "component", { selectors: [["p-tablist"]] }),
+    record("Tab", "component", { selectors: [["p-tab"]], inputs: ["value"] }),
+  ];
+  const nested = generateAngular({ archetype: "tabs", pkg: "x", exports: tabs }).candidates[0];
+  assert.equal(nested.id, "tabs-list-Tabs-TabList-Tab");
+  assert.match(nested.source, /<p-tabs value=\\"One\\"><p-tablist><p-tab value=\\"One\\">One<\/p-tab>/);
+  const accordion = [
+    record("Accordion", "component", { selectors: [["p-accordion"]] }),
+    record("AccordionPanel", "component", { selectors: [["p-accordion-panel"]], inputs: ["value"] }),
+    record("AccordionHeader", "component", { selectors: [["p-accordion-header"]] }),
+    record("AccordionContent", "component", { selectors: [["p-accordion-content"]] }),
+  ];
+  assert.match(generateAngular({ archetype: "accordion", pkg: "x", exports: accordion }).candidates[0].source, /<p-accordion-panel value=\\"One\\"><p-accordion-header>One<\/p-accordion-header><p-accordion-content>One content\.<\/p-accordion-content>/);
+});
