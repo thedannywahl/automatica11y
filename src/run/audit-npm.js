@@ -295,7 +295,6 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     }
 
     const candidates = candidateMapping({ flavor, exports: found.exports, tags: found.tags });
-    const adapter = adapterFor(flavor);
     if (flavor === "html") {
       // There's no component to find, so an archetype is either a fixture someone writes or a gap that says so.
       for (const [archetype, entry] of Object.entries(candidates)) {
@@ -303,6 +302,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
         else if (entry.status === "no-match") Object.assign(entry, { status: "needs-fixture", reason: `Plain HTML has no component to find, so the ${archetype} archetype needs a fixture someone writes.` });
       }
     }
+    const adapter = adapterFor(flavor);
     const wanted = plan.options.archetypes ?? ARCHETYPES;
     /** @type {TargetMapping} */
     const mapping = {};
@@ -435,8 +435,8 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
           reactDom: installed.reactDom,
           vue: installed.vue ?? null,
           angular: installed.angular ?? null,
-          tags: flavor === "wc" ? found.tags : [],
           ...(flavor === "html" ? { assets: /** @type {any} */ (context).assets } : {}),
+          tags: flavor === "wc" ? found.tags : [],
         },
         summary: (() => {
           const base = summarize(ordered, plan.options.engines, gaps);

@@ -62,7 +62,8 @@ export function parseRunArgs(command, argv) {
   } catch (error) {
     throw new UsageError(error instanceof Error ? error.message.split(". ")[0] : String(error));
   }
-  const { values, positionals } = parsed;
+  const values = /** @type {{ [K in keyof typeof OPTION_DEFS]?: typeof OPTION_DEFS[K]["type"] extends "boolean" ? boolean : string }} */ (parsed.values);
+  const { positionals } = parsed;
   if (values.help) return { help: true, targets: [], planOnly: false, options: null };
 
   if (command === "audit" && positionals.length !== 1) {

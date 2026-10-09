@@ -43,14 +43,20 @@ test("each page has the structure a screen reader user needs: language, title, s
     const ids = [...text.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
     assert.equal(new Set(ids).size, ids.length, `${page.out} has no duplicate ids`);
   }
-  assert.match(html["index.html"], /<title>automatica11y<\/title>/);
+  assert.match(html["index.html"], /<title>automatica11y: Accessibility Testing and Comparison<\/title>/);
+  assert.ok(/<title>([^<]+)<\/title>/.exec(html["index.html"])[1].length >= 50);
+  assert.ok(/<title>([^<]+)<\/title>/.exec(html["index.html"])[1].length <= 60);
   assert.match(html["targets.html"], /<title>Targets - automatica11y<\/title>/);
 });
 
 test("each page includes brand metadata, header logo, and copied assets", () => {
   for (const page of PAGES) {
     const text = html[page.out];
+    assert.match(text, /<meta property="og:site_name" content="automatica11y">/);
     assert.match(text, /<meta property="og:image" content="https:\/\/automatica11y\.dev\/og\.png">/);
+    assert.match(text, /<meta property="og:image:alt" content="automatica11y: test accessibility and compare results for web pages, Storybook builds, and npm components\.">/);
+    assert.match(text, /<meta name="twitter:card" content="summary_large_image">/);
+    assert.match(text, /<meta name="twitter:image" content="https:\/\/automatica11y\.dev\/og\.png">/);
     assert.match(text, /<link rel="icon" type="image\/svg\+xml" href="favicon\.svg">/);
     assert.match(text, /<link rel="icon" href="favicon\.ico">/);
     assert.match(text, /<a class="site-logo" href="index\.html"><span class="site-logo-main"><span class="site-logo-icon" aria-hidden="true"><\/span>automatic<\/span><span class="site-logo-accent">a11y<\/span><\/a>/);

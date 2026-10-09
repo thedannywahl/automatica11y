@@ -175,19 +175,26 @@ footer.site p { margin: 0 0 0.5rem; max-width: 52rem; }
 function template({ page, article, version }) {
   const nav = PAGES.map((p) => `<li><a href="${p.out}"${p.out === page.out ? ' aria-current="page"' : ""}>${escapeHtml(p.nav)}</a></li>`).join("\n        ");
   const canonical = `${SITE}${page.out === "index.html" ? "" : page.out}`;
+  const title = page.out === "index.html" ? "automatica11y: Accessibility Testing and Comparison" : `${article.title} - automatica11y`;
   return `<!doctype html>
 <html lang="en" data-pantoken-color="plum">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(page.out === "index.html" ? "automatica11y" : `${article.title} - automatica11y`)}</title>
+<title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeHtml(article.description)}">
 <link rel="canonical" href="${canonical}">
 <meta property="og:type" content="website">
-<meta property="og:title" content="${escapeHtml(page.out === "index.html" ? "automatica11y" : `${article.title} - automatica11y`)}">
+<meta property="og:site_name" content="automatica11y">
+<meta property="og:title" content="${escapeHtml(title)}">
 <meta property="og:description" content="${escapeHtml(article.description)}">
 <meta property="og:url" content="${canonical}">
 <meta property="og:image" content="https://${DOMAIN}/og.png">
+<meta property="og:image:alt" content="automatica11y: test accessibility and compare results for web pages, Storybook builds, and npm components.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escapeHtml(title)}">
+<meta name="twitter:description" content="${escapeHtml(article.description)}">
+<meta name="twitter:image" content="https://${DOMAIN}/og.png">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="pantoken.css">
