@@ -54,7 +54,9 @@ Without a mapping, the tool loads every stylesheet and script the primary's meta
 | dialog | `<button>` that calls `showModal()` on a `<dialog>` that has a heading and a close button |
 | accordion | `<details>` and `<summary>` |
 | live-region | a `<button>` that adds a `<div role="status">` message |
-| tabs, menu, combobox, tooltip, chart | No template. Native HTML has no element for them, so they are gaps with a reason, unless a fixture is brought. |
+| menu | a `<button popovertarget>` that toggles a `popover` element with `role="menu"` and `role="menuitem"` buttons. The browser does the open and close. |
+| tooltip | a `<button>` with `interestfor` pointing at a `popover="hint"` element with `role="tooltip"`, so it opens on focus. This needs a browser that supports interest invokers, so where the bundled browser doesn't, it's a gap that says so. |
+| tabs, combobox, chart | No template. Native HTML has no element for tabs. A `<select>` or `<datalist>` draws its list outside the page, so there's no surface to test, and a chart has nothing to press. They are gaps with a reason, unless a fixture is brought. |
 
 - A report marks these results as **native markup under the package's styles**, a lower claim than a result for a component the package built. The report never says the package's component passed.
 - **Authored** fixtures win, as everywhere. They work for every archetype, and a consumer can bring a full set. The same recipe format as the other adapters (`fixtures/<id>/<archetype>.html`, or a path in the mapping).
@@ -64,7 +66,7 @@ Without a mapping, the tool loads every stylesheet and script the primary's meta
 
 1. **Targets.** The comma list in `classify` and `resolve-npm`, the install of several packages into one folder, the report's npm details, and `compare`. Tests with fake packages.
 2. **Adapter.** Detection, asset discovery, the page entry, the `.html` fixture, and the mapping's `styles` and `scripts`. Tests with fake CSS and JavaScript packages, including a script that must run after mount and a script that fails to load.
-3. **Templates.** The six native templates, their report wording, and gaps for the rest.
+3. **Templates.** The eight native templates, their report wording, and gaps for the rest.
 4. **Real run.** `@pantoken/components` and `@pantoken/interactions` as the proof, with an authored `.instui-button` fixture to show a consumer fixture working. Docs, the runner skill, and a plan note.
 
 ## 6. Risks.
