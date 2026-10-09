@@ -256,7 +256,8 @@ const FLAGS = `Options:
 /** @param {string} [command] */
 export function usage(command) {
   const header = {
-    audit: "Usage: automatica11y audit <target> [options]\n\nCheck how accessible one target is.\n\n",
+    audit: "Usage: automatica11y audit <target> [options]\n       automatica11y check <target> [options]\n\nCheck how accessible one target is.\n\n",
+    check: "Usage: automatica11y audit <target> [options]\n       automatica11y check <target> [options]\n\nCheck how accessible one target is.\n\n",
     compare: "Usage: automatica11y compare <target> <target> [<target>...] [options]\n\nCompare two or more targets.\n\n",
     run: "Usage: automatica11y run --plan <plan.json>\n\nRe-run a saved plan.\n",
   }[command ?? ""];
@@ -266,6 +267,7 @@ export function usage(command) {
   }
   return `Usage:
   automatica11y audit <target> [options]
+  automatica11y check <target> [options]
   automatica11y compare <target> <target> [<target>...] [options]
   automatica11y run --plan <plan.json>
   automatica11y doctor

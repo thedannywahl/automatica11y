@@ -7,6 +7,7 @@ import { ownVersion } from "./env/versions.js";
 
 const COMMANDS = {
   audit: auditCommand,
+  check: auditCommand,
   compare: compareCommand,
   run: runSavedPlan,
   doctor: doctorCommand,

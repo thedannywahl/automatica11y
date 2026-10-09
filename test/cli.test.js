@@ -38,6 +38,17 @@ test("no command, unknown command, and --help", async () => {
   assert.equal((await run(["audit", "--help"])).code, 0);
 });
 
+test("check is an alias for audit", async () => {
+  const result = await run(["check", "npm:react", "--plan"]);
+  assert.equal(result.code, 0, result.stderr);
+  const plan = JSON.parse(readFileSync(join(result.cwd, "a11y-report", "plan.json"), "utf8"));
+  assert.equal(plan.command, "audit");
+  const help = await run(["check", "--help"]);
+  assert.equal(help.code, 0);
+  assert.match(help.stdout, /automatica11y audit <target>[\s\S]*automatica11y check <target>/);
+  assert.match((await run(["--help"])).stdout, /automatica11y check <target>/);
+});
+
 test("usage errors exit 2", async () => {
   await usageError(["audit"], /audit needs one target/);
   await usageError(["audit", "a", "b"], /audit takes one target/);
