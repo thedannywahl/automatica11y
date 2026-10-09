@@ -22,9 +22,26 @@ Fixtures are code that the tool bundles and runs in a browser on your machine. W
 | React | A `react` peer dependency or dependency. | JSX. Import the library and the tool installs it. |
 | Vue 3 | A `vue` peer dependency or dependency that allows version 3. | JSX that becomes `h()` calls. Don't import `h`. An optional `setup(app)` export installs plugins. |
 | Angular 22 and newer | An Angular core peer dependency or dependency whose range allows version 22 or later. | A `.js` file, or a `.ts` file with decorators (use `inject()` for services). Define the component by calling `Component({ ... })(Class)`, import the library, and export the class as the default. An optional `providers` export adds application providers. |
+| Plain HTML | No framework, and the package ships a stylesheet or a browser script. Or a target list that names a `.css` or `.js` file. | An `.html` file of markup. The tool loads the target's styles, puts the markup on the page, then loads its scripts. |
 | Web components | A custom elements manifest, or a base library such as Lit. | A `mount(container)` function. |
 
 Svelte, Vue 2, and Angular packages older than version 22 report "unsupported framework." Their Storybooks still work, because a Storybook renders stories in a page whatever the framework.
+
+## Plain HTML, CSS, and JavaScript.
+
+Some libraries have no framework: stylesheets, and scripts that wire up behavior on markup the page already has. Name what the page should load as sub-paths in a target list. A sub-path that ends in `.css` is a stylesheet, and one that ends in `.js` or `.mjs` is a script. They load in the order you write them, and the packages install into one folder:
+
+```bash
+automatica11y audit pan=npm:@pantoken/components/base.css,@pantoken/components/components.css,@pantoken/interactions/button.iife.js
+```
+
+A fixture is a snippet of markup, `fixtures/<target id>/<archetype>.html`. The tool loads the stylesheets with the page, puts your markup on it, then loads the scripts, so a script that looks for its elements when it starts finds them. Mark the control a keyboard user presses with `data-a11y-trigger` and the surface that appears with `data-a11y-root`. A `<script>` inside the snippet runs too.
+
+```html
+<button type="button" class="instui-button" data-a11y-trigger data-a11y-root>Save</button>
+```
+
+Plain HTML has no exports or selectors to read, so nothing is generated, and an archetype with no fixture is a gap. A script that fails to load or throws makes the archetype a gap with the error. The report says how many stylesheets and scripts loaded.
 
 ## Components that aren't an npm package.
 

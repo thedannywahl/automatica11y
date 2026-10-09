@@ -1,0 +1,5 @@
+{
+  "name": "fake-html-css",
+  "version": "1.0.0",
+  "exports": { "./components.css": "./components.css", "./base.css": "./base.css", "./package.json": "./package.json" }
+}

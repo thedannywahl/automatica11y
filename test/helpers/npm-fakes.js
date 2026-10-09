@@ -22,6 +22,8 @@ export const REGISTRY = {
   "fake-ng-modules": { name: "fake-ng-modules", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" } },
   "fake-ng-wrong": { name: "fake-ng-wrong", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" } },
   "fake-ng-zone": { name: "fake-ng-zone", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0", "zone.js": "*" } },
+  "fake-html-css": { name: "fake-html-css", version: "1.0.0", exports: { "./components.css": "./components.css", "./base.css": "./base.css", "./package.json": "./package.json" } },
+  "fake-html-js": { name: "fake-html-js", version: "2.0.0", exports: { "./init.iife.js": "./init.iife.js", "./broken.iife.js": "./broken.iife.js", "./package.json": "./package.json" } },
   "fake-ng-old": { name: "fake-ng-old", version: "1.0.0", peerDependencies: { "@angular/core": "^20.0.0 || ^21.0.0" } },
   "fake-ng-split": { name: "fake-ng-split", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" }, exports: { ".": "./index.js", "./button": "./button.js", "./package.json": "./package.json" } },
   // The real Angular Material, linked from the repository's dev dependencies, to prove a partly compiled library runs.

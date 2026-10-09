@@ -5,7 +5,7 @@ import { bundleEntries } from "../harness/bundle.js";
 import { GENERATABLE } from "../harness/generate/index.js";
 import { generateFixture } from "./generate-fixture.js";
 import { settleAnimations } from "../harness/settle.js";
-import { installExtraPackages, installOptionalPeers, installPackage } from "../harness/npm-install.js";
+import { installedVersion, installExtraPackages, installOptionalPeers, installPackage } from "../harness/npm-install.js";
 import { ANGULAR_FLOOR } from "../frameworks/angular.js";
 import { explainAngularError } from "../frameworks/angular-errors.js";
 import { adapterFor, adapterForKind } from "../frameworks/index.js";
@@ -224,8 +224,8 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
   try {
     /** The framework's id (react, vue, or wc), or "unknown" when the metadata couldn't say. */
     const adapterId = adapterForKind(planTarget.kind)?.id;
-    /** @type {"react" | "vue" | "angular" | "wc" | "unknown"} */
-    let flavor = adapterId === "react" || adapterId === "vue" || adapterId === "angular" || adapterId === "wc" ? adapterId : "unknown";
+    /** @type {"react" | "vue" | "angular" | "html" | "wc" | "unknown"} */
+    let flavor = adapterId === "react" || adapterId === "vue" || adapterId === "angular" || adapterId === "html" || adapterId === "wc" ? adapterId : "unknown";
     const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor });
     const warnings = [...installed.warnings];
     // What fixtures and templates import: the package, or the sub-path of it that was asked for.
@@ -238,13 +238,16 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     // The other packages of a list target (`npm:a,b`) go into the same folder, so the scripts and styles of one see the others.
     /** @type {Array<{ name: string, subpath: string | null, version: string | null }>} */
     const companions = [];
+    const alreadyInstalled = new Set([resolved.name]);
     for (const companion of planTarget.companions ?? []) {
-      const added = await install({ dir: workDir, name: companion.name, version: companion.version, flavor: "unknown" });
+      // A second entry for a package that's already in the folder (a stylesheet and a script from one package) needs no second install.
+      const added = alreadyInstalled.has(companion.name) ? { warnings: [], version: installedVersion(workDir, companion.name) } : await install({ dir: workDir, name: companion.name, version: companion.version, flavor: "unknown" });
       warnings.push(...added.warnings);
       if (companion.subpath) {
         const problem = subpathProblem(workDir, companion.name, companion.subpath, added.version ?? companion.version);
         if (problem) throw new Error(problem);
       }
+      alreadyInstalled.add(companion.name);
       companions.push({ name: companion.name, subpath: companion.subpath ?? null, version: added.version ?? companion.version });
     }
 
@@ -253,9 +256,11 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     warnings.push(...extras.warnings);
 
     // What the install left behind that an adapter's entry needs to know about, such as whether zone.js came with the library.
-    const context = adapterForKind(planTarget.kind)?.inspect?.(workDir) ?? {};
+    const listed = [{ name: resolved.name, subpath: resolved.subpath ?? null }, ...companions.map((c) => ({ name: c.name, subpath: c.subpath }))];
+    const context = adapterForKind(planTarget.kind)?.inspect?.(workDir, listed) ?? {};
 
-    const found = await discover({ browser, workDir, flavor: flavor === "unknown" ? "wc" : flavor, pkg: importSpec, buildDir, warnings });
+    // Plain HTML has no exports or elements to list. What it loads came from the target itself.
+    const found = flavor === "html" ? { exports: [], tags: [], facts: {} } : await discover({ browser, workDir, flavor: flavor === "unknown" ? "wc" : flavor, pkg: importSpec, buildDir, warnings });
     if (flavor === "unknown") {
       if (found.tags.length > 0) flavor = "wc";
       else if (installed.react && found.exports.some((e) => /^[A-Z]/.test(e.name))) flavor = "react";
@@ -269,6 +274,12 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
 
     const candidates = candidateMapping({ flavor, exports: found.exports, tags: found.tags });
     const adapter = adapterFor(flavor);
+    if (flavor === "html") {
+      // There's no component to find, so an archetype is either a fixture someone writes or a gap that says so.
+      for (const [archetype, entry] of Object.entries(candidates)) {
+        if (entry.status === "no-match") Object.assign(entry, { status: "needs-fixture", reason: `Plain HTML has no component to find, so the ${archetype} archetype needs a fixture someone writes.` });
+      }
+    }
     const wanted = plan.options.archetypes ?? ARCHETYPES;
     /** @type {TargetMapping} */
     const mapping = {};
@@ -402,6 +413,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
           vue: installed.vue ?? null,
           angular: installed.angular ?? null,
           tags: flavor === "wc" ? found.tags : [],
+          ...(flavor === "html" ? { assets: /** @type {any} */ (context).assets } : {}),
         },
         summary: (() => {
           const base = summarize(ordered, plan.options.engines, gaps);

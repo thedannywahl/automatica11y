@@ -1,8 +1,9 @@
 import { execFile } from "node:child_process";
+import { isAsset } from "../frameworks/html.js";
 import { ADAPTERS } from "../frameworks/index.js";
 import { checkExports, notExportedMessage } from "./subpath.js";
 
-const FIELDS = ["name", "version", "peerDependencies", "dependencies", "keywords", "customElements", "deprecated", "exports"];
+const FIELDS = ["name", "version", "peerDependencies", "dependencies", "keywords", "customElements", "deprecated", "exports", "style", "unpkg", "jsdelivr"];
 const OTHER_FRAMEWORKS = {
   svelte: "Svelte",
   "solid-js": "Solid",
@@ -52,7 +53,7 @@ export function npmView(spec, { timeoutMs = 60_000 } = {}) {
  * Guess how a package renders from its metadata alone. React wins when both signals appear, then a custom elements manifest, then Vue, then Angular.
  * `npm` means the metadata can't say, so the run decides after it installs and loads the package.
  * @param {unknown} meta
- * @returns {{ kind: "npm-react" | "npm-vue" | "npm-angular" | "npm-wc" | "npm-unsupported" | "npm", framework: string | null, reason: string }}
+ * @returns {{ kind: "npm-react" | "npm-vue" | "npm-angular" | "npm-html" | "npm-wc" | "npm-unsupported" | "npm", framework: string | null, reason: string }}
  */
 export function detectFlavor(meta) {
   const data = isRecord(meta) ? meta : {};
@@ -70,6 +71,8 @@ export function detectFlavor(meta) {
   }
   const base = WEB_COMPONENT_BASES.find((name) => name in deps || name in peers);
   if (base) return { kind: "npm-wc", framework: "Web components", reason: `The package builds on ${base}.` };
+  const html = ADAPTERS.html.detect(data);
+  if (html) return html;
   return { kind: "npm", framework: null, reason: "The metadata doesn't say. The run decides after it loads the package." };
 }
 
@@ -91,7 +94,11 @@ export async function resolveNpmTarget(target, view) {
       const result = checkExports(meta.exports, subpath);
       if (result.checked && !result.ok) throw new Error(notExportedMessage({ name, version: typeof meta.version === "string" ? meta.version : null, subpath, exact: result.exact, patterns: result.patterns }));
     }
-    const flavor = detectFlavor(meta);
+    let flavor = detectFlavor(meta);
+    // A list that names a stylesheet or a script (`npm:a/components.css,b/interactions.iife.js`) is plain HTML when the metadata names no framework.
+    if (flavor.kind === "npm" && [target.resolved.subpath, ...(target.companions ?? []).map((c) => c.subpath)].some(isAsset)) {
+      flavor = { kind: "npm-html", framework: "HTML", reason: "The target names a stylesheet or a script to load." };
+    }
     // Each companion is looked up the same way, so a wrong name, version, or sub-path fails here, before anything is installed.
     /** @type {Array<{ name: string, requested: string | null, version: string | null, subpath: string | null }>} */
     const companions = [];

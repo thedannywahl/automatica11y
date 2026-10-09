@@ -54,6 +54,8 @@ Use `audit` for one target and `compare` for two or more, even when they're diff
 
 A bare word such as `button` is a path: the folder or file `./button`. Always write an npm package with the `npm:` prefix. If a word could mean a package or a folder, ask the user which one before you run anything.
 
+**Plain HTML libraries.** A library with no framework, such as a stylesheet package and a script package, is tested by naming the files the page should load as sub-paths: `npm:pkg/base.css,pkg/components.css,other/behavior.iife.js`. A sub-path ending in `.css` is a stylesheet, and one ending in `.js` or `.mjs` is a script. Read the package's documentation or its `exports` to find the right files, and ask the user which stylesheets and scripts they use when the documentation doesn't say. Nothing is generated for plain HTML, so each archetype needs a fixture (`fixtures/<id>/<archetype>.html`) or it's a gap.
+
 **One target can be several packages.** Some libraries ship in pieces, such as a stylesheet package and a script package. Join them with commas and no spaces: `npm:@scope/components,@scope/interactions`. They install into one folder and are tested as one target. The first is the primary: it names the target and decides the framework. Every other package is a companion. Each entry can have its own version and sub-path (`npm:a@1.2,b/button`). A list with a space, an empty entry, or the same package twice is rejected. Targets themselves are separated by spaces, as before.
 
 **Reading a comparison in plain language.** People write "compare A, B and C and D." Work out the targets before you build the command:

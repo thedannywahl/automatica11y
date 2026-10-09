@@ -35,7 +35,7 @@ export function installedVersion(dir, name) {
  * Install a package into its own directory, never next to another target's install.
  * npm adds the peer dependencies. A React package also needs react-dom, and a Vue package needs vue, so add them when the peers left them out.
  * Install scripts stay off, because the code is untrusted until it runs in the browser sandbox.
- * @param {{ dir: string, name: string, version: string, flavor: "react" | "vue" | "angular" | "wc" | "unknown", run?: typeof runNpm }} options
+ * @param {{ dir: string, name: string, version: string, flavor: "react" | "vue" | "angular" | "html" | "wc" | "unknown", run?: typeof runNpm }} options
  */
 export async function installPackage({ dir, name, version, flavor, run = runNpm }) {
   mkdirSync(dir, { recursive: true });

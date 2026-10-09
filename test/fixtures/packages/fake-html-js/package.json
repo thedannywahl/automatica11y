@@ -1,0 +1,5 @@
+{
+  "name": "fake-html-js",
+  "version": "2.0.0",
+  "exports": { "./init.iife.js": "./init.iife.js", "./broken.iife.js": "./broken.iife.js", "./package.json": "./package.json" }
+}

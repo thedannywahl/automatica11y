@@ -6,7 +6,7 @@
  * To add a framework, write a module with the same shape as react.js, add it here, and add its id to FLAVORS and its kind to
  * TARGET_KINDS in schema.js. A test checks that the two lists agree.
  *
- * @typedef {"npm-react" | "npm-vue" | "npm-angular" | "npm-wc" | "npm-unsupported"} AdapterKind
+ * @typedef {"npm-react" | "npm-vue" | "npm-angular" | "npm-html" | "npm-wc" | "npm-unsupported"} AdapterKind
  * @typedef {{ kind: AdapterKind, framework: string, reason: string }} AdapterDetection
  * @typedef {{
  *   id: string,
@@ -16,7 +16,7 @@
  *   extension: string,
  *   runtime: string[],
  *   detect: (meta: unknown) => AdapterDetection | null,
- *   inspect?: (workDir: string) => Record<string, unknown>,
+ *   inspect?: (workDir: string, entries?: Array<{ name: string, subpath: string | null }>) => Record<string, unknown>,
  *   bundle: (workDir: string) => { alias: Record<string, string>, define?: Record<string, string>, plugins?: import("esbuild").Plugin[], esbuild: import("esbuild").BuildOptions },
  *   entry: (fixturePath: string, pkg: string, context?: Record<string, unknown>) => string,
  *   discoverEntry: (pkg: string) => string,
@@ -26,12 +26,13 @@
  * }} Adapter
  */
 import angular from "./angular.js";
+import html from "./html.js";
 import react from "./react.js";
 import vue from "./vue.js";
 import wc from "./wc.js";
 
 /** @type {Record<string, Adapter>} */
-export const ADAPTERS = { react, vue, angular, wc };
+export const ADAPTERS = { react, vue, angular, html, wc };
 
 /** The adapter for a flavor (`react`, `vue`, or `wc`). */
 export function adapterFor(id) {

@@ -41,7 +41,7 @@ export function score(archetype, name) {
 /**
  * Guess which exports (React, Vue, or Angular) or tags (web components) stand for each archetype.
  * The result is a starting point. A person or the skill checks it before trusting it.
- * @param {{ flavor: "react" | "vue" | "angular" | "wc", exports?: Array<{ name: string, type: string, parts: string[] }>, tags?: string[] }} input
+ * @param {{ flavor: "react" | "vue" | "angular" | "html" | "wc", exports?: Array<{ name: string, type: string, parts: string[] }>, tags?: string[] }} input
  * @returns {ReturnType<typeof parseMappingFile>[string]}
  */
 export function candidateMapping({ flavor, exports = [], tags = [] }) {
@@ -97,7 +97,7 @@ export function findAuthoredFixture({ cwd, targetId, archetype, mapped }) {
     const file = resolve(cwd, mapped.fixture);
     return existsSync(file) ? file : null;
   }
-  for (const ext of ["jsx", "js", "ts"]) {
+  for (const ext of ["jsx", "js", "ts", "html"]) {
     const file = resolve(cwd, "fixtures", targetId, `${archetype}.${ext}`);
     if (existsSync(file)) return file;
   }

@@ -1,0 +1,2 @@
+button, summary { min-height: 44px; min-width: 44px; font: inherit; color: #1d1d1d; background: #fff; border: 2px solid #1d1d1d; }
+[hidden] { display: none; }

@@ -43,7 +43,7 @@ export async function bundleEntries({ entries, outdir, workDir, framework = null
       nodePaths: [join(workDir, "node_modules")],
       alias: settings.alias,
       plugins: settings.plugins ?? [],
-      loader: ASSET_LOADERS,
+      loader: { ...ASSET_LOADERS, ...(settings.esbuild.loader ?? {}) },
       define: { "process.env.NODE_ENV": '"development"', ...(settings.define ?? {}) },
       logLevel: "silent",
     });

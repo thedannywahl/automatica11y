@@ -66,6 +66,8 @@ An Angular fixture can also be TypeScript (`fixtures/<target id>/<archetype>.ts`
 
 Angular libraries split their parts across sub-paths, so audit them with a sub-path target, for example `npm:@angular/material/menu`.
 
+For plain HTML, a fixture is a `.html` file of markup (`fixtures/<target id>/<archetype>.html`). It's a snippet, not a whole page: no `<html>` or `<body>`. Put `data-a11y-trigger` and `data-a11y-root` on the right elements yourself. The target says what loads, as sub-paths in a list: `npm:pkg/base.css,pkg/components.css,other/behavior.iife.js`. Stylesheets load with the page, the markup goes on next, and the scripts load last, so a script that wires up its elements when it starts finds them. A `<script>` inside the snippet runs. Use the classes and attributes the library's documentation names, and don't invent them.
+
 For web components, make `mount(container)` the file's default export. It adds the archetype to the container. The tool imports the package first, so its elements are defined before `mount` runs. The `data-a11y-trigger` and `data-a11y-root` attributes can sit on a host element, a slotted child, or an element inside an **open** shadow root. A **closed** shadow root hides its content from every tool, so the report lists it as not testable.
 
 ## Library accessibility options

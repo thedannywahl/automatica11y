@@ -83,3 +83,13 @@ Without a mapping, the tool loads every stylesheet and script the primary's meta
 ## 7. Still open.
 
 1. Whether a list on one side of `compare` should be allowed to pair with a single package on the other. I'd allow it, and the report would list each side's packages.
+
+## 8. Phase 2 notes (October 9, 2026).
+
+Built: `src/frameworks/html.js` (kind `npm-html`), detection by metadata (a stylesheet or browser script and no framework) and by the list itself, the page entry, and the `.html` fixture.
+
+**One change from section 3: the target names what loads, not the mapping.** A sub-path in a list that ends in `.css` is a stylesheet, and one that ends in `.js` or `.mjs` is a script, so the whole command is `npm:pkg/base.css,pkg/components.css,other/behavior.iife.js`. That needs no mapping file, uses the sub-path checks that already exist (a file the package doesn't export fails before anything installs), and keeps `compare` readable. Two entries from one package install it once. The mapping's `styles` and `scripts` lists weren't added.
+
+The entry imports the stylesheets (esbuild links them with the page), puts the markup on the root, re-creates any `<script>` in the markup so it runs, then awaits each script import in order. A script that throws sets `window.__error` and logs, so the archetype becomes a gap with the message. Verified on the published `@pantoken/components` 2.0.2 and `@pantoken/interactions` 0.5.0: authored button and live-region snippets ran, and the dialog was a gap that says a fixture has to be written.
+
+Not done: the templates (phase 3), which need the bundled Chrome checked for interest invokers.
