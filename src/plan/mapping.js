@@ -64,7 +64,9 @@ export function candidateMapping({ flavor, exports = [], tags = [] }) {
     // A button or link usually sits beside ButtonBase, ButtonGroup, and the like, which aren't its parts, so only real parts (Button.Root) count there.
     const siblings = flavor !== "wc" && !TEMPLATED.has(archetype) ? names.filter((n) => n !== best && n.startsWith(best) && n.length > best.length) : [];
     const compound = parts.length > 0 || siblings.length >= 2;
-    const templated = TEMPLATED.has(archetype) && !compound;
+    // A button written as `Button.Root` (a namespace whose only part is the root) is still one element, so a template can use the root.
+    const hasRoot = TEMPLATED.has(archetype) && parts.length === 1 && /^root$/i.test(parts[0]);
+    const templated = TEMPLATED.has(archetype) && (!compound || hasRoot);
     mapping[archetype] = {
       flavor,
       ...(flavor === "wc" ? { tag: best } : { export: best }),

@@ -31,10 +31,13 @@ window.__a11yExports = out;
  * A fixture for the simple archetypes, from the export name alone.
  * Compound components (dialog, tabs, menu) can't be guessed, so they come from generation or from a fixture someone writes.
  */
-export function template(archetype, pkg, exportName) {
+export function template(archetype, pkg, exportName, info) {
+  // A namespace with a root part (`Button.Root`) is used through its root.
+  const root = /** @type {any} */ (info)?.parts?.find((part) => /^root$/i.test(part));
+  const tag = root ? `Component.${root}` : "Component";
   const body = {
-    button: `<Component data-a11y-trigger data-a11y-root type="button">Save</Component>`,
-    link: `<Component data-a11y-trigger data-a11y-root href="#top">Read more</Component>`,
+    button: `<${tag} data-a11y-trigger data-a11y-root type="button">Save</${tag}>`,
+    link: `<${tag} data-a11y-trigger data-a11y-root href="#top">Read more</${tag}>`,
   }[archetype];
   if (!body) return null;
   return `import { ${exportName} as Component } from ${JSON.stringify(pkg)};

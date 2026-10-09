@@ -4,7 +4,7 @@
  * target's own `svelte` install, so the compiler and the runtime that runs the output are always the same version.
  */
 import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { svelteDialect } from "../harness/generate/dialects.js";
@@ -44,12 +44,15 @@ try {
 
 /**
  * A fixture for the simple archetypes, from the export name alone.
- * @param {string} archetype @param {string} pkg @param {string} exportName
+ * @param {string} archetype @param {string} pkg @param {string} exportName @param {unknown} [info]
  */
-export function template(archetype, pkg, exportName) {
+export function template(archetype, pkg, exportName, info) {
+  // A namespace with a root part (`Button.Root`) is used through its root.
+  const root = /** @type {any} */ (info)?.parts?.find((part) => /^root$/i.test(part));
+  const tag = root ? `Component.${root}` : "Component";
   const body = {
-    button: '<Component data-a11y-trigger data-a11y-root type="button">Save</Component>',
-    link: '<Component data-a11y-trigger data-a11y-root href="#top">Read more</Component>',
+    button: `<${tag} data-a11y-trigger data-a11y-root type="button">Save</${tag}>`,
+    link: `<${tag} data-a11y-trigger data-a11y-root href="#top">Read more</${tag}>`,
   }[archetype];
   if (!body) return null;
   return `<script>
@@ -57,6 +60,26 @@ export function template(archetype, pkg, exportName) {
 </script>
 ${body}
 `;
+}
+
+/**
+ * What the compiler produced for a file, kept for the life of the run. A run bundles the same library many times (every generated
+ * candidate is a bundle), and compiling a large library's components again each time dominates the run.
+ * The key is the file and the compiler's own version, so a changed file or a different Svelte compiles again.
+ * @type {Map<string, string>}
+ */
+const compiled = new Map();
+
+/** Compile a file once per version of the file. */
+function cached(path, kind, build) {
+  const stat = statSync(path);
+  const key = `${kind}\0${path}\0${stat.size}\0${stat.mtimeMs}`;
+  let code = compiled.get(key);
+  if (code === undefined) {
+    code = build();
+    compiled.set(key, code);
+  }
+  return code;
 }
 
 /**
@@ -77,17 +100,22 @@ function compilerPlugin(workDir) {
     name: "svelte-compiler",
     setup(build) {
       // One copy of Svelte for the library and the fixture, or the runtime's state is split in two.
-      build.onResolve({ filter: /^svelte(\/|$)/ }, async (args) => {
+      // A library of a thousand modules asks for the same few Svelte paths over and over, so each is looked up once per build.
+      /** @type {Map<string, Promise<import("esbuild").OnResolveResult | undefined>>} */
+      const resolved = new Map();
+      build.onResolve({ filter: /^svelte(\/|$)/ }, (args) => {
         if (args.pluginData === "svelte-compiler") return undefined;
-        const result = await build.resolve(args.path, { resolveDir: workDir, kind: args.kind, pluginData: "svelte-compiler" });
-        return result.errors.length ? undefined : result;
+        const key = `${args.kind}\0${args.path}`;
+        if (!resolved.has(key)) {
+          resolved.set(key, build.resolve(args.path, { resolveDir: workDir, kind: args.kind, pluginData: "svelte-compiler" }).then((result) => (result.errors.length ? undefined : result)));
+        }
+        return resolved.get(key);
       });
       const failure = (error, file) => ({ errors: [{ text: String(error?.message ?? error).split("\n")[0], location: { file, line: error?.start?.line ?? 0, column: error?.start?.column ?? 0 } }] });
       build.onLoad({ filter: /\.svelte$/ }, async (args) => {
         try {
           const { compile } = await load();
-          const result = compile(readFileSync(args.path, "utf8"), { filename: args.path, generate: "client", css: "injected", dev: false });
-          return { contents: result.js.code, loader: "js" };
+          return { contents: cached(args.path, "component", () => compile(readFileSync(args.path, "utf8"), { filename: args.path, generate: "client", css: "injected", dev: false }).js.code), loader: "js" };
         } catch (error) {
           return failure(error, args.path);
         }
@@ -95,7 +123,7 @@ function compilerPlugin(workDir) {
       build.onLoad({ filter: /\.svelte\.js$/ }, async (args) => {
         try {
           const { compileModule } = await load();
-          return { contents: compileModule(readFileSync(args.path, "utf8"), { filename: args.path, generate: "client" }).js.code, loader: "js" };
+          return { contents: cached(args.path, "module", () => compileModule(readFileSync(args.path, "utf8"), { filename: args.path, generate: "client" }).js.code), loader: "js" };
         } catch (error) {
           return failure(error, args.path);
         }

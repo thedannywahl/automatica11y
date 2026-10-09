@@ -6,6 +6,7 @@ import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { adapterFor } from "../src/frameworks/index.js";
 import { allowsSvelte5 } from "../src/frameworks/svelte.js";
+import { candidateMapping } from "../src/plan/mapping.js";
 import { detectFlavor } from "../src/plan/resolve-npm.js";
 import { parseResults } from "../src/schema.js";
 import { makeIo, makeTree } from "./helpers/fixtures.js";
@@ -53,6 +54,10 @@ test("the entry mounts the fixture, and a template imports the export as a compo
   assert.match(button, /<Component data-a11y-trigger data-a11y-root type="button">Save<\/Component>/);
   assert.match(svelte.template("link", "pkg", "Link"), /href="#top"/);
   assert.equal(svelte.template("dialog", "pkg", "Dialog"), null);
+  assert.match(svelte.template("button", "pkg", "Button", { parts: ["Root"] }), /<Component\.Root data-a11y-trigger data-a11y-root type="button">Save<\/Component\.Root>/, "a namespace with a root part is used through the root");
+  const mapped = candidateMapping({ flavor: "svelte", exports: [{ name: "Button", type: "object", parts: ["Root"] }, { name: "Dialog", type: "object", parts: ["Root", "Trigger"] }] });
+  assert.equal(mapped.button.status, "template", "a button namespace with a root is one element");
+  assert.equal(mapped.dialog.status, "needs-fixture", "a dialog namespace is still built from parts");
 });
 
 // ---- Svelte in a real browser ----
@@ -124,4 +129,29 @@ test("Svelte: the real bits-ui dialog runs from an authored fixture", { skip, ti
   const found = result.results.targets[0].archetypes.dialog;
   assert.deepEqual([found.status, found.fixture.source], ["ran", "authored"], found.reason ?? "");
   assert.deepEqual(found.configs.map((c) => c.state), ["closed", "open"]);
+});
+
+// ---- generated fixtures ----
+
+test("Svelte: a single component with an open prop is generated, with state held by runes", { skip, timeout: 240_000 }, async () => {
+  const result = await run(["audit", "ui=npm:fake-svelte-ui", "--archetypes", "dialog", "--tiers", "rules,interactions"]);
+  assert.equal(result.code, 0, result.stderr);
+  const found = result.results.targets[0].archetypes.dialog;
+  assert.deepEqual([found.status, found.fixture.source], ["ran", "generated"], found.reason ?? "");
+  assert.match(found.fixture.recipe, /^dialog-controlled-open-/);
+  assert.deepEqual(found.configs.map((c) => c.state), ["closed", "open"]);
+  const source = result.file("generated/ui/dialog.svelte");
+  assert.match(source, /^<script>\n  import \* as Lib from "fake-svelte-ui";\n  import \{ onMount \} from "svelte";/);
+  assert.match(source, /let open = \$state\(false\);/);
+  assert.match(source, /<button type="button" data-a11y-trigger onclick=\{\(\) => open = true\}>Open dialog<\/button>/);
+  assert.match(source, /onMount\(\(\) => startMarking\(\)\);/);
+});
+
+test("Svelte: the real bits-ui dialog, menu, tabs, and accordion are generated from their parts, and a button namespace is templated through its root", { skip, timeout: 420_000 }, async () => {
+  const result = await run(["audit", "bits=npm:bits-ui", "--archetypes", "button,dialog,menu,tabs,accordion", "--tiers", "rules"]);
+  assert.equal(result.code, 0, result.stderr);
+  const target = result.results.targets[0];
+  assert.equal(target.archetypes.button.fixture.source, "template");
+  for (const name of ["dialog", "menu", "tabs", "accordion"]) assert.deepEqual([target.archetypes[name].status, target.archetypes[name].fixture.source], ["ran", "generated"], `${name}: ${target.archetypes[name].reason ?? ""}`);
+  assert.match(result.file("generated/bits/dialog.svelte"), /<Lib\.Dialog\.Root>[\s\S]*<Lib\.Dialog\.Trigger data-a11y-trigger>Open dialog<\/Lib\.Dialog\.Trigger>/);
 });

@@ -118,10 +118,16 @@ function singleCopy(workDir) {
   return {
     name: "single-angular-copy",
     setup(build) {
-      build.onResolve({ filter: /^(@angular\/|rxjs(\/|$)|zone\.js(\/|$))/ }, async (args) => {
+      // A library asks for the same few Angular paths over and over, so each is looked up once per build.
+      /** @type {Map<string, Promise<import("esbuild").OnResolveResult | undefined>>} */
+      const resolved = new Map();
+      build.onResolve({ filter: /^(@angular\/|rxjs(\/|$)|zone\.js(\/|$))/ }, (args) => {
         if (args.pluginData === "single-angular-copy") return undefined;
-        const result = await build.resolve(args.path, { resolveDir: workDir, kind: args.kind, pluginData: "single-angular-copy" });
-        return result.errors.length ? undefined : result;
+        const key = `${args.kind}\0${args.path}`;
+        if (!resolved.has(key)) {
+          resolved.set(key, build.resolve(args.path, { resolveDir: workDir, kind: args.kind, pluginData: "single-angular-copy" }).then((result) => (result.errors.length ? undefined : result)));
+        }
+        return resolved.get(key);
       });
     },
   };

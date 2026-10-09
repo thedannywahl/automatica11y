@@ -52,3 +52,20 @@ A fixture comes from the first of these that applies:
 ## 6. Still open.
 
 1. Which Svelte libraries matter most to you, as proof the adapter is generic. I'd start with bits-ui, Melt UI, Skeleton, and Flowbite Svelte.
+
+## 7. Phase 1 and 2 notes (October 9, 2026).
+
+Built: `src/frameworks/svelte.js`, a `svelteDialect` for the shared recipes (with `click`, `fragment`, and `when` helpers added to every dialect), and `Button.Root`-style templates for React and Svelte.
+
+**Speed.** Two caches took a full bits-ui audit from more than 290 seconds (it hit a timeout) to 86 seconds, and a bundle of the whole library from 3.7 seconds to 0.9 seconds cold and 80 milliseconds warm. The compiler's output is kept per file for the run, because a run bundles the same library once per generated candidate. And the single-copy resolver looks each `svelte/...` path up once per build, because a thousand modules ask for the same few. The Angular resolver had the same shape and got the same fix.
+
+**Real libraries on Svelte 5.57** (no library-specific code):
+
+| Library | Generated or templated | Gap, and why |
+|---|---|---|
+| bits-ui 2.19.5 | dialog, menu, tabs, accordion; button through `Button.Root` | combobox and tooltip (the probe saw no root; tooltip needs keyboard focus and a provider), form-field (a checkbox namespace isn't a field), live-region (no export matches) |
+| Skeleton 5.0.1 | dialog, menu, tabs, accordion, tooltip | combobox, form-field, live-region (toast), button and link (no export named for them) |
+| Flowbite Svelte 1.33.1 | button, link, dialog, form-field, live-region | menu, tabs, combobox, accordion (its parts aren't named the way the recipes look), tooltip |
+| Melt 0.44.0 | none | Melt gives builders (`new Dialog()`) whose attributes you spread onto your own elements, so no generator can guess the fixture. An authored fixture with the builder worked: the real `melt/builders` dialog ran with closed and open states. |
+
+Left for phase 3: plain sentences for common Svelte errors, SvelteKit-only imports named as the reason, and the weekly latest-dependencies job.
