@@ -101,3 +101,12 @@ The eight native templates are in `src/frameworks/html.js`. The bundled Chrome (
 Two things the templates showed. First, the accordion checks assumed `aria-expanded`, so a native `<details>` failed them. The interactions snapshot now reads a `<summary>`'s state from its `<details>`, which fixes native disclosures for every adapter. Second, the live-region template has to keep its region in the page and change only its text, or the "region exists before the message" check fails, which is the check doing its job.
 
 Known limit: the menu template fails the arrow-key check, because a bare popover has no arrow-key behavior. I left it failing and said so in the docs and the report note, because adding our own script would test our script and not the package.
+
+## 10. Phase 4 notes (October 9, 2026).
+
+Real run on the published `@pantoken/css` 0.4.3, `@pantoken/components` 2.0.2, and `@pantoken/interactions` 0.5.0, with an authored `.instui-button` button and live-region and the native templates for the rest.
+
+- **Without the token stylesheet** (`@pantoken/components` base and components only): the focus-indicator check failed on the button, the link, and the accordion, because `base.css` draws its focus ring from `--instui-focus-outline-*` custom properties that only `@pantoken/css` defines. One axe target-size violation on the `<summary>` appeared too. The check did its job: the page really had no visible focus ring.
+- **With `@pantoken/css/style.lean.css` first**: no focus failures, no axe or IBM violations on any ran archetype. The only failing check was the menu template's arrow keys, which is the documented limit of a bare popover.
+
+So the lesson is in the docs: load the stylesheet that defines a library's custom properties, or the results describe an unstyled page. Tabs, combobox, and chart stay gaps without a fixture. The three phases and the four notes are the whole plan. Left for later: a generated-fixture pass for plain HTML (ruled out for now), and `compare` across a list and a single package, which already works because each side is its own target.
