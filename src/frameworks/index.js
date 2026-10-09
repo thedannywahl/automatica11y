@@ -6,7 +6,7 @@
  * To add a framework, write a module with the same shape as react.js, add it here, and add its id to FLAVORS and its kind to
  * TARGET_KINDS in schema.js. A test checks that the two lists agree.
  *
- * @typedef {"npm-react" | "npm-vue" | "npm-angular" | "npm-html" | "npm-wc" | "npm-unsupported"} AdapterKind
+ * @typedef {"npm-react" | "npm-vue" | "npm-angular" | "npm-svelte" | "npm-html" | "npm-wc" | "npm-unsupported"} AdapterKind
  * @typedef {{ kind: AdapterKind, framework: string, reason: string }} AdapterDetection
  * @typedef {{
  *   id: string,
@@ -28,11 +28,12 @@
 import angular from "./angular.js";
 import html from "./html.js";
 import react from "./react.js";
+import svelte from "./svelte.js";
 import vue from "./vue.js";
 import wc from "./wc.js";
 
 /** @type {Record<string, Adapter>} */
-export const ADAPTERS = { react, vue, angular, html, wc };
+export const ADAPTERS = { react, vue, angular, svelte, html, wc };
 
 /** The adapter for a flavor (`react`, `vue`, or `wc`). */
 export function adapterFor(id) {

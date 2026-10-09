@@ -219,7 +219,7 @@ Use the structure of `report.md`. Quote selectors and rule IDs exactly as `resul
 
 Say these things plainly. Don't soften them, and don't fill in a result.
 
-- **Unsupported framework.** The package needs a framework other than React, Vue 3, Angular 22 and newer, or web components. Name it, and say which version is unsupported (Vue 2 or Angular 21, for example). This version covers React, Vue 3, Angular 22 and newer, and web components. A Storybook for the library still works, whatever the framework.
+- **Unsupported framework.** The package needs a framework other than React, Vue 3, Angular 22 and newer, Svelte 5 and newer, plain HTML, or web components. Name it, and say which version is unsupported (Vue 2, Svelte 4, or Angular 21, for example). This version covers React, Vue 3, Angular 22 and newer, Svelte 5 and newer, plain HTML, and web components. A Storybook for the library still works, whatever the framework.
 - **Not applicable.** The package has no rendering surface, such as a utility library. There's nothing to test.
 - **Not testable.** The content is a canvas with no alternative, or sits in a closed shadow root. The rule engines can't see it, so the result is untested, not clean. The virtual screen reader also can't read open shadow roots.
 - **Gap.** The archetype has no usable fixture or no matching export. Say what the archetype needs.

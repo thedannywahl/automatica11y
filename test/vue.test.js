@@ -46,7 +46,7 @@ test("every adapter has the same shape, and the schema knows each framework and 
     assert.equal(typeof adapter.bundle(makeTree()).alias, "object");
   }
   assert.equal(adapterForKind("npm-unsupported"), null);
-  assert.throws(() => adapterFor("svelte"), /no adapter for "svelte"/);
+  assert.throws(() => adapterFor("solid"), /no adapter for "solid"/);
 });
 
 test("Vue 3 is recognized from the metadata, and Vue 2 and mixed ranges are handled", () => {
@@ -58,7 +58,7 @@ test("Vue 3 is recognized from the metadata, and Vue 2 and mixed ranges are hand
   assert.deepEqual([two.kind, two.framework], ["npm-unsupported", "Vue 2"]);
   assert.equal(detectFlavor({ peerDependencies: { vue: "^3", react: "^18" } }).kind, "npm-react", "React wins when both appear");
   assert.equal(detectFlavor({ peerDependencies: { vue: "^3" }, customElements: "custom-elements.json" }).kind, "npm-wc", "a custom elements manifest wins over Vue");
-  assert.equal(detectFlavor({ peerDependencies: { svelte: "^5" } }).kind, "npm-unsupported");
+  assert.equal(detectFlavor({ peerDependencies: { "solid-js": "^1" } }).kind, "npm-unsupported");
 });
 
 test("Vue fixtures bundle with JSX turned into h() calls and one copy of Vue", () => {

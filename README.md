@@ -40,7 +40,7 @@ Pick two component libraries, two versions of one component, or two sites, and `
 
 ### It tests components, not just pages
 
-Point it at an npm package. It installs the package on its own, finds the components, builds the test fixtures it needs (React, Vue 3, Angular 22 and newer, and web components), then opens the dialogs and menus and presses the keys.
+Point it at an npm package. It installs the package on its own, finds the components, builds the test fixtures it needs (React, Vue 3, Angular 22 and newer, Svelte 5 and newer, plain HTML, and web components), then opens the dialogs and menus and presses the keys.
 
 ### It's' composable
 

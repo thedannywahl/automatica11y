@@ -223,7 +223,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
   const base = { id: planTarget.id, reason: null, archetypes: {}, summary: { engines: {}, gaps: [], notTestable: [] }, warnings: [] };
   const resolved = planTarget.resolved ?? {};
   if (planTarget.kind === "npm-unsupported") {
-    return { result: { ...base, status: "unsupported", reason: `${resolved.framework ?? "This framework"} packages aren't supported.${resolved.framework === "Angular" && resolved.detectedBy ? ` ${resolved.detectedBy}` : ""} This version covers React, Vue 3, Angular ${ANGULAR_FLOOR} and newer, and web components.` }, mapping: null };
+    return { result: { ...base, status: "unsupported", reason: `${resolved.framework ?? "This framework"} packages aren't supported.${(resolved.framework === "Angular" || resolved.framework === "Svelte") && resolved.detectedBy ? ` ${resolved.detectedBy}` : ""} This version covers React, Vue 3, Angular ${ANGULAR_FLOOR} and newer, Svelte 5 and newer, and web components.` }, mapping: null };
   }
   const tmp = mkdtempSync(join(tmpdir(), "automatica11y-npm-"));
   const workDir = join(tmp, "install");
@@ -234,8 +234,8 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
   try {
     /** The framework's id (react, vue, or wc), or "unknown" when the metadata couldn't say. */
     const adapterId = adapterForKind(planTarget.kind)?.id;
-    /** @type {"react" | "vue" | "angular" | "html" | "wc" | "unknown"} */
-    let flavor = adapterId === "react" || adapterId === "vue" || adapterId === "angular" || adapterId === "html" || adapterId === "wc" ? adapterId : "unknown";
+    /** @type {"react" | "vue" | "angular" | "svelte" | "html" | "wc" | "unknown"} */
+    let flavor = adapterId === "react" || adapterId === "vue" || adapterId === "angular" || adapterId === "svelte" || adapterId === "html" || adapterId === "wc" ? adapterId : "unknown";
     const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor });
     const warnings = [...installed.warnings];
     // What fixtures and templates import: the package, or the sub-path of it that was asked for.
@@ -435,6 +435,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
           reactDom: installed.reactDom,
           vue: installed.vue ?? null,
           angular: installed.angular ?? null,
+          svelte: installed.svelte ?? null,
           ...(flavor === "html" ? { assets: /** @type {any} */ (context).assets } : {}),
           tags: flavor === "wc" ? found.tags : [],
         },

@@ -60,10 +60,8 @@ function dialogControlled([openProp, closeProp]) {
     const inner = content ? tag(content, "", dialogContent(kit)) : dialogContent(kit);
     const overlay = kit.pick("overlay", "backdrop");
     const controls = ` ${d.attr(openProp, d.read("open"))} ${d.attr(closeProp, `(next) => ${d.write("open", "next === true")}`)}`;
-    const body = `<>
-  <button type="button" data-a11y-trigger onClick={() => ${d.write("open", "true")}}>Open dialog</button>
-${indent(tag(root, controls, `${overlay ? `<${overlay} />\n` : ""}${inner}`), 2)}
-</>`;
+    const body = d.fragment(`<button type="button" data-a11y-trigger ${d.click(d.write("open", "true"))}>Open dialog</button>
+${tag(root, controls, `${overlay ? `<${overlay} />\n` : ""}${inner}`)}`);
     return { id: `dialog-controlled-${openProp}-${closeProp}`.replace(/[^\w-]+/g, "-"), summary: `a root controlled with ${openProp} and ${closeProp}`, source: d.frame("dialog", pkg, body, `  ${d.declare("open", "false")}`), used: kit.used() };
   };
 }
@@ -195,14 +193,14 @@ const fieldSingle = (id, summary, markup) => (makeKit, pkg, d) => {
 const messageConditional = (makeKit, pkg, d) => {
   const kit = makeKit();
   if (!kit.self) return null;
-  const body = `<div>\n  <button type="button" data-a11y-trigger onClick={() => ${d.write("on", "true")}}>Show message</button>\n  <div>{${d.read("on")} && <${kit.self}>Saved.</${kit.self}>}</div>\n</div>`;
+  const body = `<div>\n  <button type="button" data-a11y-trigger ${d.click(d.write("on", "true"))}>Show message</button>\n  <div>${d.when(d.read("on"), `<${kit.self}>Saved.</${kit.self}>`)}</div>\n</div>`;
   return { id: "message-mounted", summary: "a message that is mounted when the trigger is pressed", source: d.frame("live-region", pkg, body, `  ${d.declare("on", "false")}`), used: [kit.base] };
 };
 
 const messageControlled = (prop) => (makeKit, pkg, d) => {
   const kit = makeKit();
   if (!kit.self) return null;
-  const body = `<div>\n  <button type="button" data-a11y-trigger onClick={() => ${d.write("on", "true")}}>Show message</button>\n  <${kit.self} ${d.attr(prop, d.read("on"))}>Saved.</${kit.self}>\n</div>`;
+  const body = `<div>\n  <button type="button" data-a11y-trigger ${d.click(d.write("on", "true"))}>Show message</button>\n  <${kit.self} ${d.attr(prop, d.read("on"))}>Saved.</${kit.self}>\n</div>`;
   return { id: `message-${prop}`, summary: `a message shown with its ${prop} prop`, source: d.frame("live-region", pkg, body, `  ${d.declare("on", "false")}`), used: [kit.base] };
 };
 

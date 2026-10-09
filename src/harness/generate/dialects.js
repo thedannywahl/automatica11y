@@ -7,7 +7,7 @@ import { markingSource } from "./marking.js";
 const cap = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 const indentBy = (text, spaces) => text.split("\n").map((line) => (line ? " ".repeat(spaces) + line : line)).join("\n");
 
-/** @typedef {{ id: string, extension: string, openProps: string[][], labelFor: string, declare: (name: string, init: string) => string, read: (name: string) => string, write: (name: string, value: string) => string, attr: (name: string, expr: string) => string, frame: (archetype: string, pkg: string, body: string, hooks?: string) => string }} Dialect */
+/** @typedef {{ id: string, extension: string, openProps: string[][], labelFor: string, click: (action: string) => string, fragment: (inner: string) => string, when: (condition: string, markup: string) => string, declare: (name: string, init: string) => string, read: (name: string) => string, write: (name: string, value: string) => string, attr: (name: string, expr: string) => string, frame: (archetype: string, pkg: string, body: string, hooks?: string) => string }} Dialect */
 
 /** @type {Dialect} */
 export const reactDialect = {
@@ -15,6 +15,9 @@ export const reactDialect = {
   extension: "jsx",
   openProps: [["open", "onClose"], ["open", "onOpenChange"], ["isOpen", "onOpenChange"], ["isOpen", "onClose"], ["opened", "onClose"]],
   labelFor: "htmlFor",
+  click: (action) => `onClick={() => ${action}}`,
+  fragment: (inner) => `<>\n${indentBy(inner, 2)}\n</>`,
+  when: (condition, markup) => `{${condition} && ${markup}}`,
   declare: (name, init) => `const [${name}, set${cap(name)}] = useState(${init});`,
   read: (name) => name,
   write: (name, value) => `set${cap(name)}(${value})`,
@@ -40,6 +43,9 @@ export const vueDialect = {
   // Vue components usually take a model value and say they changed it with an update event, or take `open` and emit `update:open`.
   openProps: [["open", "onUpdate:open"], ["modelValue", "onUpdate:modelValue"], ["visible", "onUpdate:visible"], ["show", "onUpdate:show"], ["open", "onClose"], ["isOpen", "onClose"]],
   labelFor: "for",
+  click: (action) => `onClick={() => ${action}}`,
+  fragment: (inner) => `<>\n${indentBy(inner, 2)}\n</>`,
+  when: (condition, markup) => `{${condition} && ${markup}}`,
   declare: (name, init) => `const ${name} = ref(${init});`,
   read: (name) => `${name}.value`,
   write: (name, value) => `(${name}.value = ${value})`,
@@ -59,6 +65,34 @@ ${indentBy(body, 6)}
     );
   },
 });
+`;
+  },
+};
+
+/** @type {Dialect} */
+export const svelteDialect = {
+  id: "svelte",
+  extension: "svelte",
+  // A Svelte component takes `open` and calls back when it changes, or takes `open` and calls `onclose`.
+  openProps: [["open", "onOpenChange"], ["open", "onclose"], ["visible", "onclose"], ["isOpen", "onclose"], ["opened", "onclose"]],
+  labelFor: "for",
+  click: (action) => `onclick={() => ${action}}`,
+  // Svelte 5 markup can have several top-level nodes, so a fragment is just its children.
+  fragment: (inner) => inner,
+  when: (condition, markup) => `{#if ${condition}}${markup}{/if}`,
+  declare: (name, init) => `let ${name} = $state(${init});`,
+  read: (name) => name,
+  write: (name, value) => `${name} = ${value}`,
+  attr: (name, expr) => `${name}={${expr}}`,
+  frame(archetype, pkg, body, hooks = "") {
+    return `<script>
+  import * as Lib from ${JSON.stringify(pkg)};
+  import { onMount } from "svelte";
+${indentBy(markingSource(archetype), 2)}
+  onMount(() => startMarking());
+${hooks ? `${hooks}\n` : ""}</script>
+
+${body}
 `;
   },
 };

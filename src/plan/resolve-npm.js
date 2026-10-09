@@ -5,7 +5,6 @@ import { checkExports, notExportedMessage } from "./subpath.js";
 
 const FIELDS = ["name", "version", "peerDependencies", "dependencies", "keywords", "customElements", "deprecated", "exports", "style", "unpkg", "jsdelivr"];
 const OTHER_FRAMEWORKS = {
-  svelte: "Svelte",
   "solid-js": "Solid",
   preact: "Preact",
   "@builder.io/qwik": "Qwik",
@@ -53,7 +52,7 @@ export function npmView(spec, { timeoutMs = 60_000 } = {}) {
  * Guess how a package renders from its metadata alone. React wins when both signals appear, then a custom elements manifest, then Vue, then Angular.
  * `npm` means the metadata can't say, so the run decides after it installs and loads the package.
  * @param {unknown} meta
- * @returns {{ kind: "npm-react" | "npm-vue" | "npm-angular" | "npm-html" | "npm-wc" | "npm-unsupported" | "npm", framework: string | null, reason: string }}
+ * @returns {{ kind: "npm-react" | "npm-vue" | "npm-angular" | "npm-svelte" | "npm-html" | "npm-wc" | "npm-unsupported" | "npm", framework: string | null, reason: string }}
  */
 export function detectFlavor(meta) {
   const data = isRecord(meta) ? meta : {};
@@ -66,6 +65,8 @@ export function detectFlavor(meta) {
   if (vue) return vue;
   const angular = ADAPTERS.angular.detect(data);
   if (angular) return angular;
+  const svelte = ADAPTERS.svelte.detect(data);
+  if (svelte) return svelte;
   for (const [name, label] of Object.entries(OTHER_FRAMEWORKS)) {
     if (name in peers) return { kind: "npm-unsupported", framework: label, reason: `The package needs ${label}.` };
   }

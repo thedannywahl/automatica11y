@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { cleanSubpath } from "./subpath.js";
 
 /**
- * @typedef {"npm" | "npm-react" | "npm-vue" | "npm-angular" | "npm-html" | "npm-wc" | "npm-unsupported" | "storybook" | "url" | "html-file" | "static-dir"} TargetKind
+ * @typedef {"npm" | "npm-react" | "npm-vue" | "npm-angular" | "npm-svelte" | "npm-html" | "npm-wc" | "npm-unsupported" | "storybook" | "url" | "html-file" | "static-dir"} TargetKind
  * @typedef {{
  *   input: string,
  *   label: string | null,

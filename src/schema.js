@@ -9,7 +9,7 @@ export const IMPACTS = ["minor", "moderate", "serious", "critical"];
 export const TOOLKIT_LEVELS = [1, 2, 3];
 export const FAIL_MODES = ["any", "all"];
 export const ARCHETYPES = ["button", "link", "dialog", "menu", "tabs", "combobox", "form-field", "accordion", "tooltip", "live-region", "chart"];
-export const FLAVORS = ["react", "vue", "angular", "html", "wc"];
+export const FLAVORS = ["react", "vue", "angular", "svelte", "html", "wc"];
 export const MAPPING_STATUSES = ["template", "authored", "generated", "needs-fixture", "no-match"];
 
 /** What a candidate mapping says about one archetype of one npm target. */
@@ -49,7 +49,7 @@ export function parseMappingFile(input) {
   return result.output;
 }
 
-export const TARGET_KINDS = ["npm", "npm-react", "npm-vue", "npm-angular", "npm-html", "npm-wc", "npm-unsupported", "npm-non-ui", "storybook", "url", "html-file", "static-dir"];
+export const TARGET_KINDS = ["npm", "npm-react", "npm-vue", "npm-angular", "npm-svelte", "npm-html", "npm-wc", "npm-unsupported", "npm-non-ui", "storybook", "url", "html-file", "static-dir"];
 
 const nullableString = v.nullable(v.string());
 
@@ -240,6 +240,7 @@ export const TargetResultSchema = v.object({
       reactDom: nullableString,
       vue: v.optional(nullableString),
       angular: v.optional(nullableString),
+      svelte: v.optional(nullableString),
       /** For plain HTML, the stylesheets and scripts the page loaded, as `package/sub-path`. */
       assets: v.optional(v.object({ styles: v.array(v.string()), scripts: v.array(v.string()) })),
       tags: v.array(v.string()),

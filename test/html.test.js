@@ -40,7 +40,7 @@ test("a package that ships a stylesheet or a browser script and needs no framewo
   assert.equal(detectFlavor({ unpkg: "dist/a.iife.js" }).kind, "npm-html");
   assert.equal(detectFlavor({ exports: { "./a.umd.js": "./a.umd.js" } }).kind, "npm-html");
   assert.equal(detectFlavor({ peerDependencies: { react: "^18" }, exports: { "./a.css": "./a.css" } }).kind, "npm-react", "a framework wins");
-  assert.equal(detectFlavor({ peerDependencies: { svelte: "^5" }, style: "a.css" }).kind, "npm-unsupported");
+  assert.equal(detectFlavor({ peerDependencies: { "solid-js": "^1" }, style: "a.css" }).kind, "npm-unsupported");
   assert.equal(detectFlavor({ exports: { ".": "./index.js" } }).kind, "npm", "no browser assets, so the metadata can't say");
   assert.equal(detectFlavor({ exports: { ".": "./index.mjs", "./components.css": "./components.css" } }).kind, "npm", "a JavaScript entry could be web components, so loading the package decides");
   assert.equal(detectFlavor({ main: "index.js", style: "a.css" }).kind, "npm");

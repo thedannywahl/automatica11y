@@ -35,7 +35,7 @@ export function installedVersion(dir, name) {
  * Install a package into its own directory, never next to another target's install.
  * npm adds the peer dependencies. A React package also needs react-dom, and a Vue package needs vue, so add them when the peers left them out.
  * Install scripts stay off, because the code is untrusted until it runs in the browser sandbox.
- * @param {{ dir: string, name: string, version: string, flavor: "react" | "vue" | "angular" | "html" | "wc" | "unknown", run?: typeof runNpm }} options
+ * @param {{ dir: string, name: string, version: string, flavor: "react" | "vue" | "angular" | "svelte" | "html" | "wc" | "unknown", run?: typeof runNpm }} options
  */
 export async function installPackage({ dir, name, version, flavor, run = runNpm }) {
   mkdirSync(dir, { recursive: true });
@@ -77,6 +77,10 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
     await npm(["install", "vue", ...pinnedRuntime(dir, ["vue"]), ...NPM_FLAGS, "--legacy-peer-deps"]);
     warnings.push(`${name} didn't bring in vue, so the latest vue was added.`);
   }
+  if (flavor === "svelte" && !installedVersion(dir, "svelte")) {
+    await npm(["install", "svelte", ...pinnedRuntime(dir, ["svelte"]), ...NPM_FLAGS, "--legacy-peer-deps"]);
+    warnings.push(`${name} didn't bring in svelte, so the latest svelte was added.`);
+  }
   if (flavor === "angular") {
     // The Angular packages have to be the same version as core. A library's peers usually bring in core and common, not the compiler or the platform.
     const core = installedVersion(dir, "@angular/core");
@@ -90,7 +94,7 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
       await npm(["install", ...adding, ...pinnedRuntime(dir, adding), ...NPM_FLAGS, "--legacy-peer-deps"]);
     }
   }
-  return { dir, warnings, react: installedVersion(dir, "react"), reactDom: installedVersion(dir, "react-dom"), vue: installedVersion(dir, "vue"), angular: installedVersion(dir, "@angular/core"), version: installedVersion(dir, name) };
+  return { dir, warnings, react: installedVersion(dir, "react"), reactDom: installedVersion(dir, "react-dom"), vue: installedVersion(dir, "vue"), angular: installedVersion(dir, "@angular/core"), svelte: installedVersion(dir, "svelte"), version: installedVersion(dir, name) };
 }
 
 /** What an Angular fixture needs beside the library: core, the runtime compiler, the platform, and the pieces core uses. */

@@ -66,7 +66,7 @@ test("detectFlavor: React wins, then web components, then Vue, then other framew
   assert.equal(detectFlavor({ peerDependencies: { react: "^18" }, customElements: "x.json" }).kind, "npm-react");
   assert.equal(detectFlavor({ customElements: "custom-elements.json" }).kind, "npm-wc");
   assert.equal(detectFlavor({ dependencies: { lit: "^3" } }).kind, "npm-wc");
-  const svelte = detectFlavor({ peerDependencies: { svelte: "^5" } });
+  const svelte = detectFlavor({ peerDependencies: { svelte: "^4" } });
   assert.equal(svelte.kind, "npm-unsupported");
   assert.equal(svelte.framework, "Svelte");
   assert.equal(detectFlavor({ peerDependencies: { vue: "^3" } }).kind, "npm-vue");
@@ -473,7 +473,7 @@ test("an unsupported framework is named, and nothing is installed", { skip }, as
   const result = await run(["audit", "npm:svelte-lib", "--tiers", "rules"]);
   assert.equal(result.code, 4);
   assert.equal(result.results.targets[0].status, "unsupported");
-  assert.match(result.results.targets[0].reason, /Svelte packages aren't supported\. This version covers React, Vue 3, Angular 22 and newer, and web components\./);
+  assert.match(result.results.targets[0].reason, /Svelte packages aren't supported\.[\s\S]*svelte \^4[\s\S]*This version covers React, Vue 3, Angular 22 and newer, Svelte 5 and newer, and web components\./);
   assert.equal(leftovers().length, before);
 });
 

@@ -1,0 +1,8 @@
+{
+  "name": "fake-svelte-ui",
+  "version": "1.0.0",
+  "type": "module",
+  "svelte": "index.js",
+  "exports": { ".": { "svelte": "./index.js", "default": "./index.js" }, "./package.json": "./package.json" },
+  "peerDependencies": { "svelte": "^5.0.0" }
+}

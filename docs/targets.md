@@ -7,7 +7,7 @@ A target is `[label=]<spec>`. The label is optional, and names the target in the
 | A live page | `https://example.com/page` |
 | A local page or site | `./page.html` or `./dist`. A path with no prefix is relative to the working folder, so `dist` means `./dist`. Prefixes `../`, `/`, `~`, and `file:` work too. |
 | A Storybook | Its URL, or a local folder with `index.json` or `stories.json`. |
-| An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. Add a sub-path to test one entry of a package: `npm:@scope/pkg/button` or `npm:@scope/pkg@1.2.3/button/v2`. React, Vue 3, Angular 22 and newer, and web component libraries work. A library that ships in pieces is one target: join the packages with commas and no spaces, `npm:@scope/components,@scope/interactions`. The first is the primary and names the target, and the others install beside it into the same folder. |
+| An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. Add a sub-path to test one entry of a package: `npm:@scope/pkg/button` or `npm:@scope/pkg@1.2.3/button/v2`. React, Vue 3, Angular 22 and newer, Svelte 5 and newer, plain HTML, and web component libraries work. A library that ships in pieces is one target: join the packages with commas and no spaces, `npm:@scope/components,@scope/interactions`. The first is the primary and names the target, and the others install beside it into the same folder. |
 
 A bare word such as `button` is a path: the folder or file `./button`. Write `npm:button` to pick the package. The prefix is what chooses a package, so a folder with the same name never gets in the way. A bare word that isn't a path fails with a hint, such as "If you meant the npm package, write npm:react."
 

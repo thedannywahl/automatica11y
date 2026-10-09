@@ -24,6 +24,9 @@ export const REGISTRY = {
   "fake-ng-zone": { name: "fake-ng-zone", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0", "zone.js": "*" } },
   "fake-html-css": { name: "fake-html-css", version: "1.0.0", exports: { "./components.css": "./components.css", "./base.css": "./base.css", "./package.json": "./package.json" } },
   "fake-html-js": { name: "fake-html-js", version: "2.0.0", exports: { "./init.iife.js": "./init.iife.js", "./broken.iife.js": "./broken.iife.js", "./package.json": "./package.json" } },
+  "fake-svelte-ui": { name: "fake-svelte-ui", version: "1.0.0", peerDependencies: { svelte: "^5.0.0" } },
+  // The real bits-ui, linked from the repository's dev dependencies, to prove a library of compound parts runs.
+  "bits-ui": { name: "bits-ui", version: "2.19.5", peerDependencies: { svelte: "^5.33.0" } },
   "fake-ng-old": { name: "fake-ng-old", version: "1.0.0", peerDependencies: { "@angular/core": "^20.0.0 || ^21.0.0" } },
   "fake-ng-split": { name: "fake-ng-split", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" }, exports: { ".": "./index.js", "./button": "./button.js", "./package.json": "./package.json" } },
   // The real Angular Material, linked from the repository's dev dependencies, to prove a partly compiled library runs.
@@ -31,7 +34,7 @@ export const REGISTRY = {
   "fake-vue-ui": { name: "fake-vue-ui", version: "1.0.0", peerDependencies: { vue: "^3.4.0" } },
   "fake-vue-controlled": { name: "fake-vue-controlled", version: "1.0.0", peerDependencies: { vue: "^3.4.0" } },
   "vue-two-lib": { name: "vue-two-lib", version: "1.0.0", peerDependencies: { vue: "^2.7.0" } },
-  "svelte-lib": { name: "svelte-lib", version: "1.0.0", peerDependencies: { svelte: "^5" } },
+  "svelte-lib": { name: "svelte-lib", version: "1.0.0", peerDependencies: { svelte: "^4" } },
 };
 
 export const npmView = async (spec) => {
@@ -49,7 +52,11 @@ export async function installPackage({ dir, name, version, flavor }) {
     // Angular's packages, rxjs, and the real Material and CDK all come from the repository's dev dependencies.
     for (const dep of ["@angular", "rxjs", ...(REGISTRY[name]?.peerDependencies?.["zone.js"] ? ["zone.js"] : [])]) if (existsSync(join(repoModules, dep))) symlinkSync(join(repoModules, dep), join(dir, "node_modules", dep));
   }
-  if (!name.startsWith("@angular/")) cpSync(join(packages, name), join(dir, "node_modules", name), { recursive: true });
+  if (flavor === "svelte") {
+    // Svelte and its dependencies come from the repository's dev dependencies. bits-ui is linked too, since it's real.
+    for (const dep of ["svelte", ...(name === "bits-ui" ? ["bits-ui"] : [])]) if (existsSync(join(repoModules, dep))) symlinkSync(join(repoModules, dep), join(dir, "node_modules", dep));
+  }
+  if (!name.startsWith("@angular/") && name !== "bits-ui") cpSync(join(packages, name), join(dir, "node_modules", name), { recursive: true });
   if (flavor === "react") {
     for (const dep of ["react", "react-dom", "scheduler"]) if (existsSync(join(repoModules, dep))) symlinkSync(join(repoModules, dep), join(dir, "node_modules", dep));
   }
@@ -59,6 +66,7 @@ export async function installPackage({ dir, name, version, flavor }) {
   const react = flavor === "react" ? JSON.parse(readFileSync(join(repoModules, "react", "package.json"), "utf8")).version : null;
   const vue = flavor === "vue" ? JSON.parse(readFileSync(join(repoModules, "vue", "package.json"), "utf8")).version : null;
   const angular = flavor === "angular" ? JSON.parse(readFileSync(join(repoModules, "@angular", "core", "package.json"), "utf8")).version : null;
-  return { dir, warnings: [], react, reactDom: react, vue, angular, version };
+  const svelte = flavor === "svelte" ? JSON.parse(readFileSync(join(repoModules, "svelte", "package.json"), "utf8")).version : null;
+  return { dir, warnings: [], react, reactDom: react, vue, angular, svelte, version };
 }
 
