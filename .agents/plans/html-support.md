@@ -50,9 +50,9 @@ Without a mapping, the tool loads every stylesheet and script the primary's meta
 |---|---|
 | button | `<button type="button">` |
 | link | `<a href="#top">` |
-| form-field | `<label for>` and `<input>` |
+| form-field | a `<fieldset>` with a `<legend>` that holds the native controls: a labelled text `<input>` (the trigger), a `<textarea>`, a `<select>`, a checkbox, a radio group, and an `aria-invalid` field whose message is tied with `aria-describedby`. The `<fieldset>` is the root, so the rules checks cover every control and the interaction checks press the text input. |
 | dialog | `<button>` that calls `showModal()` on a `<dialog>` that has a heading and a close button |
-| accordion | `<details>` and `<summary>` |
+| accordion | two `<details>` elements that share a `name`, so opening one closes the other, each with a `<summary>`. A single `<details>` is the second configuration. |
 | live-region | a `<button>` that adds a `<div role="status">` message |
 | menu | a `<button popovertarget>` that toggles a `popover` element with `role="menu"` and `role="menuitem"` buttons. The browser does the open and close. |
 | tooltip | a `<button>` with `interestfor` pointing at a `popover="hint"` element with `role="tooltip"`, so it opens on focus. This needs a browser that supports interest invokers, so where the bundled browser doesn't, it's a gap that says so. |
@@ -61,6 +61,8 @@ Without a mapping, the tool loads every stylesheet and script the primary's meta
 - A report marks these results as **native markup under the package's styles**, a lower claim than a result for a component the package built. The report never says the package's component passed.
 - **Authored** fixtures win, as everywhere. They work for every archetype, and a consumer can bring a full set. The same recipe format as the other adapters (`fixtures/<id>/<archetype>.html`, or a path in the mapping).
 - **Generated** fixtures are out of the first release. Without selectors or exports there is nothing to read from except class names, and that's the guessing the decision above rules out. A later release can revisit it with real runs in hand.
+
+**Focus, and the other checks that come along.** Focus isn't an archetype. It's checked on every fixture already: the focus indicator's contrast and size, the forced-colors view, keyboard reachability, and focus return and containment for the dialog. Every template has a focusable trigger, so those checks run on all of them, and a package's base styles (a global `:focus-visible` ring, for example) are measured on bare native elements. The same goes for contrast, target size, reflow, zoom, and reduced motion in the conditions tier. Nothing needs adding for them. What the templates add is more native controls under the rules checks, which is why the form-field template is a whole fieldset and not one input.
 
 ## 5. Phases.
 
