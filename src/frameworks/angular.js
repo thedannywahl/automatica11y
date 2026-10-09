@@ -144,7 +144,9 @@ export default {
   },
   /** What the install left behind that the entry needs to know about. */
   inspect: (workDir) => ({ zone: existsSync(join(workDir, "node_modules", "zone.js")) }),
-  bundle: (workDir) => ({ alias: {}, plugins: [singleCopy(workDir)], esbuild: {} }),
+  // Fixtures can be TypeScript. esbuild strips the types, and legacy decorators are what Angular's JIT reads. It can't emit
+  // constructor parameter metadata, so a TypeScript fixture gets its services from inject().
+  bundle: (workDir) => ({ alias: {}, plugins: [singleCopy(workDir)], esbuild: { tsconfigRaw: { compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false } } } }),
   entry,
   discoverEntry,
   template,

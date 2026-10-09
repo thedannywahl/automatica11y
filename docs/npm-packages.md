@@ -21,7 +21,7 @@ Fixtures are code that the tool bundles and runs in a browser on your machine. W
 |---|---|---|
 | React | A `react` peer dependency or dependency. | JSX. Import the library and the tool installs it. |
 | Vue 3 | A `vue` peer dependency or dependency that allows version 3. | JSX that becomes `h()` calls. Don't import `h`. An optional `setup(app)` export installs plugins. |
-| Angular 22 and newer | An Angular core peer dependency or dependency whose range allows version 22 or later. | A `.js` file. Define the component by calling `Component({ ... })(Class)`, import the library, and export the class as the default. An optional `providers` export adds application providers. |
+| Angular 22 and newer | An Angular core peer dependency or dependency whose range allows version 22 or later. | A `.js` file, or a `.ts` file with decorators (use `inject()` for services). Define the component by calling `Component({ ... })(Class)`, import the library, and export the class as the default. An optional `providers` export adds application providers. |
 | Web components | A custom elements manifest, or a base library such as Lit. | A `mount(container)` function. |
 
 Svelte, Vue 2, and Angular packages older than version 22 report "unsupported framework." Their Storybooks still work, because a Storybook renders stories in a page whatever the framework.

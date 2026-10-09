@@ -62,6 +62,8 @@ Component({
 export default Fixture;
 ```
 
+An Angular fixture can also be TypeScript (`fixtures/<target id>/<archetype>.ts`) with `@Component({ ... })` decorators. The tool strips the types, but it can't emit constructor parameter metadata, so get services with `inject(Service)` and not through constructor parameters. A missing provider or an unknown element is reported in a plain sentence with Angular's error code.
+
 Angular libraries split their parts across sub-paths, so audit them with a sub-path target, for example `npm:@angular/material/menu`.
 
 For web components, make `mount(container)` the file's default export. It adds the archetype to the container. The tool imports the package first, so its elements are defined before `mount` runs. The `data-a11y-trigger` and `data-a11y-root` attributes can sit on a host element, a slotted child, or an element inside an **open** shadow root. A **closed** shadow root hides its content from every tool, so the report lists it as not testable.

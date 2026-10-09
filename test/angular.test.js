@@ -6,6 +6,7 @@ import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { adapterFor } from "../src/frameworks/index.js";
 import { generateAngular } from "../src/harness/generate/angular-recipes.js";
+import { explainAngularError } from "../src/frameworks/angular-errors.js";
 import { markupFor } from "../src/frameworks/angular-selectors.js";
 import { detectFlavor } from "../src/plan/resolve-npm.js";
 import { parseResults } from "../src/schema.js";
@@ -232,4 +233,27 @@ test("a button that names its own element keeps it, a link doesn't, and nested t
     record("AccordionContent", "component", { selectors: [["p-accordion-content"]] }),
   ];
   assert.match(generateAngular({ archetype: "accordion", pkg: "x", exports: accordion }).candidates[0].source, /<p-accordion-panel value=\\"One\\"><p-accordion-header>One<\/p-accordion-header><p-accordion-content>One content\.<\/p-accordion-content>/);
+});
+
+test("Angular's common errors become plain sentences, and the rest pass through", () => {
+  assert.match(explainAngularError("ERROR ɵNotFound: NG0201: No provider found for `TabList2`. Source: Standalone[Fixture]."), /missing a provider that the library needs \(TabList2\)[\s\S]*providers/);
+  assert.match(explainAngularError("NG0304: 'ui-thing' is not a known element"), /doesn't define \(ui-thing\)/);
+  assert.match(explainAngularError("NG05105: Unexpected synthetic listener"), /legacy animations package/);
+  assert.equal(explainAngularError("TypeError: x is not a function"), "TypeError: x is not a function");
+});
+
+test("Angular: a TypeScript fixture with decorators and inject() runs, and a missing provider is named", { skip, timeout: 240_000 }, async () => {
+  const typed = `import { Component, inject } from "@angular/core";
+import { UiDialog } from "fake-ng-ui";
+@Component({ selector: "app-content", template: "<h2>Settings</h2><button type=\\"button\\" style=\\"min-height:44px\\">Close</button>" })
+class Content {}
+@Component({ selector: "app-fixture", template: "<button type=\\"button\\" data-a11y-trigger style=\\"min-height:44px\\" (click)=\\"open()\\">Open dialog</button>" })
+export default class Fixture {
+  private dialog: UiDialog = inject(UiDialog);
+  open(): void { this.dialog.open(Content); }
+}`;
+  const result = await run(["audit", "ui=npm:fake-ng-ui", "--archetypes", "dialog", "--tiers", "rules", "--no-generate"], { "fixtures/ui/dialog.ts": typed });
+  assert.equal(result.code, 0, result.stderr);
+  const dialog = result.results.targets[0].archetypes.dialog;
+  assert.deepEqual([dialog.status, dialog.fixture.source], ["ran", "authored"], dialog.reason ?? "");
 });

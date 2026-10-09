@@ -97,7 +97,7 @@ export function findAuthoredFixture({ cwd, targetId, archetype, mapped }) {
     const file = resolve(cwd, mapped.fixture);
     return existsSync(file) ? file : null;
   }
-  for (const ext of ["jsx", "js"]) {
+  for (const ext of ["jsx", "js", "ts"]) {
     const file = resolve(cwd, "fixtures", targetId, `${archetype}.${ext}`);
     if (existsSync(file)) return file;
   }
