@@ -15,6 +15,7 @@ import { cleanSubpath } from "./subpath.js";
  *   kind: TargetKind | null,
  *   evidenceLevel: "component" | "page" | null,
  *   resolved: Record<string, string | null> | null,
+ *   companions?: Array<{ name: string, requested: string | null, version: string | null, subpath: string | null }>,
  * }} ClassifiedTarget
  * @typedef {(url: string | URL, init?: { signal?: AbortSignal, redirect?: string }) => Promise<{ ok: boolean, status: number, text(): Promise<string> }>} FetchLike
  * @typedef {{ cwd?: string, home?: string, fetch?: FetchLike, timeoutMs?: number, npmView?: (spec: string) => Promise<unknown> }} ClassifyContext
@@ -123,30 +124,57 @@ async function classifyUrl(spec, base, ctx) {
   }
 }
 
-/** @param {string} spec @param {{ input: string, label: string | null, name: string }} base @returns {ClassifiedTarget} */
-function classifyNpm(spec, base) {
+/**
+ * Read one npm spec: `name`, `name@version`, or either with a sub-path.
+ * @param {string} spec
+ * @returns {{ name: string, requested: string | null, subpath: string | null } | { error: string }}
+ */
+function parseNpmSpec(spec) {
   const match = NPM_NAME.exec(spec);
   if (!match) {
-    if (/[A-Z]/.test(spec) && NPM_NAME.test(spec.toLowerCase())) return failed(`"${spec}" isn't a valid package name. npm package names are lowercase.`, base);
-    return failed(`"${spec}" isn't a valid npm package name. Write npm:name, npm:@scope/name, or npm:name@version.`, base);
+    if (/[A-Z]/.test(spec) && NPM_NAME.test(spec.toLowerCase())) return { error: `"${spec}" isn't a valid package name. npm package names are lowercase.` };
+    return { error: `"${spec}" isn't a valid npm package name. Write npm:name, npm:@scope/name, or npm:name@version.` };
   }
   const [, scope, name, version, rawSubpath] = match;
-  if (version === "") return failed(`"${spec}" ends with @ but has no version.`, base);
+  if (version === "") return { error: `"${spec}" ends with @ but has no version.` };
   let subpath = null;
   if (rawSubpath !== undefined) {
     const cleaned = cleanSubpath(rawSubpath);
-    if ("reason" in cleaned) return failed(`"${spec}" isn't a valid sub-path: ${cleaned.reason}. Write npm:name/sub/path or npm:name@version/sub/path.`, base);
+    if ("reason" in cleaned) return { error: `"${spec}" isn't a valid sub-path: ${cleaned.reason}. Write npm:name/sub/path or npm:name@version/sub/path.` };
     subpath = /** @type {{ subpath: string }} */ (cleaned).subpath;
   }
-  const full = scope ? `@${scope}/${name}` : name;
+  return { name: scope ? `@${scope}/${name}` : name, requested: version ?? null, subpath };
+}
+
+/**
+ * An npm target. A comma-separated list (`npm:a,b@1.2`) is one target made of several packages that install into one folder.
+ * The first is the primary: it names the target and decides the framework. The rest are companions, such as a script package
+ * that goes with a stylesheet package.
+ * @param {string} spec @param {{ input: string, label: string | null, name: string }} base @returns {ClassifiedTarget}
+ */
+function classifyNpm(spec, base) {
+  const entries = spec.split(",").map((entry) => entry.trim());
+  if (entries.length > 1 && entries.some((entry) => entry === "")) {
+    return failed(`"${spec}" has an empty entry in its list. Write the packages with commas and no spaces, for example npm:a,b.`, base);
+  }
+  const parsed = entries.map(parseNpmSpec);
+  for (const entry of parsed) if ("error" in entry) return failed(entry.error, base);
+  const [primary, ...companions] = /** @type {Array<{ name: string, requested: string | null, subpath: string | null }>} */ (parsed);
+  const seen = new Set();
+  for (const entry of [primary, ...companions]) {
+    const key = `${entry.name}/${entry.subpath ?? ""}`;
+    if (seen.has(key)) return failed(`"${entry.name}${entry.subpath ? `/${entry.subpath}` : ""}" is in the list more than once.`, base);
+    seen.add(key);
+  }
   return {
     ...base,
-    name: base.name || (subpath ? `${full}/${subpath}` : full),
+    name: base.name || (primary.subpath ? `${primary.name}/${primary.subpath}` : primary.name),
     status: "ok",
     reason: null,
     kind: "npm",
     evidenceLevel: "component",
-    resolved: { name: full, requested: version ?? null, version: null, subpath },
+    resolved: { name: primary.name, requested: primary.requested, version: null, subpath: primary.subpath },
+    ...(companions.length ? { companions: companions.map((c) => ({ name: c.name, requested: c.requested, version: null, subpath: c.subpath })) } : {}),
   };
 }
 

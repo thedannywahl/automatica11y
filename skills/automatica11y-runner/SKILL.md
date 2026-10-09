@@ -22,7 +22,7 @@ This skill works with automatica11y **0.5.x**. Run:
 npx --yes automatica11y@latest --version
 ```
 
-If the command exits with an error or prints nothing, tell the user it failed, include the error text, and stop. If the output doesn't start with `0.4.`, stop. Tell the user the version you got and the series this copy expects (`0.5.x`). If this copy came from a file, offer to read the matching steps with `npx --yes automatica11y@latest guide skill`. Don't run an audit until the user confirms how to proceed.
+If the command exits with an error or prints nothing, tell the user it failed, include the error text, and stop. If the output doesn't start with `0.5.`, stop. Tell the user the version you got and the series this copy expects (`0.5.x`). If this copy came from a file, offer to read the matching steps with `npx --yes automatica11y@latest guide skill`. Don't run an audit until the user confirms how to proceed.
 
 If the user installed the tool globally (`npm i -g automatica11y`), `automatica11y` is on the `PATH` (so is the short name `a11y`), and it runs the same commands as `npx --yes automatica11y@latest`. Every command in this skill is written with `npx`, so replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above. If the installed version is the wrong series, or nothing is installed, use `npx`.
 
@@ -53,6 +53,17 @@ Use `audit` for one target and `compare` for two or more, even when they're diff
 | An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. To test one entry of a package, add a sub-path after the version: `npm:@scope/pkg/button` or `npm:@scope/pkg@1.2.3/button/v2`. The sub-path is what a person would import (`import ... from "@scope/pkg/button"`), and it has to be something the package exports. |
 
 A bare word such as `button` is a path: the folder or file `./button`. Always write an npm package with the `npm:` prefix. If a word could mean a package or a folder, ask the user which one before you run anything.
+
+**One target can be several packages.** Some libraries ship in pieces, such as a stylesheet package and a script package. Join them with commas and no spaces: `npm:@scope/components,@scope/interactions`. They install into one folder and are tested as one target. The first is the primary: it names the target and decides the framework. Every other package is a companion. Each entry can have its own version and sub-path (`npm:a@1.2,b/button`). A list with a space, an empty entry, or the same package twice is rejected. Targets themselves are separated by spaces, as before.
+
+**Reading a comparison in plain language.** People write "compare A, B and C and D." Work out the targets before you build the command:
+
+- A comma joins packages into one target. The words "and", "vs", "versus", "against", and "compared with" separate targets. So "compare A, B and C and D" is three targets: `A,B`, `C`, and `D`.
+- Give each target a short label that says what it is, such as `pantoken-html=npm:A,B instui=npm:C pantoken-wc=npm:D`. Use the framework or the library's own name, so the report reads clearly.
+- Packages from the same organization are separate targets when they're alternatives for the same job (a React build and a web component build of one design system). They belong in one target only when the user says they work together, or when one package is the stylesheet or script half of the other.
+- Don't guess when the grouping is unclear. "A, B and C" could be one target of three packages, a target of two beside a third, or three targets. A comma list with no "and", a package that might be a companion or an alternative, and "with" or "plus" between packages are all unclear.
+- Always show the grouping before you run, as a short table of label, packages, and role. If the grouping came from anything but an obvious reading, ask the user to confirm it, with your best reading offered as the default, in the same message as your other questions.
+- Run the same archetypes on every target in a comparison. Say in the report which targets are made of several packages.
 
 Options you can set, and nothing else:
 

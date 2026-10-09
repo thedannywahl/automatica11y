@@ -92,10 +92,24 @@ export async function resolveNpmTarget(target, view) {
       if (result.checked && !result.ok) throw new Error(notExportedMessage({ name, version: typeof meta.version === "string" ? meta.version : null, subpath, exact: result.exact, patterns: result.patterns }));
     }
     const flavor = detectFlavor(meta);
+    // Each companion is looked up the same way, so a wrong name, version, or sub-path fails here, before anything is installed.
+    /** @type {Array<{ name: string, requested: string | null, version: string | null, subpath: string | null }>} */
+    const companions = [];
+    for (const companion of target.companions ?? []) {
+      const found = await view(`${companion.name}@${companion.requested ?? "latest"}`);
+      if (!isRecord(found)) throw new Error(`npm returned metadata for ${companion.name} in an unreadable shape.`);
+      const version = typeof found.version === "string" ? found.version : null;
+      if (companion.subpath) {
+        const result = checkExports(found.exports, companion.subpath);
+        if (result.checked && !result.ok) throw new Error(notExportedMessage({ name: companion.name, version, subpath: companion.subpath, exact: result.exact, patterns: result.patterns }));
+      }
+      companions.push({ ...companion, version });
+    }
     return {
       ...target,
       kind: flavor.kind,
       resolved: { ...target.resolved, version: typeof meta.version === "string" ? meta.version : null, framework: flavor.framework, detectedBy: flavor.reason },
+      ...(companions.length ? { companions } : {}),
     };
   } catch (error) {
     return { ...target, status: "failed", reason: error instanceof Error ? error.message : String(error), kind: null, evidenceLevel: null, resolved: null };

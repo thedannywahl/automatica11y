@@ -235,6 +235,19 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       if (problem) throw new Error(problem);
     }
 
+    // The other packages of a list target (`npm:a,b`) go into the same folder, so the scripts and styles of one see the others.
+    /** @type {Array<{ name: string, subpath: string | null, version: string | null }>} */
+    const companions = [];
+    for (const companion of planTarget.companions ?? []) {
+      const added = await install({ dir: workDir, name: companion.name, version: companion.version, flavor: "unknown" });
+      warnings.push(...added.warnings);
+      if (companion.subpath) {
+        const problem = subpathProblem(workDir, companion.name, companion.subpath, added.version ?? companion.version);
+        if (problem) throw new Error(problem);
+      }
+      companions.push({ name: companion.name, subpath: companion.subpath ?? null, version: added.version ?? companion.version });
+    }
+
     // Packages the mapping names (a token stylesheet, a theme) go in beside the library, so a fixture can import them.
     const extras = await installExtraPackages({ dir: workDir, specs: Object.values(planTarget.mapping ?? {}).flatMap((entry) => entry.install ?? []) });
     warnings.push(...extras.warnings);
@@ -381,6 +394,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
           name: resolved.name,
           subpath: resolved.subpath ?? null,
           version: installed.version ?? resolved.version,
+          ...(companions.length ? { companions } : {}),
           flavor,
           framework: resolved.framework ?? null,
           react: installed.react,

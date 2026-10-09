@@ -281,6 +281,7 @@ export function targetSection(planTarget, target, { generatedNote = true } = {})
   if (target.npm) {
     const n = target.npm;
     lines.push(`Installed ${code(`${n.name}@${n.version}`)} on its own${n.subpath ? ` and tested its ${code(`${n.name}/${n.subpath}`)} entry` : ""}, as ${adapterFor(n.flavor).describe(n)}.`, "");
+    if (n.companions?.length) lines.push(`Installed beside it, in the same folder: ${n.companions.map((c) => code(`${c.name}@${c.version}${c.subpath ? `/${c.subpath}` : ""}`)).join(", ")}.`, "");
   }
   for (const warning of target.warnings) lines.push(`Warning: ${warning}`, "");
   if (target.status === "failed") {

@@ -36,6 +36,7 @@ export async function buildPlan({ command, targets, options, browserVersion = nu
       kind: target.kind,
       evidenceLevel: target.evidenceLevel,
       resolved: target.resolved,
+      ...(target.companions?.length ? { companions: target.companions } : {}),
       mapping: null,
     };
   });

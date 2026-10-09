@@ -62,6 +62,8 @@ export const TargetSchema = v.object({
   kind: v.nullable(v.picklist(TARGET_KINDS)),
   evidenceLevel: v.nullable(v.picklist(["component", "page"])),
   resolved: v.nullable(v.record(v.string(), nullableString)),
+  /** The other packages of an npm list target (`npm:a,b`), which install beside the primary one. */
+  companions: v.optional(v.array(v.object({ name: v.string(), requested: nullableString, version: nullableString, subpath: nullableString }))),
   mapping: v.nullable(v.record(v.string(), MappingEntrySchema)),
 });
 
@@ -230,6 +232,8 @@ export const TargetResultSchema = v.object({
       /** The sub-path of the package that was tested, such as `button/v2`, or null for the package itself. */
       subpath: v.optional(nullableString),
       version: nullableString,
+      /** The other packages of a list target (`npm:a,b`), installed beside the primary one. */
+      companions: v.optional(v.array(v.object({ name: v.string(), subpath: nullableString, version: nullableString }))),
       flavor: v.picklist(FLAVORS),
       framework: nullableString,
       react: nullableString,

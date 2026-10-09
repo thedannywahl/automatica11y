@@ -265,3 +265,10 @@ test("the fixture reference mentions both hooks and both flavors", () => {
   const fixtures = referenceFiles.find((f) => f.name === "references/fixtures.md").text;
   for (const must of ["data-a11y-trigger", "data-a11y-root", "mount(container", "libA11y", "fixtures/<target id>/<archetype>"]) assert.ok(fixtures.includes(must), must);
 });
+
+test("the runner says how to read a plain-language comparison, and asks when the grouping is unclear", () => {
+  assert.match(runner, /Join them with commas and no spaces: `npm:@scope\/components,@scope\/interactions`/);
+  assert.match(runner, /A comma joins packages into one target\. The words "and", "vs", "versus", "against", and "compared with" separate targets\. So "compare A, B and C and D" is three targets: `A,B`, `C`, and `D`\./);
+  assert.match(runner, /Don't guess when the grouping is unclear/);
+  assert.match(runner, /Always show the grouping before you run[\s\S]*ask the user to confirm it/);
+});
