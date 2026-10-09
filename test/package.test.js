@@ -68,17 +68,22 @@ test("every dependency the code imports is a real dependency", () => {
 });
 
 
-test("the README documents every flag, every exit code, and the skill install", () => {
+test("the docs document every flag, every exit code, and the skill install, and the README says what the tool won't do", () => {
   const readme = readFileSync(join(root, "README.md"), "utf8");
+  const docs = readdirSync(join(root, "docs")).filter((name) => name.endsWith(".md")).map((name) => readFileSync(join(root, "docs", name), "utf8")).join("\n");
   const common = readFileSync(join(root, "src/commands/common.js"), "utf8");
   const defs = /OPTION_DEFS = [^{]*\{([\s\S]*?)\n\}\);/.exec(common)[1];
   const flags = [...defs.matchAll(/^\s*"?([a-z0-9-]+)"?: \{/gm)].map((m) => m[1]).filter((f) => f !== "help");
   assert.ok(flags.length >= 12);
-  for (const flag of flags) assert.ok(readme.includes(`--${flag}`), `README documents --${flag}`);
-  for (const code of ["0", "1", "2", "3", "4"]) assert.match(readme, new RegExp(`\\| ${code} \\|`), `README explains exit code ${code}`);
+  for (const flag of flags) assert.ok(docs.includes(`--${flag}`), `the docs document --${flag}`);
+  for (const code of ["0", "1", "2", "3", "4"]) assert.match(docs, new RegExp(`\\| ${code} \\|`), `the docs explain exit code ${code}`);
   assert.match(readme, /skills\/automatica11y/);
   assert.match(readme, /automatica11y@latest guide|automatica11y guide/);
-  assert.doesNotMatch(readme, /init-skill/);
-  assert.match(readme, /no automated violations found/i);
-  assert.doesNotMatch(readme, /\bis (fully )?(accessible|compliant)\b/i);
+  assert.match(docs, /automatica11y@latest guide/);
+  for (const text of [readme, docs]) {
+    assert.doesNotMatch(text, /init-skill/);
+    assert.doesNotMatch(text, /\bis (fully )?(accessible|compliant)\b/i);
+  }
+  assert.match(docs, /no automated violations found/i);
+  assert.match(readme, /no automated violations found|never says "accessible/i);
 });

@@ -3,3 +3,4 @@ a11y-report/
 *.tgz
 .DS_Store
 tmp/
+site/

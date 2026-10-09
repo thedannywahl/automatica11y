@@ -15,6 +15,9 @@ const runner = readFileSync(join(runnerDir, "SKILL.md"), "utf8");
 const agents = read("AGENTS.md");
 const referenceFiles = readdirSync(join(runnerDir, "references")).map((name) => ({ name: `references/${name}`, text: readFileSync(join(runnerDir, "references", name), "utf8") }));
 /** Every Markdown file an agent might be handed. */
+/** Every Markdown page in docs/, which is where the long-form documentation lives. */
+const docPages = readdirSync(join(root, "docs")).filter((name) => name.endsWith(".md")).map((name) => ({ name: `docs/${name}`, text: read("docs", name) }));
+const docsText = docPages.map((page) => page.text).join("\n");
 const agentDocs = [{ name: "AGENTS.md", text: agents }, { name: "skills/automatica11y/SKILL.md", text: bootstrap }, { name: "skills/automatica11y-runner/SKILL.md", text: runner }, ...referenceFiles];
 
 /** The version series a skill expects. In 0.x a minor version can change behavior, so it counts. From 1.0, the major version is enough. */
@@ -138,7 +141,7 @@ test("every file the runner points to exists, one level below it", () => {
 test("the guide topics print the files the docs say they print", () => {
   assert.deepEqual(Object.keys(TOPICS), ["agents", "skill", "fixtures"]);
   for (const [topic, { file }] of Object.entries(TOPICS)) assert.ok(existsSync(join(root, file)), `${topic} prints ${file}`);
-  for (const topic of Object.keys(TOPICS)) assert.ok(readFileSync(join(root, "README.md"), "utf8").includes(topic), `the README names the ${topic} topic`);
+  for (const topic of Object.keys(TOPICS)) assert.ok(read("docs", "agents.md").includes(topic) || topic === "agents", `the docs name the ${topic} topic`);
 });
 
 // ---- Guards that keep the docs honest about the tool ----
@@ -173,14 +176,14 @@ test("every command the docs run exists, and every guide topic they name is real
 
 test("the docs write npm packages with the npm: prefix, as the tool requires", () => {
   const readme = read("README.md");
-  for (const { name, text } of [{ name: "README.md", text: readme }, ...agentDocs]) {
+  for (const { name, text } of [{ name: "README.md", text: readme }, ...docPages, ...agentDocs]) {
     assert.doesNotMatch(text, /(^|[\s=`])@[a-z][\w-]*\/[\w.-]+/m, `${name} has no bare scoped package as a target`);
     assert.doesNotMatch(text, /=(react-aria-components|@radix-ui)/, `${name} labels no bare package`);
   }
   assert.match(readme, /compare radix=npm:@radix-ui\/react-dialog aria=npm:react-aria-components/);
   assert.match(runner, /\| An npm package \| `npm:name`, `npm:@scope\/name`, or `npm:name@version`\. To test one entry of a package, add a sub-path after the version: `npm:@scope\/pkg\/button` or `npm:@scope\/pkg@1\.2\.3\/button\/v2`/);
   assert.match(runner, /A bare word such as `button` is a path: the folder or file `\.\/button`\. Always write an npm package with the `npm:` prefix/);
-  assert.match(readme, /Write `npm:button` to pick the package/);
+  assert.match(docsText, /Write `npm:button` to pick the package/);
 });
 
 test("the archetypes the runner lists match the tool's", async () => {

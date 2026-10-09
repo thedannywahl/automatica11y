@@ -2,12 +2,36 @@
 
 Test and compare the accessibility of web pages, Storybook builds, and npm component libraries.
 
-automatica11y answers two questions:
+```bash
+npm i -g automatica11y
+automatica11y compare radix=npm:@radix-ui/react-dialog aria=npm:react-aria-components
+```
 
-- How accessible is this? (`audit`)
-- How do these compare? (`compare`, two or more targets)
+**[Read the documentation.](https://thedannywahl.github.io/automatica11y/)**
 
-It's **not** an attestation or certification tool. Automated checks cover only part of WCAG, so a report says "no automated violations found" only where an engine found none, and never says "accessible." See [Limits](#limits).
+## Why use it.
+
+Most accessibility tools scan one page and hand back one score. automatica11y is built for the questions that come before and after that scan.
+
+- **It compares.** Pick two component libraries, two versions of one component, or two sites, and `compare` runs them under the same settings, side by side. "Is this library's dialog better than that one?" gets an answer you can check.
+- **It tests components, not just pages.** Point it at an npm package. It installs the package on its own, finds the components, builds the test fixtures it needs (React, Vue 3, and web components), then opens the dialogs and menus and presses the keys.
+- **It runs two rule engines and keeps them apart.** axe-core and IBM Equal Access catch different things. You get both, labeled, and their counts are never added into one number.
+- **It looks past the rules.** Keyboard and focus checks, contrast measured from the styles the browser resolved in every state, how the page holds up under reduced motion, dark mode, forced colors, a 320 pixel window, and wider text spacing, and a transcript from a simulated screen reader.
+- **Its reports say how much to trust them.** A gap, an error, or a result it couldn't determine is a finding, never a pass. Each result says whether it came from a whole page or a component, and whether the fixture was written by a person or generated. A report says "no automated violations found" only where an engine found none, and it never says "accessible."
+- **It runs on your machine.** It drives your own Chrome. There's no account and nothing is uploaded. Exit codes and fail flags make it usable in CI.
+- **An AI agent can run it.** The tool prints its own instructions, so you can ask an agent "how accessible is Radix Dialog?" and it knows what to do.
+
+## What a result looks like.
+
+From a real run on the carousel in shadcn/ui:
+
+| Check | Result | Detail |
+|---|---|---|
+| `focus-indicator-contrast` | fail | The border has 2.58:1 against what's next to it (needs 3:1). |
+| `forced-colors-focus-visible` | fail | With forced colors on, only four of 156 changed pixels reach 3:1 against their unfocused color. |
+| `boundary-contrast` | pass | The strongest mark is its icon stroke, at 19.79:1 (needs 3:1). |
+
+axe-core found no automated violations on that component. IBM Equal Access found one: the carousel's region has no label. Both facts are in the report, side by side and separate.
 
 ## Quick start.
 
@@ -19,7 +43,7 @@ Install it once, and `automatica11y` is on your `PATH`, with the short name `a11
 npm i -g automatica11y
 ```
 
-Then run it without `npx`:
+Then run it:
 
 ```bash
 automatica11y doctor
@@ -27,139 +51,17 @@ automatica11y audit https://example.com
 automatica11y compare radix=npm:@radix-ui/react-dialog aria=npm:react-aria-components
 ```
 
-You can skip the install and put `npx` in front instead, for example `npx automatica11y doctor`. `npx` fetches the tool the first time and checks the registry after that. A global install doesn't update itself, so run `npm i -g automatica11y@latest` to upgrade, and `automatica11y --version` to see what you have. The rest of this page writes the short form. Add `npx` if you didn't install it.
+You can skip the install and put `npx` in front instead, for example `npx automatica11y doctor`. A global install doesn't update itself, so run `npm i -g automatica11y@latest` to upgrade, and `automatica11y --version` to see what you have.
 
-`doctor` checks your setup. If it can't find a browser, it prints the command that installs one:
-
-```bash
-npx playwright-core install --only-shell chromium
-```
-
-Each run writes a folder (`./a11y-report` by default) with `report.md`, `results.json`, and `plan.json`.
-
-## Targets.
-
-A target is `[label=]<spec>`. The label is optional, and names the target in the report.
-
-| Target | Spec |
-|---|---|
-| A live page | `https://example.com/page` |
-| A local page or site | `./page.html` or `./dist`. A path with no prefix is relative to the working folder, so `dist` means `./dist`. Prefixes `../`, `/`, `~`, and `file:` work too. |
-| A Storybook | Its URL, or a local folder with `index.json` or `stories.json`. |
-| An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. Add a sub-path to test one entry of a package: `npm:@scope/pkg/button` or `npm:@scope/pkg@1.2.3/button/v2`. React, Vue 3, and web component libraries work. |
-
-A bare word such as `button` is a path: the folder or file `./button`. Write `npm:button` to pick the package. The prefix is what chooses a package, so a folder with the same name never gets in the way. A bare word that isn't a path fails with a hint, such as "If you meant the npm package, write npm:react."
-
-A local `.html` file is served over `http://localhost`, never `file://`. A static site audits its `index.html` only.
-
-## What it checks.
-
-Five tiers run by default. Use `--tiers` to pick fewer.
-
-- **Rules.** axe-core and IBM Equal Access run side by side. They overlap, and each catches things the other misses. Their findings are reported separately and never added together. axe-core reports an impact (`minor` to `critical`). IBM reports its Toolkit level, a staged adoption scale where level 1 is essential, high-impact requirements. The two scales aren't comparable.
-- **Interactions.** Keyboard and focus checks for ten archetypes: button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, and live-region (a message that appears or changes without moving focus, such as an alert or status message). Each check runs on a fresh page.
-- **Computed checks.** automatica11y's own measurements from resolved styles in the browser, for the trigger of each archetype fixture: text contrast in rest, hover, keyboard focus, and pressed states (1.4.3), the contrast of the control's edge, fill, or icon (1.4.11), and the contrast and thickness of the focus indicator (1.4.11, and 2.4.13 at level AAA). A page that uses a gradient, an image, or transparency behind the control can't be reduced to one color, so that check reports `undetermined`, which is a gap and never a pass. These results are reported on their own and never added to the rule engines' counts.
-- **Conditions.** How the page holds up under a user's settings and environment. Each check opens fresh copies of the page and says what happened:
-  - `prefers-reduced-motion: reduce` (2.3.3, 2.2.2): do animations that move or repeat stop or go away? Motion driven by JavaScript timers isn't visible to this check.
-  - `prefers-color-scheme: dark` (1.4.3): if the page changes in dark mode, does every piece of text keep its contrast? A page that doesn't adapt isn't failed.
-  - `prefers-contrast: more` (1.4.3, 1.4.6): if the page responds, does the lowest text contrast stay above the minimum and not drop? The check says whether enhanced contrast (7:1) is reached. `prefers-contrast: less` (1.4.3): if the page softens, does text stay above the minimum? A page that doesn't respond isn't failed.
-  - `prefers-reduced-transparency: reduce` (1.4.3, 1.4.11): do surfaces that hold text stop being see-through (translucent backgrounds, backdrop blur)? This preference isn't a WCAG requirement. It matters because see-through backgrounds make text contrast unpredictable.
-  - Forced colors (1.4.11, 2.4.7): is the focus indicator still visible? A ring drawn with `box-shadow` disappears in forced colors, so use an outline.
-  - Reflow at 320 CSS pixels (1.4.10): does the page scroll sideways, or does anything reach past the right edge? Two-dimensional content such as data tables and maps is exempt, so a person judges those.
-  - Text spacing (1.4.12): with the spacing the criterion names, does any element cut off its text? Overlapping text isn't checked.
-
-  Conditions run on whole pages and on component fixtures. Storybook stories are reported as not applicable.
-- **Virtual screen reader.** The announcements a simulated screen reader makes, recorded as data. The output is simulated. It isn't a real screen reader, and real ones announce things differently.
-
-Every result says what it ran, or why it didn't. A gap, a failure, or a result that can't be tested is a finding. It never counts as a pass.
-
-## Options.
-
-| Option | Default | What it does |
-|---|---|---|
-| `--wcag 2.0\|2.1\|2.2` | `2.2` | The WCAG version. |
-| `--level A\|AA\|AAA` | `AA` | The conformance level. IBM Equal Access has no AAA rules, so it runs its AA rules and says so. |
-| `--engine axe,ibm` | both | Which rule engines run. |
-| `--tiers rules,interactions,computed,conditions,vsr` | all | Which tiers run. |
-| `--archetypes a,b` | all | Limit npm and Storybook targets to these archetypes. |
-| `--lib-a11y on,off` | both | For libraries with opt-in accessibility features. See [the fixture guide](skills/automatica11y-runner/references/fixtures.md). |
-| `--mapping <file>` | none | A mapping file for npm targets. |
-| `--no-generate` | off | Don't build fixtures for npm packages. Only authored fixtures and the `button` and `link` templates run. |
-| `--max-stories <n>` | `200` | The Storybook story cap. The cap spreads over components. |
-| `--out <dir>` | `./a11y-report` | Where results go. |
-| `--plan` | off | Classify the targets and write `plan.json`, then stop. Nothing installs and no browser launches. |
-| `--fail-on-axe <impact>` | off | Exit 1 if axe-core reports a violation at or above `minor`, `moderate`, `serious`, or `critical`. |
-| `--fail-on-ibm <1\|2\|3>` | off | Exit 1 if IBM reports a violation at or below that Toolkit level. |
-| `--fail-mode any\|all` | `any` | `any` trips when either engine's check trips. `all` trips only when both do, on the same target. |
-
-Run `automatica11y run --plan <plan.json>` to repeat a saved plan. It warns if tool versions have changed.
-
-## Output.
-
-- `report.md` is a complete report, written without any model. It opens with a coverage matrix, then lists findings, then ends with a method note.
-- `results.json` holds everything, including element selectors and announcement logs.
-- `plan.json` records what ran and the resolved tool and package versions.
-- `mapping.json` appears for npm targets. See below.
-
-## Exit codes.
-
-| Code | Meaning |
-|---|---|
-| 0 | The run completed. Findings don't change this unless a fail flag is set. |
-| 1 | The run completed and a fail check tripped. |
-| 2 | The command line was wrong. |
-| 3 | An environment problem, such as a missing browser or an old Node. The message says how to fix it. |
-| 4 | No target produced results. |
-
-One failing target doesn't stop a comparison. It's recorded with its reason, and the others run.
-
-## npm packages and fixtures.
-
-The tool installs each package into its own temporary folder (with install scripts turned off), loads it in the browser, and finds its exports or custom elements. It writes its guesses to `mapping.json`.
-
-Each archetype's fixture comes from the first of these that applies:
-
-1. **Authored.** A file you or your agent write at `fixtures/<target id>/<archetype>.jsx` (`.js` for web components). The same `.jsx` works for React and for Vue 3, following [the fixture guide](skills/automatica11y-runner/references/fixtures.md). It always wins.
-2. **Template.** The tool builds `button` and `link` tests from the export name alone.
-3. **Generated.** For dialog, menu, tooltip, tabs, accordion, combobox, form-field, and live-region, the tool builds candidate fixtures from what the package exports. It looks for compound parts by common names (a root, a trigger, a content part, a title, a close part, and so on), either as `Dialog.Root` or as `DialogRoot`, and it tries the usual ways of switching a component on (an `open` prop and a close handler). For web components it reads what each element says about itself: its observed attributes, its members, and its slots. It then bundles each candidate, loads it, and checks that exactly one element is the trigger, that nothing logged an error, that activating the trigger shows a root, and that the root carries a role that fits. The first candidate that passes is used. If none does, the archetype is a gap, and the report lists what was tried and why each attempt failed.
-4. **Gap.** Anything else is a gap in the report.
-
-A generated fixture is a guess about how the library is meant to be assembled, so a failure may come from how it was wired and not from the library. Reports mark generated results and treat them as lower evidence than an authored fixture. The source of each generated fixture is written to `generated/<target id>/<archetype>.jsx` beside the report. Copy one to `fixtures/<target id>/` and edit it to make it an authored fixture. Use `--no-generate` to turn generation off, for example when you want a strict comparison of authored fixtures only.
-
-Fixtures are code that the tool bundles and runs in a browser on your machine. Write them from the library's documentation, and read ones you didn't write.
+`doctor` checks your setup, and prints the command that installs a browser if it can't find one. Each run writes a folder (`./a11y-report` by default) with `report.md`, `results.json`, and `plan.json`.
 
 ## Use it with an AI agent.
 
-The tool prints its own guidance, so any agent that can run `npx` can learn to use it. If the tool is installed globally, the agent can run `automatica11y guide skill` instead of `npx automatica11y@latest guide skill`:
+Any agent that can run shell commands can learn the tool from the tool: `automatica11y guide` prints where to start, and `automatica11y guide skill` prints the full steps. If your agent loads skills from a folder, copy [`skills/automatica11y`](skills/automatica11y) into it. It's one small file, and it sends the agent to the same steps. [`AGENTS.md`](AGENTS.md) does the same for agents that read it instead. The [documentation](https://thedannywahl.github.io/automatica11y/agents.html) has the details.
 
-```bash
-npx automatica11y@latest guide           # where to start (the AGENTS.md file)
-npx automatica11y@latest guide skill     # the full steps: build the command, run it, write the report
-npx automatica11y@latest guide fixtures  # how to write the fixtures an npm package needs
-```
+## What it won't do.
 
-The guidance ships with the tool, so it always matches the version you run. Tell your agent to run `npx automatica11y@latest guide` and follow it, then ask for things like "How accessible is Radix Dialog?" or "Compare the accessibility of React Aria and Headless UI." The agent needs to run shell commands and read and write files. Nothing here is tied to one agent.
-
-**Skills.** If your agent loads skills from a folder, copy [`skills/automatica11y`](skills/automatica11y) into it. That's one small file, `SKILL.md`. It advertises the tool to the agent, and sends it to `guide skill`. It names no version, so it doesn't go stale. The full steps are the [`automatica11y-runner`](skills/automatica11y-runner) skill, which ships in the package and is what `guide skill` prints. Copy it too if you want the steps available without the network.
-
-**AGENTS.md.** [`AGENTS.md`](AGENTS.md) is for agents that read it but don't load skills. It points to the same steps, and tells contributors how to run and change the code.
-
-## Limits.
-
-- Automated rules find only part of what WCAG covers. They can't judge whether alt text is meaningful, whether link and heading text make sense in context, cognitive load, real focus and reading order in use, or how real screen readers behave. A person has to check those.
-- Components are tested in the states a fixture shows. Dialogs, menus, tooltips, and comboboxes run closed and open, and live regions run before and after the message. Other states aren't visited.
-- Content on a canvas with no alternative, or inside a closed shadow root, can't be tested, and the report says so. The virtual screen reader can't read inside shadow roots at all.
-- Svelte, Angular, Vue 2, and other frameworks report "unsupported framework." Their Storybooks work, because a Storybook renders stories in a page whatever the framework.
-- Native screen readers aren't part of this version.
-- Results are a snapshot. The tools run at their latest versions, and the report records them.
-
-## Using it in CI.
-
-```bash
-npx automatica11y audit ./dist --fail-on-axe serious --fail-on-ibm 1 --fail-mode any
-```
-
-The run exits 1 when the check trips. Needs-review items never trip it.
+It's not an attestation or certification tool. Automated checks cover only part of WCAG. They can't judge whether alt text is meaningful, whether the reading order makes sense, or how real screen readers behave, and the screen reader it runs is simulated. A person has to check those. See [the limits](https://thedannywahl.github.io/automatica11y/limits.html).
 
 ## License.
 
