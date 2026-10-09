@@ -4,9 +4,12 @@
 // The pages are semantic HTML with no script. A skip link, landmarks, labelled scrollable regions, and light, dark,
 // and forced-colors styles come from the template below. A workflow publishes the output to the `docs` branch.
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Marked } from "marked";
+
+const require = createRequire(import.meta.url);
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO = "https://github.com/thedannywahl/automatica11y";
@@ -85,13 +88,19 @@ function renderMarkdown(source, sourceFile) {
   return { html, title, description };
 }
 
+/** The plum scheme, pantoken's base and prose rules, and the token sheet they read, as one same-origin stylesheet. */
+function pantokenCss() {
+  const read = (specifier) => readFileSync(require.resolve(specifier), "utf8");
+  const plum = read("@pantoken/plugin-custom-theme-colors/custom-theme-colors.css").match(/:root\[data-pantoken-color=plum\]\{[^}]*\}/g);
+  if (!plum) throw new Error("The plum scheme wasn't found in @pantoken/plugin-custom-theme-colors.");
+  return [read("@pantoken/css/style.lean.css"), ...plum, read("@pantoken/components/base.css"), read("@pantoken/components/prose.css")].join("\n");
+}
+
+// The surfaces read pantoken tokens, which switch between light and dark themselves through light-dark().
 const STYLE = `
-:root { color-scheme: light dark; --bg: #ffffff; --fg: #1a1a1a; --muted: #4a4a4a; --link: #0b4fb3; --rule: #c9c9c9; --code: #f1f1f1; --nav: #f6f6f6; --focus: #0b4fb3; }
-@media (prefers-color-scheme: dark) { :root { --bg: #121212; --fg: #ececec; --muted: #b8b8b8; --link: #8ab4f8; --rule: #444444; --code: #1e1e1e; --nav: #1a1a1a; --focus: #8ab4f8; } }
+:root { color-scheme: light dark; --bg: var(--instui-color-background-page); --fg: var(--instui-color-text-base); --muted: var(--instui-color-text-muted); --link: var(--instui-color-text-interactive-navigation-primary-base); --rule: var(--instui-color-stroke-base); --code: var(--instui-color-background-muted); --nav: var(--instui-color-background-container); --focus: var(--instui-focus-outline-color); }
 * { box-sizing: border-box; }
-html { font-size: 100%; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-a { color: var(--link); text-underline-offset: 0.15em; }
+a { text-underline-offset: 0.15em; }
 a:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .skip { position: absolute; left: 1rem; top: -4rem; background: var(--bg); color: var(--fg); padding: 0.5rem 1rem; border: 2px solid var(--fg); z-index: 10; }
 .skip:focus { top: 1rem; }
@@ -105,12 +114,9 @@ nav.docs a { display: inline-block; padding: 0.25rem 0; }
 nav.docs a[aria-current="page"] { font-weight: 700; color: var(--fg); text-decoration-thickness: 3px; }
 main { padding: 1.5rem 1rem 3rem; max-width: 52rem; }
 main:focus { outline: none; }
-h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 1rem; }
-h2 { font-size: 1.5rem; line-height: 1.3; margin: 2.5rem 0 0.75rem; }
-h3 { font-size: 1.2rem; margin: 2rem 0 0.5rem; }
-p, ul, ol { margin: 0 0 1rem; }
-li { margin: 0.25rem 0; }
-code { background: var(--code); padding: 0.1em 0.3em; border-radius: 0.25rem; font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+h1 { margin-top: 0; }
+h2 { margin-top: 2.5rem; }
+code { background: var(--code); padding: 0.1em 0.3em; border-radius: var(--instui-border-radius-sm); font-family: var(--instui-font-family-code); font-size: 0.9em; overflow-wrap: anywhere; }
 /* Long lines wrap instead of scrolling, so a code block never needs focus to be read, and it reflows at 320 pixels. */
 pre { background: var(--code); padding: 1rem; border-radius: 0.5rem; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 1rem; border: 1px solid var(--rule); }
 pre code { background: none; padding: 0; overflow-wrap: inherit; white-space: inherit; }
@@ -138,13 +144,14 @@ function template({ page, article, version }) {
   const nav = PAGES.map((p) => `<li><a href="${p.out}"${p.out === page.out ? ' aria-current="page"' : ""}>${escapeHtml(p.nav)}</a></li>`).join("\n        ");
   const canonical = `${SITE}${page.out === "index.html" ? "" : page.out}`;
   return `<!doctype html>
-<html lang="en">
+<html lang="en" data-pantoken-color="plum">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(page.out === "index.html" ? "automatica11y" : `${article.title} - automatica11y`)}</title>
 <meta name="description" content="${escapeHtml(article.description)}">
 <link rel="canonical" href="${canonical}">
+<link rel="stylesheet" href="pantoken.css">
 <style>${STYLE}</style>
 </head>
 <body>
@@ -191,7 +198,9 @@ export function buildDocs({ root = ROOT, outDir = join(root, "site") } = {}) {
   writeFileSync(join(outDir, ".nojekyll"), "");
   // Each publish replaces the whole branch, so the CNAME has to be in every build or Pages forgets the domain.
   writeFileSync(join(outDir, "CNAME"), `${DOMAIN}\n`);
-  writeFileSync(join(outDir, "404.html"), `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Page not found - automatica11y</title><style>${STYLE}</style></head>\n<body><main id="main" style="padding:2rem 1rem"><h1>Page not found.</h1><p>That page isn't in the documentation. Start at the <a href="${SITE}">home page</a>.</p></main></body></html>\n`);
+  writeFileSync(join(outDir, "pantoken.css"), pantokenCss());
+  // The 404 page is served from any path, so its stylesheet link is absolute.
+  writeFileSync(join(outDir, "404.html"), `<!doctype html>\n<html lang="en" data-pantoken-color="plum"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Page not found - automatica11y</title><link rel="stylesheet" href="/pantoken.css"><style>${STYLE}</style></head>\n<body><main id="main" style="padding:2rem 1rem"><h1>Page not found.</h1><p>That page isn't in the documentation. Start at the <a href="${SITE}">home page</a>.</p></main></body></html>\n`);
   return written;
 }
 

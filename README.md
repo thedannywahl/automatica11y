@@ -12,7 +12,7 @@ automatica11y helps answer two questions:
 Run it from your terminal:
 
 ```bash
-npx -y automatica11y audit @instructure/ui-buttons
+npx -y automatica11y audit npm:@instructure/ui-buttons
 ```
 
 Install the [skill](skills/automatica11y/SKILL.md) and use it with an agent:

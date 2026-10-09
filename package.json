@@ -30,6 +30,7 @@
     "lint": "tsc -p jsconfig.json",
     "update-wcag": "node scripts/update-wcag.js",
     "docs:build": "node scripts/build-docs.js",
+    "docs:preview": "node scripts/build-docs.js && npx --yes serve site",
     "prepublishOnly": "npm run lint"
   },
   "dependencies": {
@@ -42,6 +43,9 @@
     "valibot": "^1.5.0"
   },
   "devDependencies": {
+    "@pantoken/components": "^2.0.2",
+    "@pantoken/css": "^0.4.3",
+    "@pantoken/plugin-custom-theme-colors": "^0.3.3",
     "@types/node": "^26.6.4",
     "marked": "^18.1.0",
     "react": "^19.3.0",

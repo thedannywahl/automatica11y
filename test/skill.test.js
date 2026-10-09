@@ -180,7 +180,7 @@ test("the docs write npm packages with the npm: prefix, as the tool requires", (
     assert.doesNotMatch(text, /(^|[\s=`])@[a-z][\w-]*\/[\w.-]+/m, `${name} has no bare scoped package as a target`);
     assert.doesNotMatch(text, /=(react-aria-components|@radix-ui)/, `${name} labels no bare package`);
   }
-  assert.match(readme, /compare radix=npm:@radix-ui\/react-dialog aria=npm:react-aria-components/);
+  assert.match(docsText, /compare radix=npm:@radix-ui\/react-dialog aria=npm:react-aria-components/);
   assert.match(runner, /\| An npm package \| `npm:name`, `npm:@scope\/name`, or `npm:name@version`\. To test one entry of a package, add a sub-path after the version: `npm:@scope\/pkg\/button` or `npm:@scope\/pkg@1\.2\.3\/button\/v2`/);
   assert.match(runner, /A bare word such as `button` is a path: the folder or file `\.\/button`\. Always write an npm package with the `npm:` prefix/);
   assert.match(docsText, /Write `npm:button` to pick the package/);
@@ -193,7 +193,7 @@ test("the archetypes the runner lists match the tool's", async () => {
 });
 
 test("every document tells a global install how to skip npx, without dropping the version check", () => {
-  const readme = read("README.md");
+  const readme = read("docs", "index.md");
   assert.match(readme, /npm i -g automatica11y/);
   assert.match(readme, /`automatica11y` is on your `PATH`, with the short name `a11y` too/);
   assert.match(readme, /A global install doesn't update itself, so run `npm i -g automatica11y@latest` to upgrade/);

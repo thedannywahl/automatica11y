@@ -30,7 +30,8 @@ test("every Markdown page in docs/ is on the site, in the navigation, and nothin
 test("each page has the structure a screen reader user needs: language, title, skip link, landmarks, one h1", () => {
   for (const page of PAGES) {
     const text = html[page.out];
-    assert.match(text, /^<!doctype html>\n<html lang="en">/, `${page.out} has a language`);
+    assert.match(text, /^<!doctype html>\n<html lang="en" data-pantoken-color="plum">/, `${page.out} has a language and the plum scheme`);
+    assert.match(text, /<link rel="stylesheet" href="pantoken.css">/, `${page.out} loads the pantoken styles`);
     assert.match(text, /<title>[^<]+<\/title>/);
     assert.match(text, /<meta name="viewport" content="width=device-width, initial-scale=1">/, `${page.out} works on a phone`);
     assert.match(text, /<a class="skip" href="#main">/, `${page.out} has a skip link`);
@@ -49,7 +50,7 @@ test("each page has the structure a screen reader user needs: language, title, s
 test("every link on the site points at a page and a section that exist", () => {
   for (const page of PAGES) {
     for (const [, href] of html[page.out].matchAll(/ href="([^"]*)"/g)) {
-      if (/^(https?:|mailto:)/.test(href)) continue;
+      if (/^(https?:|mailto:)/.test(href) || href.endsWith(".css")) continue;
       assert.doesNotMatch(href, /\.md(#|$)/, `${page.out} links to a Markdown file: ${href}`);
       const [file, hash] = href.split("#");
       const target = file === "" ? page.out : file;
@@ -80,7 +81,10 @@ test("tables and code can be read without a mouse", () => {
   assert.match(html["options.html"], /aria-label="Table: Options"/);
   assert.match(html["agent-steps.html"], /aria-label="Table: 3\. Turn the request into a command \(2\)"/, "a second table under the same heading gets its own label");
   assert.match(html["index.html"], /white-space: pre-wrap/);
-  assert.match(html["index.html"], /prefers-color-scheme: dark/);
+  assert.match(html["index.html"], /color-scheme: light dark/);
+  const css = readFileSync(join(out, "pantoken.css"), "utf8");
+  assert.match(css, /:root\[data-pantoken-color=plum\]\{/, "the plum scheme is in the stylesheet");
+  assert.match(css, /light-dark\(/, "pantoken switches light and dark itself");
   assert.match(html["index.html"], /forced-colors: active/);
 });
 
