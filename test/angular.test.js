@@ -257,3 +257,20 @@ export default class Fixture {
   const dialog = result.results.targets[0].archetypes.dialog;
   assert.deepEqual([dialog.status, dialog.fixture.source], ["ran", "authored"], dialog.reason ?? "");
 });
+
+test("Angular: a library that peers on zone.js runs with it, and gives the same results as the same library without it", { skip, timeout: 400_000 }, async () => {
+  const args = (name) => ["audit", `lib=npm:${name}`, "--archetypes", "button,dialog,menu,live-region", "--tiers", "rules,interactions,conditions"];
+  const withZone = await run(args("fake-ng-zone"));
+  const without = await run(args("fake-ng-ui"));
+  assert.equal(withZone.code, 0, withZone.stderr);
+  assert.equal(without.code, 0, without.stderr);
+  const summarize = (result) => Object.fromEntries(Object.entries(result.results.targets[0].archetypes).map(([name, found]) => [name, {
+    status: found.status,
+    source: found.fixture?.source,
+    states: found.configs.map((c) => c.state),
+    checks: found.configs.flatMap((c) => Object.values(c.tiers.interactions?.checks ?? []).map((check) => `${check.name}:${check.result}`)).sort(),
+    conditions: found.configs.flatMap((c) => Object.keys(c.tiers.conditions?.checks ?? c.tiers.conditions ?? {})).sort(),
+  }]));
+  assert.ok(Object.values(summarize(withZone)).every((s) => s.status === "ran"), JSON.stringify(summarize(withZone)));
+  assert.deepEqual(summarize(withZone), summarize(without));
+});

@@ -21,6 +21,7 @@ export const REGISTRY = {
   "fake-ng-ui": { name: "fake-ng-ui", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" } },
   "fake-ng-modules": { name: "fake-ng-modules", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" } },
   "fake-ng-wrong": { name: "fake-ng-wrong", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" } },
+  "fake-ng-zone": { name: "fake-ng-zone", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0", "zone.js": "*" } },
   "fake-ng-old": { name: "fake-ng-old", version: "1.0.0", peerDependencies: { "@angular/core": "^20.0.0 || ^21.0.0" } },
   "fake-ng-split": { name: "fake-ng-split", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" }, exports: { ".": "./index.js", "./button": "./button.js", "./package.json": "./package.json" } },
   // The real Angular Material, linked from the repository's dev dependencies, to prove a partly compiled library runs.
@@ -44,7 +45,7 @@ export async function installPackage({ dir, name, version, flavor }) {
   mkdirSync(join(dir, "node_modules"), { recursive: true });
   if (flavor === "angular") {
     // Angular's packages, rxjs, and the real Material and CDK all come from the repository's dev dependencies.
-    for (const dep of ["@angular", "rxjs"]) if (existsSync(join(repoModules, dep))) symlinkSync(join(repoModules, dep), join(dir, "node_modules", dep));
+    for (const dep of ["@angular", "rxjs", ...(REGISTRY[name]?.peerDependencies?.["zone.js"] ? ["zone.js"] : [])]) if (existsSync(join(repoModules, dep))) symlinkSync(join(repoModules, dep), join(dir, "node_modules", dep));
   }
   if (!name.startsWith("@angular/")) cpSync(join(packages, name), join(dir, "node_modules", name), { recursive: true });
   if (flavor === "react") {
