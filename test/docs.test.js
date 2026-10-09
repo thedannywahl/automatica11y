@@ -66,6 +66,25 @@ test("each page includes brand metadata, header logo, and copied assets", () => 
   }
 });
 
+test("each page includes schema.org data for the site, application, and page", () => {
+  const version = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
+  for (const page of PAGES) {
+    const text = html[page.out];
+    const match = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(text);
+    assert.ok(match, `${page.out} has JSON-LD`);
+    const data = JSON.parse(match[1]);
+    assert.equal(data["@context"], "https://schema.org");
+    const website = data["@graph"].find((item) => item["@type"] === "WebSite");
+    const application = data["@graph"].find((item) => item["@type"] === "SoftwareApplication");
+    const webpage = data["@graph"].find((item) => item["@type"] === "WebPage");
+    assert.equal(website.url, "https://automatica11y.dev/");
+    assert.equal(application.softwareVersion, version);
+    assert.equal(application.applicationCategory, "DeveloperApplication");
+    assert.equal(webpage.url, `https://automatica11y.dev/${page.out === "index.html" ? "" : page.out}`);
+    assert.deepEqual(webpage.about, { "@id": "https://automatica11y.dev/#software" });
+  }
+});
+
 test("every link on the site points at a page and a section that exist", () => {
   for (const page of PAGES) {
     for (const [, href] of html[page.out].matchAll(/ href="([^"]*)"/g)) {

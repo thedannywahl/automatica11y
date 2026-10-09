@@ -176,6 +176,40 @@ function template({ page, article, version }) {
   const nav = PAGES.map((p) => `<li><a href="${p.out}"${p.out === page.out ? ' aria-current="page"' : ""}>${escapeHtml(p.nav)}</a></li>`).join("\n        ");
   const canonical = `${SITE}${page.out === "index.html" ? "" : page.out}`;
   const title = page.out === "index.html" ? "automatica11y: Accessibility Testing and Comparison" : `${article.title} - automatica11y`;
+  const structuredData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": SITE,
+        url: SITE,
+        name: "automatica11y",
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${SITE}#software`,
+        name: "automatica11y",
+        description: "Test and compare the accessibility of web pages, Storybook builds, and npm component libraries.",
+        url: SITE,
+        applicationCategory: "DeveloperApplication",
+        applicationSubCategory: "Accessibility testing",
+        operatingSystem: "macOS, Windows, Linux",
+        softwareVersion: version,
+        license: "https://opensource.org/licenses/MIT",
+        codeRepository: `${REPO}.git`,
+        downloadUrl: "https://www.npmjs.com/package/automatica11y",
+      },
+      {
+        "@type": "WebPage",
+        "@id": canonical,
+        url: canonical,
+        name: title,
+        description: article.description,
+        isPartOf: { "@id": SITE },
+        about: { "@id": `${SITE}#software` },
+      },
+    ],
+  }).replace(/</g, "\\u003c");
   return `<!doctype html>
 <html lang="en" data-pantoken-color="plum">
 <head>
@@ -195,6 +229,7 @@ function template({ page, article, version }) {
 <meta name="twitter:title" content="${escapeHtml(title)}">
 <meta name="twitter:description" content="${escapeHtml(article.description)}">
 <meta name="twitter:image" content="https://${DOMAIN}/og.png">
+<script type="application/ld+json">${structuredData}</script>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="pantoken.css">
