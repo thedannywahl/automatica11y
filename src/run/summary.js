@@ -1,6 +1,6 @@
 /** Roll the engine results up into counts. Impact counts belong to axe and Toolkit-level counts belong to IBM. */
 export function summarize(archetypes, engines, gaps = []) {
-  /** @type {any} */
+  /** @type {ReturnType<typeof import("../schema.js").parseResults>["targets"][number]["summary"]} */
   const summary = { engines: {}, gaps, notTestable: [] };
   for (const engine of engines) {
     const results = Object.values(archetypes).flatMap((a) => a.configs.map((c) => c.tiers.rules?.engines?.[engine]).filter(Boolean));

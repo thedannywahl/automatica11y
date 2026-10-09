@@ -6,6 +6,8 @@
  * To add a framework, write a module with the same shape as react.js, add it here, and add its id to FLAVORS and its kind to
  * TARGET_KINDS in schema.js. A test checks that the two lists agree.
  *
+ * @typedef {"npm-react" | "npm-vue" | "npm-angular" | "npm-wc" | "npm-unsupported"} AdapterKind
+ * @typedef {{ kind: AdapterKind, framework: string, reason: string }} AdapterDetection
  * @typedef {{
  *   id: string,
  *   label: string,
@@ -13,14 +15,14 @@
  *   noun: string,
  *   extension: string,
  *   runtime: string[],
- *   detect: (meta: any) => { kind: string, framework: string, reason: string } | null,
- *   inspect?: (workDir: string) => Record<string, any>,
- *   bundle: (workDir: string) => { alias: Record<string, string>, define?: Record<string, string>, plugins?: any[], esbuild: Record<string, any> },
- *   entry: (fixturePath: string, pkg: string, context?: Record<string, any>) => string,
+ *   detect: (meta: unknown) => AdapterDetection | null,
+ *   inspect?: (workDir: string) => Record<string, unknown>,
+ *   bundle: (workDir: string) => { alias: Record<string, string>, define?: Record<string, string>, plugins?: import("esbuild").Plugin[], esbuild: import("esbuild").BuildOptions },
+ *   entry: (fixturePath: string, pkg: string, context?: Record<string, unknown>) => string,
  *   discoverEntry: (pkg: string) => string,
- *   template: (archetype: string, pkg: string, name?: string, info?: any) => string | null,
- *   generate: (input: any) => { candidates: Array<{ id: string, summary: string, source: string, used: string[] }>, reason: string | null },
- *   describe: (npm: any) => string,
+ *   template: (archetype: string, pkg: string, name?: string, info?: unknown) => string | null,
+ *   generate: (input: unknown) => { candidates: Array<{ id: string, summary: string, source: string, used: string[] }>, reason: string | null },
+ *   describe: (npm: unknown) => string,
  * }} Adapter
  */
 import angular from "./angular.js";

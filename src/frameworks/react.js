@@ -55,6 +55,7 @@ export default {
   /** Packages the fixture and the library must share one copy of, and that the install makes sure are there. */
   runtime: ["react", "react-dom"],
   /** Is this package React, from its registry metadata alone? */
+  /** @returns {import("./index.js").AdapterDetection | null} */
   detect(meta) {
     const peers = meta.peerDependencies ?? {};
     const deps = meta.dependencies ?? {};
@@ -66,7 +67,7 @@ export default {
   bundle: (workDir) => ({
     // One copy of React for the library and the fixture, or hooks break.
     alias: { react: join(workDir, "node_modules", "react"), "react-dom": join(workDir, "node_modules", "react-dom") },
-    esbuild: { jsx: "automatic" },
+    esbuild: { jsx: /** @type {"automatic"} */ ("automatic") },
   }),
   entry,
   discoverEntry,

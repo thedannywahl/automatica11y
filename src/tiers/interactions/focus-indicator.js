@@ -1,9 +1,11 @@
+/** @typedef {{ outlineStyle: string, outlineWidth: string, outlineColor: string, boxShadow: string, borderTopStyle: string, borderTopColor: string, borderTopWidth: string, backgroundColor: string, color: string, textDecorationLine: string, rendered: boolean }} FocusPart */
+
 /**
  * Compare the resolved styles of a control with and without keyboard focus, and say which changes can show a focus indicator.
  * A change counts only if a person could see it: an outline with a width and a color, a box shadow, a border, a color change,
  * a text decoration, or an element that appeared inside. An outline offset alone doesn't count, because it moves nothing visible.
- * @param {Record<string, Record<string, any>>} focused Parts of the focused control, keyed by where they are.
- * @param {Record<string, Record<string, any>> | undefined} unfocused The same parts without focus.
+ * @param {Record<string, FocusPart>} focused Parts of the focused control, keyed by where they are.
+ * @param {Record<string, FocusPart> | undefined} unfocused The same parts without focus.
  * @returns {string[]} Each change, such as `the element: outline`.
  */
 export function focusIndicatorChanges(focused, unfocused) {

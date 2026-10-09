@@ -34,7 +34,10 @@ const COMMON = [
       await ctx.page.evaluate(() => window.__a11y.remember());
       const clip = ctx.clipAround(focused.box);
       const shotFocused = await ctx.page.screenshot({ clip });
-      await ctx.page.evaluate(() => /** @type {any} */ (window).__a11yLast?.blur());
+      await ctx.page.evaluate(() => {
+        const last = window.__a11yLast;
+        if (last && "blur" in last && typeof last.blur === "function") last.blur();
+      });
       await ctx.settle();
       const unfocused = await ctx.page.evaluate(() => window.__a11y.lastSnapshot());
       const changed = focusIndicatorChanges(focused.parts, unfocused?.parts);
@@ -422,7 +425,8 @@ export const ARCHETYPE_CHECKS = {
       async run(ctx) {
         const facts = await ctx.page.evaluate(() => {
           const c = window.__a11y.queryDeep("[data-a11y-trigger]");
-          return { tag: c?.localName, type: c?.getAttribute("type") ?? "text", required: c?.hasAttribute("required"), pattern: c?.hasAttribute("pattern"), minlength: c?.hasAttribute("minlength"), valid: c?.checkValidity?.() ?? true };
+          const validity = c && "checkValidity" in c && typeof c.checkValidity === "function" ? c.checkValidity() : undefined;
+          return { tag: c?.localName, type: c?.getAttribute("type") ?? "text", required: c?.hasAttribute("required"), pattern: c?.hasAttribute("pattern"), minlength: c?.hasAttribute("minlength"), valid: validity ?? true };
         });
         const control = ctx.trigger;
         const before = await ctx.page.evaluate(() => window.__a11y.errorInfo());

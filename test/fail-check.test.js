@@ -4,8 +4,10 @@ import { evaluateFailCheck } from "../src/run/fail-check.js";
 
 /**
  * Build a target result with the given findings per engine.
+ * @typedef {{ status?: string, impacts?: string[] }} AxeSpec
+ * @typedef {{ status?: string, levels?: number[] }} IbmSpec
  * @param {string} id
- * @param {{ axe?: any, ibm?: any, status?: string }} [spec]
+ * @param {{ axe?: AxeSpec, ibm?: IbmSpec, status?: string }} [spec]
  */
 function target(id, { axe, ibm, status = "ran" } = {}) {
   const engines = {};

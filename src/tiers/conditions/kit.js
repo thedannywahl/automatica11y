@@ -33,8 +33,8 @@ export function installConditions() {
     describe,
     /** Every animation and transition running right now. */
     animations() {
-      return document.getAnimations().map((/** @type {any} */ animation) => {
-        const effect = /** @type {any} */ (animation.effect);
+      return document.getAnimations().map((animation) => {
+        const effect = animation.effect instanceof KeyframeEffect ? animation.effect : null;
         const timing = effect?.getComputedTiming?.() ?? {};
         const keyframes = effect?.getKeyframes?.() ?? [];
         const props = [...new Set(keyframes.flatMap((frame) => Object.keys(frame)).filter((key) => !IGNORED_KEYS.has(key)))];
@@ -42,7 +42,7 @@ export function installConditions() {
         const iterations = timing.iterations === Infinity ? "infinite" : timing.iterations;
         return {
           kind: animation.constructor.name,
-          name: animation.animationName ?? animation.transitionProperty ?? "",
+          name: animation instanceof CSSAnimation ? animation.animationName : animation instanceof CSSTransition ? animation.transitionProperty : "",
           target: describe(target),
           duration: typeof timing.duration === "number" ? timing.duration : null,
           iterations,

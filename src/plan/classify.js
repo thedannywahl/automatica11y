@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { cleanSubpath } from "./subpath.js";
 
 /**
- * @typedef {"npm" | "storybook" | "url" | "html-file" | "static-dir"} TargetKind
+ * @typedef {"npm" | "npm-react" | "npm-vue" | "npm-angular" | "npm-wc" | "npm-unsupported" | "storybook" | "url" | "html-file" | "static-dir"} TargetKind
  * @typedef {{
  *   input: string,
  *   label: string | null,
@@ -17,7 +17,7 @@ import { cleanSubpath } from "./subpath.js";
  *   resolved: Record<string, string | null> | null,
  * }} ClassifiedTarget
  * @typedef {(url: string | URL, init?: { signal?: AbortSignal, redirect?: string }) => Promise<{ ok: boolean, status: number, text(): Promise<string> }>} FetchLike
- * @typedef {{ cwd?: string, home?: string, fetch?: FetchLike, timeoutMs?: number, npmView?: (spec: string) => Promise<any> }} ClassifyContext
+ * @typedef {{ cwd?: string, home?: string, fetch?: FetchLike, timeoutMs?: number, npmView?: (spec: string) => Promise<unknown> }} ClassifyContext
  */
 
 const LOCAL_PATH = /^(\.{1,2}(\/|$)|\/|~(\/|$)|file:)/;

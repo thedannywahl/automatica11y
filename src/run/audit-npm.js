@@ -23,6 +23,12 @@ import { failedVsr, runVsr } from "../tiers/vsr.js";
 import { num } from "../text.js";
 import { summarize } from "./summary.js";
 
+/** @typedef {ReturnType<typeof import("../schema.js").parsePlan>} Plan */
+/** @typedef {ReturnType<typeof import("../schema.js").parseResults>["targets"][number]} TargetResult */
+/** @typedef {ReturnType<typeof import("../schema.js").parseMappingFile>[string]} TargetMapping */
+/** @typedef {NonNullable<TargetResult["archetypes"][string]["fixture"]>} FixtureInfo */
+/** @typedef {TargetResult["archetypes"][string]["configs"][number]} FixtureConfig */
+
 /** The states worth checking for each archetype. The first is where a page starts. */
 const STATES = {
   dialog: ["closed", "open"],
@@ -75,12 +81,12 @@ async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
   try {
     const opened = await openPage(browser, `${server.origin}/discover.html`, { beforeGoto: watchErrors(errors) });
     try {
-      await opened.page.waitForFunction(() => /** @type {any} */ (window).__a11yExports !== undefined, undefined, { timeout: 15_000 });
+      await opened.page.waitForFunction(() => window.__a11yExports !== undefined, undefined, { timeout: 15_000 });
     } catch {
       throw new Error(`The package didn't finish loading in the browser${errors.length ? `: ${errors[0]}` : "."}`);
     }
-    const exportsList = await opened.page.evaluate(() => /** @type {any} */ (window).__a11yExports);
-    const tags = await opened.page.evaluate(() => [.../** @type {any} */ (window).__a11yDefined ?? []]);
+    const exportsList = await opened.page.evaluate(() => window.__a11yExports ?? []);
+    const tags = await opened.page.evaluate(() => [...(window.__a11yDefined ?? [])]);
     // What each element says about itself, so a fixture can be built around it: observed attributes, class members, slots.
     const facts = await opened.page.evaluate((names) => {
       const out = {};
@@ -100,7 +106,8 @@ async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
         } catch {
           // An element that can't be created on its own has no slots to report.
         }
-        out[name] = { attributes: [.../** @type {any} */ (Element).observedAttributes ?? []], members: [...members], slots: slots.filter(Boolean) };
+        const attributes = "observedAttributes" in Element && Array.isArray(Element.observedAttributes) ? Element.observedAttributes : [];
+        out[name] = { attributes: [...attributes], members: [...members], slots: slots.filter(Boolean) };
       }
       return out;
     }, tags);
@@ -153,7 +160,7 @@ async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
         }
       }
       await settleAnimations(opened.page);
-      /** @type {Record<string, any>} */
+      /** @type {TargetResult["archetypes"][string]["configs"][number]["tiers"]} */
       const tiers = {};
       for (const tier of plan.options.tiers) {
         if (tier === "interactions" || tier === "computed" || tier === "conditions") continue;
@@ -179,7 +186,8 @@ async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
 
 /**
  * Audit one fixture. A library that ships opt-in accessibility features runs once for each `--lib-a11y` value, and each result carries its label.
- * @param {{ browser: any, url: string, archetype: string, plan: any, toggle: boolean }} options
+ * @param {{ browser: import("playwright-core").Browser, url: string, archetype: string, plan: Plan, toggle: boolean }} options
+ * @returns {Promise<{ gap: string } | { configs: FixtureConfig[], hidden: string[] }>}
  */
 async function auditFixture({ browser, url, archetype, plan, toggle }) {
   const values = toggle ? plan.options.libA11y : ["n/a"];
@@ -187,7 +195,7 @@ async function auditFixture({ browser, url, archetype, plan, toggle }) {
   const hidden = [];
   for (const libA11y of values) {
     const outcome = await auditFixturePage({ browser, url, archetype, plan, libA11y });
-    if (outcome.gap) return { gap: toggle ? `With library accessibility ${libA11y}: ${outcome.gap}` : outcome.gap };
+    if ("gap" in outcome) return { gap: toggle ? `With library accessibility ${libA11y}: ${outcome.gap}` : outcome.gap };
     configs.push(...outcome.configs);
     hidden.push(...outcome.hidden);
   }
@@ -197,7 +205,8 @@ async function auditFixture({ browser, url, archetype, plan, toggle }) {
 /**
  * Audit an npm package: install it on its own, find what it exports, and audit each archetype that has a fixture.
  * An archetype without a usable fixture is a gap with a reason, never a pass.
- * @returns {Promise<{ result: any, mapping: Record<string, any> | null, files?: Record<string, string> }>}
+ * @param {{ browser: import("playwright-core").Browser, planTarget: Plan["targets"][number], plan: Plan, cwd: string, install?: typeof installPackage }} options
+ * @returns {Promise<{ result: TargetResult, mapping: TargetMapping | null, files?: Record<string, string> }>}
  */
 export async function auditNpm({ browser, planTarget, plan, cwd, install = installPackage }) {
   install ??= installPackage;
@@ -214,8 +223,9 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
   const servers = [];
   try {
     /** The framework's id (react, vue, or wc), or "unknown" when the metadata couldn't say. */
-    /** @type {any} */
-    let flavor = adapterForKind(planTarget.kind)?.id ?? "unknown";
+    const adapterId = adapterForKind(planTarget.kind)?.id;
+    /** @type {"react" | "vue" | "angular" | "wc" | "unknown"} */
+    let flavor = adapterId === "react" || adapterId === "vue" || adapterId === "angular" || adapterId === "wc" ? adapterId : "unknown";
     const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor });
     const warnings = [...installed.warnings];
     // What fixtures and templates import: the package, or the sub-path of it that was asked for.
@@ -247,9 +257,9 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     const candidates = candidateMapping({ flavor, exports: found.exports, tags: found.tags });
     const adapter = adapterFor(flavor);
     const wanted = plan.options.archetypes ?? ARCHETYPES;
-    /** @type {Record<string, any>} */
+    /** @type {TargetMapping} */
     const mapping = {};
-    /** @type {Record<string, any>} */
+    /** @type {TargetResult["archetypes"]} */
     const archetypes = {};
     const gaps = [];
     const hidden = [];
@@ -292,7 +302,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
           writeFileSync(fixture, source);
         }
       }
-      /** @type {any} */
+      /** @type {FixtureInfo | null} */
       let source = fixture ? { source: entry.status === "authored" ? "authored" : "template" } : null;
       let attempts = [];
       let generationTried = false;
@@ -345,10 +355,9 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       const live = await serveStatic(buildDir);
       servers.push(live);
       for (const [archetype, path] of Object.entries(runnable)) {
-        /** @type {any} */
         const outcome = await auditFixture({ browser, url: `${live.origin}${path}`, archetype, plan, toggle: mapping[archetype].libA11y === true }).catch((error) => ({ gap: firstLine(error) }));
         const fixtureInfo = sources[archetype];
-        if (outcome.gap) {
+        if ("gap" in outcome) {
           archetypes[archetype] = { status: "gap", reason: outcome.gap, configs: [], ...(fixtureInfo?.attempts?.length ? { fixture: { source: "none", attempts: fixtureInfo.attempts } } : {}) };
           gaps.push(`archetype:${archetype}`);
           mapping[archetype].status = "needs-fixture";

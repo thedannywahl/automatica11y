@@ -23,17 +23,20 @@ export function makeFakeBrowser(version = "123.0.4567.89") {
 }
 
 /** Collect what the CLI writes. */
+/** @param {Partial<import("../../src/commands/common.js").Io>} [overrides] */
 export function makeIo(overrides = {}) {
   const out = { stdout: "", stderr: "" };
+  /** @type {import("../../src/commands/common.js").Io} */
+  const io = {
+    stdout: { write: (text) => (out.stdout += text) },
+    stderr: { write: (text) => (out.stderr += text) },
+    cwd: makeTree(),
+    env: { PATH: "" },
+    ...overrides,
+  };
   return {
     out,
-    io: /** @type {any} */ ({
-      stdout: { write: (text) => (out.stdout += text) },
-      stderr: { write: (text) => (out.stderr += text) },
-      cwd: makeTree(),
-      env: { PATH: "" },
-      ...overrides,
-    }),
+    io,
   };
 }
 

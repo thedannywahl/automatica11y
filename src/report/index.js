@@ -3,7 +3,7 @@ import { renderSingleReport } from "./single.js";
 
 /**
  * Render report.md. A comparison of two or more targets gets the side-by-side report. Anything else gets the single report.
- * @param {{ plan: any, results: any }} input
+ * @param {{ plan: ReturnType<typeof import("../schema.js").parsePlan>, results: ReturnType<typeof import("../schema.js").parseResults> }} input
  */
 export function renderReport(input) {
   return input.plan.command === "compare" && input.results.targets.length > 1 ? renderComparison(input) : renderSingleReport(input);

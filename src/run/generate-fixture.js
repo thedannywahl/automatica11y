@@ -14,15 +14,15 @@ const firstLine = (error) => (error instanceof Error ? error.message : String(er
  *   adapter: import("../frameworks/index.js").Adapter,
  *   archetype: string,
  *   entry: { export?: string, tag?: string },
- *   found: { exports: any[], tags: string[], facts: Record<string, any> },
+ *   found: { exports: PackageExport[], tags: string[], facts: Record<string, { attributes: string[], members: string[], slots: string[] }> },
  *   pkg: string,
  *   explicit?: boolean,
- *   context?: Record<string, any>,
+ *   context?: Record<string, unknown>,
  *   tmp: string,
  *   workDir: string,
  *   buildDir: string,
  *   getServer: () => Promise<{ origin: string }>,
- *   bundle: (options: any) => Promise<unknown>,
+ *   bundle: (options: Parameters<typeof import("../harness/bundle.js").bundleEntries>[0]) => Promise<unknown>,
  * }} input
  * @returns {Promise<{ ok: boolean, reason: string | null, attempts: Array<{ recipe: string, summary: string, ok: boolean, reason: string | null }>, winner?: { recipe: string, summary: string, used: string[], source: string, file: string, extension: string } }>}
  */

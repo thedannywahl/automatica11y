@@ -12,11 +12,16 @@ const OTHER_FRAMEWORKS = {
 };
 const WEB_COMPONENT_BASES = ["lit", "lit-element", "@lit/reactive-element", "@stencil/core", "@microsoft/fast-element", "@polymer/polymer"];
 
+/** @param {unknown} value @returns {value is Record<string, unknown>} */
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /**
  * Read a package's registry metadata without installing it.
  * @param {string} spec `name`, `name@version`, or `name@range`
  * @param {{ timeoutMs?: number }} [options]
- * @returns {Promise<any>} The metadata. Throws an Error with a plain reason when the package can't be read.
+ * @returns {Promise<unknown>} The metadata. Throws an Error with a plain reason when the package can't be read.
  */
 export function npmView(spec, { timeoutMs = 60_000 } = {}) {
   return new Promise((resolve, reject) => {
@@ -46,18 +51,19 @@ export function npmView(spec, { timeoutMs = 60_000 } = {}) {
 /**
  * Guess how a package renders from its metadata alone. React wins when both signals appear, then a custom elements manifest, then Vue, then Angular.
  * `npm` means the metadata can't say, so the run decides after it installs and loads the package.
- * @param {any} meta
+ * @param {unknown} meta
  * @returns {{ kind: "npm-react" | "npm-vue" | "npm-angular" | "npm-wc" | "npm-unsupported" | "npm", framework: string | null, reason: string }}
  */
 export function detectFlavor(meta) {
-  const peers = meta.peerDependencies ?? {};
-  const deps = meta.dependencies ?? {};
-  const react = /** @type {any} */ (ADAPTERS.react.detect(meta));
+  const data = isRecord(meta) ? meta : {};
+  const peers = isRecord(data.peerDependencies) ? data.peerDependencies : {};
+  const deps = isRecord(data.dependencies) ? data.dependencies : {};
+  const react = ADAPTERS.react.detect(data);
   if (react) return react;
-  if (meta.customElements) return { kind: "npm-wc", framework: "Web components", reason: "The package has a customElements manifest." };
-  const vue = /** @type {any} */ (ADAPTERS.vue.detect(meta));
+  if (data.customElements) return { kind: "npm-wc", framework: "Web components", reason: "The package has a customElements manifest." };
+  const vue = ADAPTERS.vue.detect(data);
   if (vue) return vue;
-  const angular = /** @type {any} */ (ADAPTERS.angular.detect(meta));
+  const angular = ADAPTERS.angular.detect(data);
   if (angular) return angular;
   for (const [name, label] of Object.entries(OTHER_FRAMEWORKS)) {
     if (name in peers) return { kind: "npm-unsupported", framework: label, reason: `The package needs ${label}.` };
@@ -70,24 +76,26 @@ export function detectFlavor(meta) {
 /**
  * Fill in a classified npm target: the concrete version and the framework guess.
  * @param {import("./classify.js").ClassifiedTarget} target
- * @param {(spec: string) => Promise<any>} view
+ * @param {(spec: string) => Promise<unknown>} view
  * @returns {Promise<import("./classify.js").ClassifiedTarget>}
  */
 export async function resolveNpmTarget(target, view) {
   if (target.status !== "ok" || target.kind !== "npm" || !target.resolved) return target;
   const { name, requested, subpath } = target.resolved;
   try {
-    const meta = await view(`${name}@${requested ?? "latest"}`);
+    const metadata = await view(`${name}@${requested ?? "latest"}`);
+    if (!isRecord(metadata)) throw new Error("npm returned package metadata in an unreadable shape.");
+    const meta = metadata;
     // The registry lists a package's exports, so a wrong sub-path is caught here, before anything is installed.
     if (subpath) {
       const result = checkExports(meta.exports, subpath);
-      if (result.checked && !result.ok) throw new Error(notExportedMessage({ name, version: meta.version ?? null, subpath, exact: result.exact, patterns: result.patterns }));
+      if (result.checked && !result.ok) throw new Error(notExportedMessage({ name, version: typeof meta.version === "string" ? meta.version : null, subpath, exact: result.exact, patterns: result.patterns }));
     }
     const flavor = detectFlavor(meta);
     return {
       ...target,
-      kind: /** @type {any} */ (flavor.kind),
-      resolved: { ...target.resolved, version: meta.version ?? null, framework: flavor.framework, detectedBy: flavor.reason },
+      kind: flavor.kind,
+      resolved: { ...target.resolved, version: typeof meta.version === "string" ? meta.version : null, framework: flavor.framework, detectedBy: flavor.reason },
     };
   } catch (error) {
     return { ...target, status: "failed", reason: error instanceof Error ? error.message : String(error), kind: null, evidenceLevel: null, resolved: null };

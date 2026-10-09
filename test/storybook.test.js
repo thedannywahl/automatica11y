@@ -77,10 +77,11 @@ test("storyUrl builds the iframe address", () => {
 
 test("readIndex: reads from disk and from a URL, and reports HTTP errors", async () => {
   const local = await readIndex({ path: sbDir, index: "index.json" });
+  assert.ok(typeof local === "object" && local !== null && "v" in local);
   assert.equal(local.v, 5);
   const ok = async () => ({ ok: true, status: 200, json: async () => ({ v: 3, stories: {} }) });
   assert.deepEqual(await readIndex({ url: "http://x.test/", index: "stories.json" }, ok), { v: 3, stories: {} });
-  const bad = async () => ({ ok: false, status: 500 });
+  const bad = async () => ({ ok: false, status: 500, json: async () => ({}) });
   await assert.rejects(readIndex({ url: "http://x.test/", index: "index.json" }, bad), /HTTP 500/);
 });
 

@@ -33,7 +33,7 @@ const UNSUPPORTED_KIND = (kind) => `${kind} targets aren't supported.`;
 async function auditPage(browser, url, planTarget, plan, extraWarnings) {
   const opened = await openPage(browser, url);
   try {
-    /** @type {Record<string, any>} */
+    /** @type {ReturnType<typeof import("../schema.js").parseResults>["targets"][number]["archetypes"][string]["configs"][number]["tiers"]} */
     const tiers = {};
     for (const tier of plan.options.tiers) {
       if (tier === "rules") {
@@ -71,7 +71,7 @@ async function auditStory(browser, base, story, plan) {
   const opened = await openPage(browser, storyUrl(base, story.id));
   try {
     await waitForStory(opened.page);
-    /** @type {Record<string, any>} */
+    /** @type {ReturnType<typeof import("../schema.js").parseResults>["targets"][number]["archetypes"][string]["configs"][number]["tiers"]} */
     const tiers = {};
     for (const tier of plan.options.tiers) {
       tiers[tier] =
@@ -201,7 +201,7 @@ function describeResult(target) {
 
 /**
  * Run a plan: check the environment, launch one browser, audit each target, write results.json and report.md.
- * @param {any} plan
+ * @param {ReturnType<typeof import("../schema.js").parsePlan>} plan
  * @param {import("../commands/common.js").Io} io
  * @returns {Promise<number>} The exit code.
  */
@@ -232,14 +232,15 @@ export async function runPlan(plan, io) {
     /** Fixtures the tool generated, by path under the output folder. */
     const generatedFiles = {};
     for (const planTarget of plan.targets) {
-      const { result, mapping, files } = await runTarget(browser, planTarget, plan, io);
+      const targetRun = await runTarget(browser, planTarget, plan, io);
+      const { result, mapping } = targetRun;
       targets.push(result);
-      if (files) Object.assign(generatedFiles, files);
+      if ("files" in targetRun && targetRun.files) Object.assign(generatedFiles, targetRun.files);
       if (mapping) {
         mappings[planTarget.id] = mapping;
         planTarget.mapping = mapping;
       }
-      if (result.npm) planTarget.kind = adapterFor(result.npm.flavor).kind;
+      if ("npm" in result && result.npm) planTarget.kind = adapterFor(result.npm.flavor).kind;
     }
 
     const results = parseResults({

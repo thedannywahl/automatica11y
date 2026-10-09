@@ -35,9 +35,9 @@ test("repeatLength finds where a wrapped walk starts over", () => {
   assert.equal(repeatLength(long), 0, "a long document with no repeat is left alone");
 });
 
-/** @type {any} */
+/** @type {Awaited<ReturnType<typeof launchBrowser>> | undefined} */
 let session;
-/** @type {any} */
+/** @type {Awaited<ReturnType<typeof serveStatic>> | undefined} */
 let server;
 before(async () => {
   if (skip) return;

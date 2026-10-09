@@ -18,7 +18,7 @@ export function recordClosedShadowRoots() {
  * @returns {Promise<Record<string, number>>}
  */
 export async function closedShadowHosts(page) {
-  const hosts = await page.evaluate(() => /** @type {any} */ (window).__a11yClosedShadowHosts ?? []).catch(() => []);
+  const hosts = await page.evaluate(() => window.__a11yClosedShadowHosts ?? []).catch(() => []);
   /** @type {Record<string, number>} */
   const counts = {};
   for (const host of hosts) counts[host] = (counts[host] ?? 0) + 1;

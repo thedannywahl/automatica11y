@@ -1,6 +1,6 @@
 {
   "name": "automatica11y",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Test and compare the accessibility of web pages, Storybook builds, and npm component libraries.",
   "homepage": "https://automatica11y.dev",
   "repository": {

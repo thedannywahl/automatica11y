@@ -2,7 +2,7 @@ import { FINDINGS_NOTE, coverageMatrix, finish, failCheckSection, notTestableLin
 
 /**
  * Render report.md for an audit. The text comes from results.json and nothing else.
- * @param {{ plan: any, results: any }} input
+ * @param {{ plan: ReturnType<typeof import("../schema.js").parsePlan>, results: ReturnType<typeof import("../schema.js").parseResults> }} input
  */
 export function renderSingleReport({ plan, results }) {
   const lines = reportHeader(plan, results, "Accessibility report.");

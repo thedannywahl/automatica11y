@@ -1,3 +1,5 @@
+[![automatica11y Open Graph preview](https://automatica11y.dev/og.png)](https://automatica11y.dev/)
+
 # automatica11y
 
 Test and compare the accessibility of web pages, Storybook builds, and npm component libraries.

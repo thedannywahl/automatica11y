@@ -62,6 +62,7 @@ export default {
   noun: "export",
   extension: "jsx",
   runtime: ["vue"],
+  /** @returns {import("./index.js").AdapterDetection | null} */
   detect(meta) {
     const peers = meta.peerDependencies ?? {};
     const deps = meta.dependencies ?? {};
@@ -79,7 +80,7 @@ export default {
       alias: { vue: join(workDir, "node_modules", "vue") },
       define: { __VUE_OPTIONS_API__: "true", __VUE_PROD_DEVTOOLS__: "false", __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: "false" },
       // Vue has no JSX runtime of its own, so JSX becomes h() calls. The shim is injected wherever h or Fragment is used without being declared.
-      esbuild: { jsx: "transform", jsxFactory: "h", jsxFragment: "Fragment", inject: [shim] },
+      esbuild: { jsx: /** @type {"transform"} */ ("transform"), jsxFactory: "h", jsxFragment: "Fragment", inject: [shim] },
     };
   },
   entry,

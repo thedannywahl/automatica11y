@@ -346,7 +346,7 @@ const BUILDERS = { dialog: dialogs, menu: menus, tooltip: tooltips, tabs, accord
 
 /**
  * Candidates for an Angular package, from what discovery read off its classes.
- * @param {{ archetype: string, pkg: string, exports: Array<{ name: string, angular?: any }> }} input
+ * @param {{ archetype: string, pkg: string, exports: Array<{ name: string, angular?: AngularExportInfo }> }} input
  * @returns {{ candidates: Array<{ id: string, summary: string, source: string, used: string[] }>, reason: string | null }}
  */
 export function generateAngular({ archetype, pkg, exports }) {

@@ -3,7 +3,7 @@
 //   node scripts/build-docs.js [outDir]       Default out folder: site/
 // The pages are semantic HTML with no script. A skip link, landmarks, labelled scrollable regions, and light, dark,
 // and forced-colors styles come from the template below. A workflow publishes the output to the `docs` branch.
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -133,7 +133,11 @@ a:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: 3px 
 .skip:focus { top: 1rem; }
 header.site { padding: 1rem; background: var(--header); border-bottom: 1px solid var(--rule); }
 header.site p { margin: 0; font-weight: 700; font-size: 1.25rem; }
-header.site a { color: inherit; text-decoration: none; }
+header.site a { text-decoration: none; }
+.site-logo { display: inline-flex; align-items: center; }
+.site-logo-main { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--fg); }
+.site-logo-icon { display: block; flex: none; width: 2rem; height: 2rem; background: currentColor; -webkit-mask: url("favicon.svg") center / contain no-repeat; mask: url("favicon.svg") center / contain no-repeat; }
+.site-logo-accent { color: #DD4CA8; }
 .layout { display: block; }
 nav.docs { padding: 1rem; background: var(--nav); border-bottom: 1px solid var(--rule); }
 nav.docs ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
@@ -179,13 +183,20 @@ function template({ page, article, version }) {
 <title>${escapeHtml(page.out === "index.html" ? "automatica11y" : `${article.title} - automatica11y`)}</title>
 <meta name="description" content="${escapeHtml(article.description)}">
 <link rel="canonical" href="${canonical}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${escapeHtml(page.out === "index.html" ? "automatica11y" : `${article.title} - automatica11y`)}">
+<meta property="og:description" content="${escapeHtml(article.description)}">
+<meta property="og:url" content="${canonical}">
+<meta property="og:image" content="https://${DOMAIN}/og.png">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="pantoken.css">
 <style>${STYLE}</style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the content</a>
 <header class="site">
-  <p><a href="index.html">automatica11y</a></p>
+  <p><a class="site-logo" href="index.html"><span class="site-logo-main"><span class="site-logo-icon" aria-hidden="true"></span>automatic</span><span class="site-logo-accent">a11y</span></a></p>
 </header>
 <div class="layout">
   <nav class="docs" aria-label="Documentation">
@@ -227,6 +238,9 @@ export function buildDocs({ root = ROOT, outDir = join(root, "site") } = {}) {
   // Each publish replaces the whole branch, so the CNAME has to be in every build or Pages forgets the domain.
   writeFileSync(join(outDir, "CNAME"), `${DOMAIN}\n`);
   writeFileSync(join(outDir, "pantoken.css"), pantokenCss());
+  for (const [source, destination] of [["automatica11y-og.png", "og.png"], ["automatica11y-favicon.ico", "favicon.ico"], ["automatica11y-favicon.svg", "favicon.svg"]]) {
+    copyFileSync(join(root, "site-assets", source), join(outDir, destination));
+  }
   // The 404 page is served from any path, so its stylesheet link is absolute.
   writeFileSync(join(outDir, "404.html"), `<!doctype html>\n<html lang="en" data-pantoken-color="plum"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Page not found - automatica11y</title><link rel="stylesheet" href="/pantoken.css"><style>${STYLE}</style></head>\n<body><main id="main" style="padding:2rem 1rem"><h1>Page not found.</h1><p>That page isn't in the documentation. Start at the <a href="${SITE}">home page</a>.</p></main></body></html>\n`);
   return written;

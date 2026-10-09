@@ -2,6 +2,8 @@ import { adapterFor } from "../frameworks/index.js";
 import { criterion, criterionName, wcagAttribution } from "../wcag/index.js";
 import { cap, num, plural } from "../text.js";
 
+/** @typedef {NonNullable<ReturnType<typeof import("../schema.js").parseResults>["targets"][number]["archetypes"][string]["configs"][number]["tiers"][string]["flags"]>[number]} VsrFlag */
+
 /** Markdown helpers. */
 export const cell = (text) => String(text ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
 export const code = (text) => `\`${String(text).replace(/`/g, "'")}\``;
@@ -162,7 +164,7 @@ export function storybookSection(planTarget, target) {
   }
   const walks = Object.entries(target.archetypes).map(([key, a]) => ({ id: key.replace(/^story:/, ""), vsr: a.configs[0]?.tiers.vsr })).filter((w) => w.vsr?.status === "ran");
   if (walks.length) {
-    /** @type {Map<string, { flag: any, stories: string[] }>} */
+    /** @type {Map<string, { flag: VsrFlag, stories: string[] }>} */
     const byFlag = new Map();
     for (const { id, vsr } of walks) for (const flag of vsr.flags) {
       const key = `${flag.type}|${flag.phrase}`;

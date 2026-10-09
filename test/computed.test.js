@@ -10,9 +10,9 @@ const dir = new URL("./fixtures/computed/", import.meta.url).pathname;
 const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
 
-/** @type {any} */
+/** @type {Awaited<ReturnType<typeof launchBrowser>> | undefined} */
 let session;
-/** @type {any} */
+/** @type {Awaited<ReturnType<typeof serveStatic>> | undefined} */
 let server;
 before(async () => {
   if (skip) return;

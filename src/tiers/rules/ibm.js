@@ -17,9 +17,9 @@ export const helpUrl = (ruleId) => `https://able.ibm.com/rules/archives/latest/d
 
 /**
  * Group raw IBM results into findings, one per rule and kind, with the first few nodes.
- * @param {Array<{ ruleId: string, message: string, dom?: string, snippet?: string }>} items
+ * @param {Array<{ ruleId: string, message: string, value: string[], dom?: string, snippet?: string }>} items
  * @param {Map<string, { wcag: string[], toolkitLevel: number | null }>} ruleInfo
- * @param {(item: any) => string} kindOf
+ * @param {(item: { value: string[] }) => string} kindOf
  * @param {number} maxNodes
  */
 function group(items, ruleInfo, kindOf, maxNodes, withKind) {

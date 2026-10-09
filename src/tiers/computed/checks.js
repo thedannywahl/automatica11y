@@ -9,6 +9,8 @@ import { num } from "../../text.js";
 import { criterionRef } from "../../wcag/index.js";
 import { contrastOver, contrastRatio, formatRatio, ringIsEnough, textThreshold } from "./color.js";
 
+/** @typedef {{ key: number, text: string, color: number[] | null, size: number, weight: string, backdrop: number[] | null, undetermined: string | null }} TextPart */
+
 const pass = (detail, extra = {}) => ({ result: "pass", detail, ...extra });
 const fail = (detail, extra = {}) => ({ result: "fail", detail, ...extra });
 const na = (detail) => ({ result: "not-applicable", detail });
@@ -31,7 +33,7 @@ const TEXT_CONTRAST = {
   name: "text-contrast-by-state",
   criteria: ["1.4.3"],
   async run(ctx) {
-    /** @type {Array<{ state: string, parts: any[] }>} */
+    /** @type {Array<{ state: string, parts: TextPart[] }>} */
     const states = [];
     const measure = async (state) => states.push({ state, parts: (await ctx.page.evaluate(() => window.__a11yMeasure.text())) ?? [] });
     await parkPointer(ctx);

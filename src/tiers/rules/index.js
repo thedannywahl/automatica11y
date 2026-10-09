@@ -19,7 +19,7 @@ export async function runRules(page, { engines, wcag, level, maxNodes = 5, scope
       engines: Object.fromEntries(engines.map((engine) => [engine, { status: "not-testable", reason }])),
     };
   }
-  /** @type {Record<string, any>} */
+  /** @type {NonNullable<ReturnType<typeof import("../../schema.js").parseResults>["targets"][number]["archetypes"][string]["configs"][number]["tiers"][string]["engines"]>} */
   const results = {};
   for (const engine of engines) {
     try {

@@ -16,20 +16,32 @@ export const ARCHETYPE_PATTERNS = {
   chart: /\bcharts?\b|\bgraphs?\b|\bplots?\b/i,
 };
 
+/** @param {unknown} value @returns {value is Record<string, unknown>} */
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** @param {unknown} value @returns {value is unknown[]} */
+function isArray(value) {
+  return Array.isArray(value);
+}
+
 /**
  * Pull the stories out of a Storybook index. Handles `index.json` (`entries`, with docs pages) and the older `stories.json`.
- * @param {any} index
+ * @param {unknown} index
  * @returns {Array<{ id: string, title: string, name: string, tags: string[] }>}
  */
 export function listStories(index) {
-  const table = index.entries ?? index.stories ?? {};
+  const data = isRecord(index) ? index : {};
+  const table = (isRecord(data.entries) ? data.entries : null) ?? (isRecord(data.stories) ? data.stories : {});
   return Object.values(table)
-    .filter((entry) => entry && typeof entry === "object" && (entry.type === undefined || entry.type === "story"))
+    .filter(isRecord)
+    .filter((entry) => entry.type === undefined || entry.type === "story")
     .map((entry) => ({
       id: String(entry.id),
       title: String(entry.title ?? entry.kind ?? ""),
       name: String(entry.name ?? entry.story ?? ""),
-      tags: Array.isArray(entry.tags) ? entry.tags.map(String) : [],
+      tags: isArray(entry.tags) ? entry.tags.map(String) : [],
     }))
     .sort((a, b) => a.id.localeCompare(b.id));
 }
@@ -88,7 +100,8 @@ export function storyUrl(base, id) {
 /**
  * Read a Storybook's index from disk or over HTTP.
  * @param {{ path?: string | null, url?: string | null, index: string }} resolved
- * @param {Function} [doFetch]
+ * @param {(url: URL, options?: { signal?: AbortSignal }) => Promise<{ ok: boolean, status: number, json(): Promise<unknown> }>} [doFetch]
+ * @returns {Promise<unknown>}
  */
 export async function readIndex(resolved, doFetch = globalThis.fetch) {
   if (resolved.path) return JSON.parse(readFileSync(join(resolved.path, resolved.index), "utf8"));

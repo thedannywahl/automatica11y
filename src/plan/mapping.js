@@ -39,14 +39,14 @@ export function score(archetype, name) {
 }
 
 /**
- * Guess which exports (React or Vue) or tags (web components) stand for each archetype.
+ * Guess which exports (React, Vue, or Angular) or tags (web components) stand for each archetype.
  * The result is a starting point. A person or the skill checks it before trusting it.
- * @param {{ flavor: "react" | "vue" | "wc", exports?: Array<{ name: string, type: string, parts: string[] }>, tags?: string[] }} input
- * @returns {Record<string, any>}
+ * @param {{ flavor: "react" | "vue" | "angular" | "wc", exports?: Array<{ name: string, type: string, parts: string[] }>, tags?: string[] }} input
+ * @returns {ReturnType<typeof parseMappingFile>[string]}
  */
 export function candidateMapping({ flavor, exports = [], tags = [] }) {
   const names = flavor === "wc" ? tags : exports.filter((e) => /^[A-Z]/.test(e.name)).map((e) => e.name);
-  /** @type {Record<string, any>} */
+  /** @type {ReturnType<typeof parseMappingFile>[string]} */
   const mapping = {};
   for (const archetype of ARCHETYPES) {
     const ranked = names

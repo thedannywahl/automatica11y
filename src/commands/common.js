@@ -14,7 +14,7 @@ export const EXIT = { OK: 0, FAIL_THRESHOLD: 1, USAGE: 2, ENVIRONMENT: 3, ALL_TA
 export class UsageError extends Error {}
 
 /**
- * @typedef {{ stdout: { write(text: string): unknown }, stderr: { write(text: string): unknown }, cwd: string, env: NodeJS.ProcessEnv, fetch?: import("../plan/classify.js").FetchLike, npmView?: (spec: string) => Promise<any>, installPackage?: Function, platform?: NodeJS.Platform }} Io
+ * @typedef {{ stdout: { write(text: string): unknown }, stderr: { write(text: string): unknown }, cwd: string, env: NodeJS.ProcessEnv, fetch?: import("../plan/classify.js").FetchLike, npmView?: (spec: string) => Promise<unknown>, installPackage?: Function, platform?: NodeJS.Platform }} Io
  */
 
 const OPTION_DEFS = /** @type {const} */ ({
@@ -99,16 +99,16 @@ export function parseRunArgs(command, argv) {
     const ibm = ibmFlag === undefined ? null : Number(parseChoice("fail-on-ibm", ibmFlag, TOOLKIT_LEVELS.map(String)));
     if (axe && !engines.includes("axe")) throw new UsageError("--fail-on-axe needs the axe engine. Add axe to --engine or drop the flag.");
     if (ibm && !engines.includes("ibm")) throw new UsageError("--fail-on-ibm needs the ibm engine. Add ibm to --engine or drop the flag.");
-    fail = { mode: /** @type {"any" | "all"} */ (modeFlag === undefined ? "any" : parseChoice("fail-mode", modeFlag, FAIL_MODES)), axe: /** @type {any} */ (axe), ibm: /** @type {any} */ (ibm) };
+    fail = { mode: /** @type {"any" | "all"} */ (modeFlag === undefined ? "any" : parseChoice("fail-mode", modeFlag, FAIL_MODES)), axe, ibm };
   }
 
   const options = {
-    wcag: /** @type {any} */ (values.wcag === undefined ? "2.2" : parseChoice("wcag", values.wcag, WCAG_VERSIONS)),
-    level: /** @type {any} */ (values.level === undefined ? "AA" : parseChoice("level", values.level, LEVELS)),
-    tiers: /** @type {any} */ (tiers),
-    engines: /** @type {any} */ (engines),
-    libA11y: /** @type {any} */ (libA11y),
-    archetypes: /** @type {any} */ (archetypes),
+    wcag: values.wcag === undefined ? "2.2" : parseChoice("wcag", values.wcag, WCAG_VERSIONS),
+    level: values.level === undefined ? "AA" : parseChoice("level", values.level, LEVELS),
+    tiers,
+    engines,
+    libA11y,
+    archetypes,
     mapping: values.mapping ?? null,
     maxStories,
     generate: !values["no-generate"],

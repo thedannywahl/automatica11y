@@ -168,7 +168,7 @@ function impactTables(results, engines) {
 /**
  * Render report.md for a comparison of two or more targets.
  * Every target ran with the same settings, so the columns line up. A gap or a failure shows in its cell, and never reads as a pass.
- * @param {{ plan: any, results: any }} input
+ * @param {{ plan: ReturnType<typeof import("../schema.js").parsePlan>, results: ReturnType<typeof import("../schema.js").parseResults> }} input
  */
 export function renderComparison({ plan, results }) {
   const o = plan.options;

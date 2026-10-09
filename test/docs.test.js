@@ -47,6 +47,19 @@ test("each page has the structure a screen reader user needs: language, title, s
   assert.match(html["targets.html"], /<title>Targets - automatica11y<\/title>/);
 });
 
+test("each page includes brand metadata, header logo, and copied assets", () => {
+  for (const page of PAGES) {
+    const text = html[page.out];
+    assert.match(text, /<meta property="og:image" content="https:\/\/automatica11y\.dev\/og\.png">/);
+    assert.match(text, /<link rel="icon" type="image\/svg\+xml" href="favicon\.svg">/);
+    assert.match(text, /<link rel="icon" href="favicon\.ico">/);
+    assert.match(text, /<a class="site-logo" href="index\.html"><span class="site-logo-main"><span class="site-logo-icon" aria-hidden="true"><\/span>automatic<\/span><span class="site-logo-accent">a11y<\/span><\/a>/);
+  }
+  for (const [source, output] of [["automatica11y-og.png", "og.png"], ["automatica11y-favicon.ico", "favicon.ico"], ["automatica11y-favicon.svg", "favicon.svg"]]) {
+    assert.deepEqual(readFileSync(join(out, output)), readFileSync(join(root, "site-assets", source)));
+  }
+});
+
 test("every link on the site points at a page and a section that exist", () => {
   for (const page of PAGES) {
     for (const [, href] of html[page.out].matchAll(/ href="([^"]*)"/g)) {
@@ -54,6 +67,10 @@ test("every link on the site points at a page and a section that exist", () => {
       assert.doesNotMatch(href, /\.md(#|$)/, `${page.out} links to a Markdown file: ${href}`);
       const [file, hash] = href.split("#");
       const target = file === "" ? page.out : file;
+      if (html[target] === undefined) {
+        assert.ok(readdirSync(out).includes(file), `${page.out} links to ${href}, which isn't a built asset`);
+        continue;
+      }
       assert.ok(html[target] !== undefined, `${page.out} links to ${href}, which isn't a page`);
       if (hash) assert.ok(html[target].includes(` id="${hash}"`), `${page.out} links to ${href}, which has no such section`);
     }
@@ -90,6 +107,7 @@ test("tables and code can be read without a mouse", () => {
 
 test("the README points at the site, and the pages it names exist", () => {
   const readme = readFileSync(join(root, "README.md"), "utf8");
+  assert.match(readme, /^\[\!\[automatica11y Open Graph preview\]\(https:\/\/automatica11y\.dev\/og\.png\)\]\(https:\/\/automatica11y\.dev\/\)/);
   assert.match(readme, /\(https:\/\/automatica11y\.dev\/\)/);
   for (const [, page] of readme.matchAll(/automatica11y\.dev\/([a-z-]+\.html)/g)) assert.ok(html[page] !== undefined, `the README links to ${page}`);
   assert.ok(readme.split("\n").length < 100, "the README stays short: the details live in the docs");

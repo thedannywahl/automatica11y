@@ -134,6 +134,7 @@ export default {
   noun: "export",
   extension: "js",
   runtime: ["@angular/core", "@angular/common", "@angular/compiler", "@angular/platform-browser", "rxjs"],
+  /** @returns {import("./index.js").AdapterDetection | null} */
   detect(meta) {
     const peers = meta.peerDependencies ?? {};
     const deps = meta.dependencies ?? {};

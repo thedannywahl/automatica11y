@@ -38,8 +38,12 @@ test("open shadow roots: both engines read inside, and nothing is recorded as hi
   try {
     const opened = await openPage(browser, `${server.origin}/open.html`);
     const result = await runRules(opened.page, { engines: ["axe", "ibm"], wcag: "2.2", level: "AA" });
-    assert.deepEqual(result.engines.axe.violations.map((v) => v.ruleId).sort(), ["button-name", "image-alt"]);
-    assert.deepEqual(result.engines.ibm.violations.map((v) => v.ruleId).sort(), ["img_alt_valid", "input_label_exists"]);
+    const axe = result.engines.axe;
+    const ibm = result.engines.ibm;
+    if (!("violations" in axe)) throw new Error("axe didn't run");
+    if (!("violations" in ibm)) throw new Error("IBM didn't run");
+    assert.deepEqual(axe.violations.map((v) => v.ruleId).sort(), ["button-name", "image-alt"]);
+    assert.deepEqual(ibm.violations.map((v) => v.ruleId).sort(), ["img_alt_valid", "input_label_exists"]);
     assert.deepEqual(await closedShadowHosts(opened.page), {});
     assert.equal(await opened.page.locator("[data-a11y-trigger]").count(), 1);
     await opened.close();
@@ -56,8 +60,12 @@ test("closed shadow roots: the engines see nothing, so the run records them as n
   try {
     const opened = await openPage(browser, `${server.origin}/closed.html`);
     const result = await runRules(opened.page, { engines: ["axe", "ibm"], wcag: "2.2", level: "AA" });
-    assert.deepEqual(result.engines.axe.violations, []);
-    assert.deepEqual(result.engines.ibm.violations, []);
+    const axe = result.engines.axe;
+    const ibm = result.engines.ibm;
+    if (!("violations" in axe)) throw new Error("axe didn't run");
+    if (!("violations" in ibm)) throw new Error("IBM didn't run");
+    assert.deepEqual(axe.violations, []);
+    assert.deepEqual(ibm.violations, []);
     assert.deepEqual(await closedShadowHosts(opened.page), { "x-thing": 1 });
     await opened.close();
   } finally {

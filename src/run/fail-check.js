@@ -1,5 +1,13 @@
 import { IMPACTS } from "../schema.js";
 
+/**
+ * @typedef {{ impact?: string | null, toolkitLevel?: number | null }} FailFinding
+ * @typedef {{ status?: string, violations?: FailFinding[] }} FailEngineResult
+ * @typedef {{ tiers: { rules?: { engines?: Record<string, FailEngineResult> } } }} FailConfigResult
+ * @typedef {{ configs: FailConfigResult[] }} FailArchetypeResult
+ * @typedef {{ id: string, status: string, archetypes: Record<string, FailArchetypeResult> }} FailTarget
+ */
+
 const RANK = Object.fromEntries(IMPACTS.map((impact, index) => [impact, index]));
 
 /** All findings an engine reported for one target, across every archetype and configuration. */
@@ -28,8 +36,8 @@ export function countIbmHits(target, threshold) {
  * Decide whether the run trips its fail check. Each engine has its own threshold, and counts are never added across engines.
  * `any` trips a target when any checked engine hits. `all` trips it only when every checked engine hits.
  * A target that failed, or an engine that failed, counts as no hit.
- * @param {Array<any>} targets Target results.
- * @param {{ mode: string, axe: string | null, ibm: number | null } | null} fail
+ * @param {FailTarget[]} targets Target results.
+ * @param {ReturnType<typeof import("../schema.js").parsePlan>["options"]["fail"]} fail
  */
 export function evaluateFailCheck(targets, fail) {
   if (!fail) return null;
