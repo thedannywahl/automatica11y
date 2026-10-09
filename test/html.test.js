@@ -42,6 +42,8 @@ test("a package that ships a stylesheet or a browser script and needs no framewo
   assert.equal(detectFlavor({ peerDependencies: { react: "^18" }, exports: { "./a.css": "./a.css" } }).kind, "npm-react", "a framework wins");
   assert.equal(detectFlavor({ peerDependencies: { svelte: "^5" }, style: "a.css" }).kind, "npm-unsupported");
   assert.equal(detectFlavor({ exports: { ".": "./index.js" } }).kind, "npm", "no browser assets, so the metadata can't say");
+  assert.equal(detectFlavor({ exports: { ".": "./index.mjs", "./components.css": "./components.css" } }).kind, "npm", "a JavaScript entry could be web components, so loading the package decides");
+  assert.equal(detectFlavor({ main: "index.js", style: "a.css" }).kind, "npm");
 });
 
 test("a list that names a stylesheet or a script is plain HTML even when the metadata says nothing", async () => {
@@ -97,6 +99,7 @@ test("HTML: a package with no framework and no list runs an authored snippet, a 
   assert.equal(result.code, 0, result.stderr);
   const target = result.results.targets[0];
   assert.equal(target.npm.flavor, "html");
+  assert.ok(target.warnings.some((w) => /didn't name a stylesheet or a script/.test(w)), "a target that loads nothing says so");
   assert.deepEqual([target.archetypes.button.status, target.archetypes.button.fixture.source], ["ran", "authored"]);
   assert.equal(target.archetypes.tabs.status, "gap");
   assert.match(target.archetypes.tabs.reason, /Plain HTML has no component to find[\s\S]*Write fixtures\/css\/tabs\.html/);

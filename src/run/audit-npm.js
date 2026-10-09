@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { bundleEntries } from "../harness/bundle.js";
@@ -6,6 +6,7 @@ import { GENERATABLE } from "../harness/generate/index.js";
 import { generateFixture } from "./generate-fixture.js";
 import { settleAnimations } from "../harness/settle.js";
 import { installedVersion, installExtraPackages, installOptionalPeers, installPackage } from "../harness/npm-install.js";
+import { shipsBrowserAssets } from "../frameworks/html.js";
 import { ANGULAR_FLOOR } from "../frameworks/angular.js";
 import { explainAngularError } from "../frameworks/angular-errors.js";
 import { adapterFor, adapterForKind } from "../frameworks/index.js";
@@ -67,6 +68,15 @@ async function bundleWithPeers(options, warnings) {
     if (added.installed.length === 0) throw error;
     warnings.push(...added.warnings);
     return bundleEntries(options);
+  }
+}
+
+/** The installed package's own package.json, or an empty object. */
+function readInstalledMeta(workDir, name) {
+  try {
+    return JSON.parse(readFileSync(join(workDir, "node_modules", name, "package.json"), "utf8"));
+  } catch {
+    return {};
   }
 }
 
@@ -257,13 +267,25 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
 
     // What the install left behind that an adapter's entry needs to know about, such as whether zone.js came with the library.
     const listed = [{ name: resolved.name, subpath: resolved.subpath ?? null }, ...companions.map((c) => ({ name: c.name, subpath: c.subpath }))];
-    const context = adapterForKind(planTarget.kind)?.inspect?.(workDir, listed) ?? {};
+    let context = adapterForKind(planTarget.kind)?.inspect?.(workDir, listed) ?? {};
 
     // Plain HTML has no exports or elements to list. What it loads came from the target itself.
-    const found = flavor === "html" ? { exports: [], tags: [], facts: {} } : await discover({ browser, workDir, flavor: flavor === "unknown" ? "wc" : flavor, pkg: importSpec, buildDir, warnings });
+    let found = flavor === "html" ? { exports: [], tags: [], facts: {} } : await discover({ browser, workDir, flavor: flavor === "unknown" ? "wc" : flavor, pkg: importSpec, buildDir, warnings });
     if (flavor === "unknown") {
       if (found.tags.length > 0) flavor = "wc";
       else if (installed.react && found.exports.some((e) => /^[A-Z]/.test(e.name))) flavor = "react";
+      // Nothing to load as a component, but the package ships stylesheets or browser scripts: it's plain HTML.
+      else if (shipsBrowserAssets(readInstalledMeta(workDir, resolved.name))) {
+        flavor = "html";
+        found = { exports: [], tags: [], facts: {} };
+        context = adapterFor("html").inspect?.(workDir, listed) ?? {};
+      }
+    }
+    if (flavor === "html") {
+      const assets = /** @type {any} */ (context).assets;
+      if (!assets || (assets.styles.length === 0 && assets.scripts.length === 0)) {
+        warnings.push("The target didn't name a stylesheet or a script, so the page loaded none and the templates ran on the browser's own styles. Name them as sub-paths, such as npm:name/style.css.");
+      }
     }
     if (flavor === "unknown" || (flavor === "wc" && found.tags.length === 0)) {
       // Some packages keep their components in sub-paths and leave the main entry nearly empty.

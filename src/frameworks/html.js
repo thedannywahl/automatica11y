@@ -41,6 +41,14 @@ export function shipsBrowserAssets(meta) {
   return keys.some((key) => STYLE.test(key) || /\.(iife|umd)\.m?js$/.test(key));
 }
 
+/** Does the package have a JavaScript entry to import? Then loading it is what tells plain HTML from web components. */
+function hasScriptEntry(meta) {
+  if (typeof meta?.main === "string" || typeof meta?.module === "string") return true;
+  const exported = meta?.exports;
+  if (typeof exported === "string") return true;
+  return Boolean(exported && typeof exported === "object" && exported["."]);
+}
+
 /**
  * Mounts a fixture. The stylesheets come first, as imports, so they load with the page. The markup goes on the page next. A
  * `<script>` inside the markup is made again so the browser runs it, because markup set by the page never runs its scripts.
@@ -136,7 +144,8 @@ export default {
   runtime: [],
   /** @returns {import("./index.js").AdapterDetection | null} */
   detect(meta) {
-    if (!shipsBrowserAssets(meta)) return null;
+    // A package that also has a JavaScript entry could be web components, so the run decides after it loads the package.
+    if (!shipsBrowserAssets(meta) || hasScriptEntry(meta)) return null;
     return { kind: "npm-html", framework: "HTML", reason: "The package ships a stylesheet or a browser script and needs no framework." };
   },
   /** What the page loads, from the packages the target lists. */
