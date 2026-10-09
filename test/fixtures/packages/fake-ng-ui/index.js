@@ -68,7 +68,7 @@ export class UiCombobox {
   open() { this.uiCombobox.isOpen.set(true); }
   expanded() { return this.uiCombobox?.isOpen() ? "true" : "false"; }
 }
-define(Directive, { selector: "[uiCombobox]", inputs: ["uiCombobox"], host: { role: "combobox", "[attr.aria-expanded]": "expanded()", "(keydown.arrowdown)": "open()" } }, UiCombobox);
+define(Directive, { selector: "[uiCombobox]", inputs: ["uiCombobox"], host: { role: "combobox", "[attr.aria-expanded]": "expanded()", "(click)": "open()", "(keydown.arrowdown)": "open()" } }, UiCombobox);
 export class UiOption {}
 define(Directive, { selector: "[uiOption]", host: { role: "option" } }, UiOption);
 

@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { adapterFor } from "../src/frameworks/index.js";
+import { generateAngular } from "../src/harness/generate/angular-recipes.js";
 import { markupFor } from "../src/frameworks/angular-selectors.js";
 import { detectFlavor } from "../src/plan/resolve-npm.js";
 import { parseResults } from "../src/schema.js";
@@ -159,4 +160,55 @@ test("Angular: the real Angular Material button is covered by a template", { ski
   const result = await run(["audit", "mat=npm:@angular/material/button", "--archetypes", "button,link", "--tiers", "rules"]);
   assert.equal(result.code, 0, result.stderr);
   for (const name of ["button", "link"]) assert.deepEqual([result.results.targets[0].archetypes[name].status, result.results.targets[0].archetypes[name].fixture.source], ["ran", "template"], name);
+});
+
+// ---- generated fixtures ----
+
+const record = (name, kind, extra = {}) => ({ name, type: "function", parts: [], angular: { kind, standalone: true, selectors: [], inputs: [], outputs: [], exportAs: [], ...extra } });
+
+test("generated candidates are built from selectors, inputs, and exportAs names, and a package with none says why", () => {
+  const exports = [
+    record("XMenuTrigger", "directive", { selectors: [["", "xMenuTriggerFor", ""]], inputs: ["xMenuTriggerFor"] }),
+    record("XMenu", "component", { selectors: [["x-menu"]], exportAs: ["xMenu"] }),
+    record("XDialog", "service", { methods: ["open"] }),
+  ];
+  const menu = generateAngular({ archetype: "menu", pkg: "x", exports });
+  assert.deepEqual(menu.candidates.map((c) => c.id), ["menu-ref-XMenuTrigger-XMenu"]);
+  assert.match(menu.candidates[0].source, /\[xMenuTriggerFor\]=\\"m\\"/);
+  assert.match(menu.candidates[0].source, /#m=\\"xMenu\\"/);
+  assert.match(menu.candidates[0].source, /runOutsideAngular\(\(\) => startMarking\(\)\)/);
+  assert.deepEqual(generateAngular({ archetype: "dialog", pkg: "x", exports }).candidates.map((c) => c.id), ["dialog-service-XDialog"]);
+  const none = generateAngular({ archetype: "tabs", pkg: "x", exports });
+  assert.deepEqual(none.candidates, []);
+  assert.match(none.reason, /No Angular class looks like the tabs archetype/);
+  assert.match(generateAngular({ archetype: "chart", pkg: "x", exports }).reason, /Nothing is generated for the chart archetype/);
+});
+
+test("Angular: every archetype is generated from a library's own parts, and the probe accepts each", { skip, timeout: 300_000 }, async () => {
+  const names = ["dialog", "menu", "tooltip", "tabs", "accordion", "combobox", "form-field", "live-region"];
+  const result = await run(["audit", "ui=npm:fake-ng-ui", "--archetypes", names.join(","), "--tiers", "rules"]);
+  assert.equal(result.code, 0, result.stderr);
+  const target = result.results.targets[0];
+  for (const name of names) {
+    assert.deepEqual([target.archetypes[name].status, target.archetypes[name].fixture.source], ["ran", "generated"], `${name}: ${target.archetypes[name].reason ?? ""}`);
+  }
+  assert.equal(target.archetypes.menu.fixture.recipe, "menu-ref-UiMenuTrigger-UiMenu");
+  assert.match(result.file("generated/ui/menu.js"), /\[uiMenuTriggerFor\]=\\"m\\"/);
+});
+
+test("Angular: a generated fixture that doesn't behave is rejected, and the gap says what happened", { skip, timeout: 240_000 }, async () => {
+  const result = await run(["audit", "lib=npm:fake-ng-wrong", "--archetypes", "menu,dialog", "--tiers", "rules"]);
+  const target = result.results.targets[0];
+  for (const name of ["menu", "dialog"]) assert.equal(target.archetypes[name].status, "gap", name);
+  assert.match(target.archetypes.menu.reason, /showed no element marked as the root/);
+  assert.match(target.archetypes.dialog.reason, /showed no element marked as the root/);
+});
+
+test("Angular: the real Angular Material menu and tabs are generated from their selectors and exportAs names", { skip, timeout: 300_000 }, async () => {
+  for (const [sub, name, recipe] of [["menu", "menu", "menu-ref-MatMenuTrigger-MatMenu"], ["tabs", "tabs", "tabs-group-MatTabGroup-MatTab"]]) {
+    const result = await run(["audit", `mat=npm:@angular/material/${sub}`, "--archetypes", name, "--tiers", "rules"]);
+    assert.equal(result.code, 0, result.stderr);
+    const found = result.results.targets[0].archetypes[name];
+    assert.deepEqual([found.status, found.fixture.source, found.fixture.recipe], ["ran", "generated", recipe], name);
+  }
 });

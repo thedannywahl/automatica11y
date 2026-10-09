@@ -60,8 +60,8 @@ export async function probeFixture(browser, url, archetype) {
     } catch (error) {
       return { ok: false, reason: `the trigger couldn't be activated: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}` };
     }
-    try {
-      await page.waitForFunction(
+    /** Wait for the surface. A tooltip gets a second chance below, so this one is short for it. */
+    const waitForSurface = (timeout) => page.waitForFunction(
         ({ live, needsRoot }) => {
           const state = window.__a11y.live();
           if (live) return state.present && state.visible && Boolean(state.text || state.named);
@@ -71,8 +71,18 @@ export async function probeFixture(browser, url, archetype) {
           return (state.present && state.visible) || trigger?.getAttribute("aria-expanded") === "true";
         },
         { live: archetype === "live-region", needsRoot: Boolean(ROOT_ROLES[archetype]) },
-        { timeout: 4000 },
+        { timeout },
       );
+    try {
+      try {
+        await waitForSurface(archetype === "tooltip" ? 1500 : 4000);
+      } catch (error) {
+        if (archetype !== "tooltip") throw error;
+        // Some tooltips open only for focus that came from the keyboard, so focus the trigger again the way a person would.
+        await page.evaluate(() => /** @type {HTMLElement | null} */ (document.activeElement)?.blur());
+        await page.keyboard.press("Tab");
+        await waitForSurface(3000);
+      }
     } catch {
       return { ok: false, reason: `activating the trigger showed no ${archetype === "live-region" ? "message" : "element marked as the root"}${ROOT_ROLES[archetype] ? ` (looked for an element with role ${ROOT_ROLES[archetype].join(", ")})` : ""}, which can also mean the library doesn't set that role` };
     }

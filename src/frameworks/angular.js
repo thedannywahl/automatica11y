@@ -6,6 +6,7 @@
  */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { generateAngular } from "../harness/generate/angular-recipes.js";
 import { attributeText, markupFor } from "./angular-selectors.js";
 
 /** The oldest Angular this version supports. */
@@ -146,7 +147,6 @@ export default {
   entry,
   discoverEntry,
   template,
-  // Fixtures for Angular libraries aren't generated yet. A fixture someone writes, or a button or link template, works.
-  generate: () => ({ candidates: [], reason: "Generated fixtures for Angular libraries aren't available yet, so this one has to be written." }),
+  generate: (input) => generateAngular(input),
   describe: (npm) => `Angular${npm.angular ? ` (core ${npm.angular})` : ""}`,
 };

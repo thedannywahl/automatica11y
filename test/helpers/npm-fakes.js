@@ -20,10 +20,11 @@ export const REGISTRY = {
   "fake-legacy": { name: "fake-legacy", version: "1.0.0", peerDependencies: { react: "*", "react-dom": "*" } },
   "fake-ng-ui": { name: "fake-ng-ui", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" } },
   "fake-ng-modules": { name: "fake-ng-modules", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" } },
+  "fake-ng-wrong": { name: "fake-ng-wrong", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" } },
   "fake-ng-old": { name: "fake-ng-old", version: "1.0.0", peerDependencies: { "@angular/core": "^20.0.0 || ^21.0.0" } },
   "fake-ng-split": { name: "fake-ng-split", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0" }, exports: { ".": "./index.js", "./button": "./button.js", "./package.json": "./package.json" } },
   // The real Angular Material, linked from the repository's dev dependencies, to prove a partly compiled library runs.
-  "@angular/material": { name: "@angular/material", version: "22.2.2", peerDependencies: { "@angular/core": "^22.0.0 || ^23.0.0", "@angular/cdk": "22.2.2" }, exports: { ".": "./index.js", "./button": "./button.js", "./menu": "./menu.js", "./tooltip": "./tooltip.js", "./package.json": "./package.json" } },
+  "@angular/material": { name: "@angular/material", version: "22.2.2", peerDependencies: { "@angular/core": "^22.0.0 || ^23.0.0", "@angular/cdk": "22.2.2" }, exports: { ".": "./index.js", "./button": "./button.js", "./menu": "./menu.js", "./tooltip": "./tooltip.js", "./dialog": "./dialog.js", "./tabs": "./tabs.js", "./expansion": "./expansion.js", "./autocomplete": "./autocomplete.js", "./form-field": "./form-field.js", "./input": "./input.js", "./snack-bar": "./snack-bar.js", "./package.json": "./package.json" } },
   "fake-vue-ui": { name: "fake-vue-ui", version: "1.0.0", peerDependencies: { vue: "^3.4.0" } },
   "fake-vue-controlled": { name: "fake-vue-controlled", version: "1.0.0", peerDependencies: { vue: "^3.4.0" } },
   "vue-two-lib": { name: "vue-two-lib", version: "1.0.0", peerDependencies: { vue: "^2.7.0" } },
