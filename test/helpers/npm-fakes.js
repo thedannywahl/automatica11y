@@ -24,6 +24,7 @@ export const REGISTRY = {
   "fake-ng-zone": { name: "fake-ng-zone", version: "1.0.0", peerDependencies: { "@angular/core": "^22.0.0", "zone.js": "*" } },
   "fake-html-css": { name: "fake-html-css", version: "1.0.0", exports: { "./components.css": "./components.css", "./base.css": "./base.css", "./package.json": "./package.json" } },
   "fake-html-js": { name: "fake-html-js", version: "2.0.0", exports: { "./init.iife.js": "./init.iife.js", "./broken.iife.js": "./broken.iife.js", "./package.json": "./package.json" } },
+  "fake-svelte-kit": { name: "fake-svelte-kit", version: "1.0.0", peerDependencies: { svelte: "^5.0.0" } },
   "fake-svelte-ui": { name: "fake-svelte-ui", version: "1.0.0", peerDependencies: { svelte: "^5.0.0" } },
   // The real bits-ui, linked from the repository's dev dependencies, to prove a library of compound parts runs.
   "bits-ui": { name: "bits-ui", version: "2.19.5", peerDependencies: { svelte: "^5.33.0" } },

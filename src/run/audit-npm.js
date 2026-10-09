@@ -8,7 +8,7 @@ import { settleAnimations } from "../harness/settle.js";
 import { installedVersion, installExtraPackages, installOptionalPeers, installPackage } from "../harness/npm-install.js";
 import { shipsBrowserAssets } from "../frameworks/html.js";
 import { ANGULAR_FLOOR } from "../frameworks/angular.js";
-import { explainAngularError } from "../frameworks/angular-errors.js";
+import { explainFrameworkError } from "../frameworks/errors.js";
 import { adapterFor, adapterForKind } from "../frameworks/index.js";
 import { offeredSubpaths, subpathProblem } from "../plan/subpath.js";
 import { closedShadowHosts, notTestableEntries } from "../harness/shadow.js";
@@ -40,17 +40,17 @@ const STATES = {
   "live-region": ["before message", "message shown"],
 };
 
-const firstLine = (error) => (error instanceof Error ? error.message : String(error)).split("\n").find((l) => l.trim()) ?? "unknown error";
+const firstLine = (error) => explainFrameworkError((error instanceof Error ? error.message : String(error)).split("\n").find((l) => l.trim()) ?? "unknown error");
 
 /** Page and console errors that mean a fixture didn't mount cleanly. A missing favicon doesn't count. */
 function watchErrors(errors) {
   return (page) => {
-    page.on("pageerror", (error) => errors.push(explainAngularError(error.message.split("\n")[0])));
+    page.on("pageerror", (error) => errors.push(explainFrameworkError(error.message.split("\n")[0])));
     page.on("console", (message) => {
       if (message.type() !== "error") return;
       const text = message.text();
       if (/favicon|Failed to load resource/i.test(text) && !/\.(js|css)\b/.test(text)) return;
-      errors.push(explainAngularError(text.split("\n")[0]));
+      errors.push(explainFrameworkError(text.split("\n")[0]));
     });
   };
 }

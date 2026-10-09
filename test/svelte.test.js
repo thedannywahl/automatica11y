@@ -5,6 +5,8 @@ import { test } from "node:test";
 import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { adapterFor } from "../src/frameworks/index.js";
+import { explainFrameworkError } from "../src/frameworks/errors.js";
+import { explainSvelteError } from "../src/frameworks/svelte-errors.js";
 import { allowsSvelte5 } from "../src/frameworks/svelte.js";
 import { candidateMapping } from "../src/plan/mapping.js";
 import { detectFlavor } from "../src/plan/resolve-npm.js";
@@ -154,4 +156,24 @@ test("Svelte: the real bits-ui dialog, menu, tabs, and accordion are generated f
   assert.equal(target.archetypes.button.fixture.source, "template");
   for (const name of ["dialog", "menu", "tabs", "accordion"]) assert.deepEqual([target.archetypes[name].status, target.archetypes[name].fixture.source], ["ran", "generated"], `${name}: ${target.archetypes[name].reason ?? ""}`);
   assert.match(result.file("generated/bits/dialog.svelte"), /<Lib\.Dialog\.Root>[\s\S]*<Lib\.Dialog\.Trigger data-a11y-trigger>Open dialog<\/Lib\.Dialog\.Trigger>/);
+});
+
+// ---- plain sentences for errors ----
+
+test("Svelte's common errors become plain sentences, and other errors pass through", () => {
+  assert.match(explainSvelteError('Could not resolve "$app/environment" (node_modules/x/Button.svelte:3)'), /imports \$app\/environment, which only exists inside a SvelteKit app/);
+  assert.match(explainSvelteError('Could not resolve "$lib/utils"'), /SvelteKit app/);
+  assert.match(explainSvelteError("Error: Context \"bits-dialog\" not found"), /needs a context that its parent part provides \(bits-dialog\)/);
+  assert.match(explainSvelteError("https://svelte.dev/e/lifecycle_outside_component"), /outside a component[\s\S]*lifecycle_outside_component/);
+  assert.match(explainSvelteError("https://svelte.dev/e/props_invalid_value"), /wrong kind for a prop/);
+  assert.match(explainSvelteError("TypeError: exports_exports is not a function"), /namespace of parts/);
+  assert.equal(explainSvelteError("TypeError: x is not a function"), "TypeError: x is not a function", "an ordinary error is left alone");
+  assert.equal(explainFrameworkError("NG0201: No provider found for `X`.").includes("missing a provider"), true, "Angular's errors still go through the same door");
+});
+
+test("Svelte: a library that imports SvelteKit modules fails with the import named", { skip, timeout: 240_000 }, async () => {
+  const result = await run(["audit", "kit=npm:fake-svelte-kit", "--archetypes", "button", "--tiers", "rules"]);
+  const target = result.results.targets[0];
+  assert.equal(target.status, "failed", "a failed target is a gap in coverage, never a pass");
+  assert.match(target.reason, /imports \$app\/environment, which only exists inside a SvelteKit app/);
 });

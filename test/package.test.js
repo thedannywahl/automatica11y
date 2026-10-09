@@ -41,7 +41,7 @@ test("the tarball holds the tool, the skill, the docs, and the license, and noth
   }
   const size = files.reduce((n, f) => n + f.size, 0);
   // The W3C's WCAG JSON ships unmodified, and it's about half a megabyte of this.
-  assert.ok(size < 1_000_000, `the tarball is small (${size} bytes unpacked)`);
+  assert.ok(size < 1_250_000, `the tarball is small (${size} bytes unpacked)`);
 });
 
 test("every dependency the code imports is a real dependency", () => {

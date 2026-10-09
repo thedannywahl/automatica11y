@@ -1,8 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { explainFrameworkError } from "../frameworks/errors.js";
 import { probeFixture } from "../harness/generate/probe.js";
 
-const firstLine = (error) => (error instanceof Error ? error.message : String(error)).split("\n").find((l) => l.trim()) ?? "unknown error";
+const firstLine = (error) => explainFrameworkError((error instanceof Error ? error.message : String(error)).split("\n").find((l) => l.trim()) ?? "unknown error");
 
 /**
  * Build a fixture for an archetype from what discovery found, and keep it only if it works.

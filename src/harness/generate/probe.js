@@ -1,4 +1,4 @@
-import { explainAngularError } from "../../frameworks/angular-errors.js";
+import { explainFrameworkError } from "../../frameworks/errors.js";
 import { installHelpers } from "../../tiers/interactions/helpers.js";
 import { openPage } from "../url.js";
 import { ROOT_ROLES } from "./marking.js";
@@ -26,9 +26,9 @@ export async function probeFixture(browser, url, archetype) {
     opened = await openPage(browser, url, {
       waitUntil: "load",
       beforeGoto: async (page) => {
-        page.on("pageerror", (error) => errors.push(explainAngularError(error.message.split("\n")[0])));
+        page.on("pageerror", (error) => errors.push(explainFrameworkError(error.message.split("\n")[0])));
         page.on("console", (message) => {
-          if (message.type() === "error" && !/favicon|Failed to load resource/i.test(message.text())) errors.push(explainAngularError(message.text().split("\n")[0]));
+          if (message.type() === "error" && !/favicon|Failed to load resource/i.test(message.text())) errors.push(explainFrameworkError(message.text().split("\n")[0]));
         });
         await page.addInitScript(installHelpers);
       },

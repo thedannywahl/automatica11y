@@ -17,6 +17,7 @@ import { parseResults } from "../schema.js";
 import { runRules, selfTest } from "../tiers/rules/index.js";
 import { evaluateFailCheck } from "./fail-check.js";
 import { mapPool } from "./pool.js";
+import { explainFrameworkError } from "../frameworks/errors.js";
 import { auditNpm } from "./audit-npm.js";
 import { adapterFor } from "../frameworks/index.js";
 import { failedTarget, summarize } from "./summary.js";
@@ -182,7 +183,7 @@ async function runTarget(browser, planTarget, plan, io) {
     }
     return { result: failedTarget(planTarget.id, UNSUPPORTED_KIND(planTarget.kind)), mapping: null };
   } catch (error) {
-    return { result: failedTarget(planTarget.id, error instanceof Error ? error.message.split("\n")[0] : String(error)), mapping: null };
+    return { result: failedTarget(planTarget.id, explainFrameworkError(error instanceof Error ? error.message.split("\n")[0] : String(error))), mapping: null };
   } finally {
     for (const server of servers) await server.close();
   }

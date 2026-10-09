@@ -69,3 +69,9 @@ Built: `src/frameworks/svelte.js`, a `svelteDialect` for the shared recipes (wit
 | Melt 0.44.0 | none | Melt gives builders (`new Dialog()`) whose attributes you spread onto your own elements, so no generator can guess the fixture. An authored fixture with the builder worked: the real `melt/builders` dialog ran with closed and open states. |
 
 Left for phase 3: plain sentences for common Svelte errors, SvelteKit-only imports named as the reason, and the weekly latest-dependencies job.
+
+## 8. Phase 3 notes (October 9, 2026).
+
+Plain sentences for Svelte errors are in `src/frameworks/svelte-errors.js`, and one door, `explainFrameworkError` in `src/frameworks/errors.js`, now serves Angular and Svelte. It's used for page errors in audits and probes, for bundle failures, and for a failed target's reason. Covered: SvelteKit-only imports (`$app/...`, `$env/...`, `$lib/...`), a missing parent context, lifecycle functions called outside a component, a prop of the wrong kind, a prop that can't be bound, and a namespace of parts used as one component. The weekly latest-dependencies job now installs the latest `svelte` and `bits-ui`.
+
+All three phases are done. Open: snippet-prop libraries whose parts take content only through `{#snippet}` (Melt's components, for one) stay authored-only, and a Svelte compile cache lives for the run, not across runs.
