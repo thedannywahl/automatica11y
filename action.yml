@@ -1,0 +1,116 @@
+name: automatica11y
+description: Audit or compare accessibility with separate axe and IBM findings, coverage gates, and report artifacts.
+branding:
+  icon: check-circle
+  color: green
+inputs:
+  targets:
+    description: One target per line. Replaces config.targets. Supports URLs, built paths, and npm packages.
+  config:
+    description: YAML config path. Defaults to .automatica11y.yml when present.
+  working-directory:
+    description: Base directory for targets, config, mappings, server, and output paths.
+    default: .
+  wcag:
+    description: WCAG version (2.0, 2.1, or 2.2).
+  level:
+    description: Conformance level (A, AA, or AAA).
+  tiers:
+    description: Comma-separated tiers (rules, interactions, computed, conditions, vsr).
+  engine:
+    description: Comma-separated engines (axe, ibm).
+  archetypes:
+    description: Comma-separated archetypes to audit.
+  lib-a11y:
+    description: Comma-separated library accessibility configurations (on, off).
+  mapping:
+    description: Archetype mapping JSON path.
+  max-stories:
+    description: Maximum Storybook stories.
+  generate:
+    description: Generate npm fixtures (true or false).
+  out:
+    description: Report directory, which must be empty or absent. Default ./a11y-report.
+  fail-on-axe:
+    description: Axe threshold (minor, moderate, serious, critical, none). Default serious when axe/rules selected.
+  fail-on-ibm:
+    description: IBM Toolkit threshold (1, 2, 3, none). Default 1 when ibm/rules selected.
+  fail-mode:
+    description: Combine engine thresholds on each target (any or all). Default any.
+  fail-on-incomplete:
+    description: Fail execution or coverage gaps (true or false). Default true.
+  fail-on-review:
+    description: Fail engine incomplete findings or virtual-screen-reader review flags (true or false). Default false.
+  fail-on-checks:
+    description: Fail explicit non-rule check failures (true or false). Default false.
+  server-command:
+    description: Trusted shell command for a local server. Requires server-url.
+  server-url:
+    description: HTTP(S) loopback readiness URL; must not already respond.
+  server-timeout:
+    description: Positive integer readiness timeout in seconds. Default 60.
+  server-working-directory:
+    description: Server directory relative to working-directory.
+  upload-artifact:
+    description: Upload reports (true or false). Default true.
+  artifact-name:
+    description: Unique workflow artifact name. Default automatica11y-report.
+  artifact-retention-days:
+    description: Artifact retention from 1 to 90 days. Default repository retention.
+  summary:
+    description: Write a GitHub job summary (true or false). Default true.
+outputs:
+  exit-code:
+    description: CLI exit code (0 success, 1 finding policy, 2 usage, 3 environment, 4 no target results, 5 incomplete).
+    value: ${{ steps.audit.outputs.exit-code }}
+  outcome:
+    description: passed, failed, incomplete, or error.
+    value: ${{ steps.audit.outputs.outcome }}
+  report-path:
+    description: Absolute Markdown report path, or empty if no report.
+    value: ${{ steps.audit.outputs.report-path }}
+  results-path:
+    description: Absolute JSON results path, or empty if no results.
+    value: ${{ steps.audit.outputs.results-path }}
+  artifact-name:
+    description: Effective report artifact name.
+    value: ${{ steps.audit.outputs.artifact-name }}
+  artifact-id:
+    description: Uploaded report artifact ID, or empty if not uploaded.
+    value: ${{ steps.artifact.outputs.artifact-id }}
+  artifact-url:
+    description: Uploaded report artifact URL, or empty if not uploaded.
+    value: ${{ steps.artifact.outputs.artifact-url }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: '24'
+    - name: Install isolated automatica11y runtime
+      id: tool
+      shell: bash
+      run: node "$GITHUB_ACTION_PATH/src/action/runner.js" install
+    - name: Run accessibility CI
+      id: audit
+      shell: bash
+      env:
+        AUTOMATICA11Y_INPUTS: ${{ toJSON(inputs) }}
+        AUTOMATICA11Y_TOOL_PATH: ${{ steps.tool.outputs.tool-path }}
+      run: node "$AUTOMATICA11Y_TOOL_PATH/src/action/runner.js" run
+    - name: Upload accessibility reports
+      id: artifact
+      if: ${{ !cancelled() && steps.audit.outputs.upload-artifact == 'true' && steps.audit.outputs.artifact-path != '' }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: ${{ steps.audit.outputs.artifact-name }}
+        path: ${{ steps.audit.outputs.artifact-path }}
+        retention-days: ${{ steps.audit.outputs.artifact-retention-days }}
+        if-no-files-found: error
+    - name: Propagate CI outcome
+      if: ${{ !cancelled() && steps.audit.outputs.exit-code != '' }}
+      shell: bash
+      env:
+        AUTOMATICA11Y_EXIT_CODE: ${{ steps.audit.outputs.exit-code }}
+        AUTOMATICA11Y_TOOL_PATH: ${{ steps.tool.outputs.tool-path }}
+      run: node "$AUTOMATICA11Y_TOOL_PATH/src/action/runner.js" finish

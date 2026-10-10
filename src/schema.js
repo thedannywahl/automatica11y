@@ -90,6 +90,7 @@ export const PlanSchema = v.object({
     generate: v.optional(v.boolean(), true),
     out: v.string(),
     fail: v.nullable(FailConfigSchema),
+    policy: v.optional(v.object({ incomplete: v.boolean(), review: v.boolean(), checks: v.boolean() }), { incomplete: false, review: false, checks: false }),
   }),
   tools: v.record(v.string(), nullableString),
   targets: v.array(TargetSchema),
@@ -276,6 +277,12 @@ export const ResultsSchema = v.object({
   tools: v.record(v.string(), nullableString),
   targets: v.array(TargetResultSchema),
   failCheck: v.nullable(FailCheckSchema),
+  outcome: v.optional(v.object({
+    status: v.picklist(["passed", "failed", "incomplete"]),
+    coverage: v.array(v.string()),
+    review: v.array(v.string()),
+    checks: v.array(v.string()),
+  })),
   warnings: v.array(v.string()),
 });
 

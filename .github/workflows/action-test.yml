@@ -1,0 +1,68 @@
+name: Action Smoke Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  action:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: clean
+            targets: ./test/fixtures/clean.html
+            exit: '0'
+          - case: violation
+            targets: ./test/fixtures/missing-label.html
+            exit: '1'
+          - case: compare
+            targets: |
+              first=./test/fixtures/clean.html
+              second=./test/fixtures/clean.html
+            exit: '0'
+          - case: incomplete
+            targets: |
+              clean=./test/fixtures/clean.html
+              canvas=./test/fixtures/canvas-only.html
+            exit: '5'
+          - case: server
+            targets: http://127.0.0.1:4317
+            server: node -e "require('node:http').createServer((req,res)=>res.end(require('node:fs').readFileSync('test/fixtures/clean.html'))).listen(4317,'127.0.0.1')"
+            url: http://127.0.0.1:4317
+            exit: '0'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: ./
+        id: audit
+        continue-on-error: true
+        with:
+          targets: ${{ matrix.targets }}
+          tiers: rules
+          out: ./smoke-report
+          artifact-name: smoke-${{ matrix.case }}
+          server-command: ${{ matrix.server || '' }}
+          server-url: ${{ matrix.url || '' }}
+      - name: Verify exit, reports, and uploaded artifact
+        env:
+          EXPECTED: ${{ matrix.exit }}
+          ACTUAL: ${{ steps.audit.outputs.exit-code }}
+          STEP_OUTCOME: ${{ steps.audit.outcome }}
+          ARTIFACT: ${{ steps.audit.outputs.artifact-id }}
+          RESULTS: ${{ steps.audit.outputs.results-path }}
+          REPORT: ${{ steps.audit.outputs.report-path }}
+        run: |
+          test "$ACTUAL" = "$EXPECTED"
+          test -n "$ARTIFACT"
+          test -f "$RESULTS"
+          test -f "$REPORT"
+          if test "$EXPECTED" = 0; then
+            test "$STEP_OUTCOME" = success
+          else
+            test "$STEP_OUTCOME" = failure
+          fi

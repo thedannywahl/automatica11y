@@ -15,17 +15,16 @@ import { renderReport } from "../report/index.js";
 import { num } from "../text.js";
 import { parseResults } from "../schema.js";
 import { runRules, selfTest } from "../tiers/rules/index.js";
-import { evaluateFailCheck } from "./fail-check.js";
+import { evaluateFailCheck, evaluateOutcome } from "./fail-check.js";
 import { mapPool } from "./pool.js";
 import { explainFrameworkError } from "../frameworks/errors.js";
 import { auditNpm } from "./audit-npm.js";
 import { adapterFor } from "../frameworks/index.js";
 import { failedTarget, summarize } from "./summary.js";
+import { EXIT } from "../exit.js";
 
 /** How many stories to audit at once. */
 const STORY_CONCURRENCY = 4;
-
-const EXIT = { OK: 0, FAIL_THRESHOLD: 1, ENVIRONMENT: 3, ALL_TARGETS_FAILED: 4 };
 
 const NPM_KINDS = new Set(["npm", "npm-react", "npm-vue", "npm-angular", "npm-svelte", "npm-html", "npm-wc", "npm-unsupported"]);
 const UNSUPPORTED_KIND = (kind) => `${kind} targets aren't supported.`;
@@ -244,13 +243,15 @@ export async function runPlan(plan, io) {
       if ("npm" in result && result.npm) planTarget.kind = adapterFor(result.npm.flavor).kind;
     }
 
+    const failCheck = evaluateFailCheck(targets, plan.options.fail);
     const results = parseResults({
       schema: 1,
       planRef: "plan.json",
       runAt: new Date().toISOString(),
       tools: readToolVersions({ chromium: version }),
       targets,
-      failCheck: evaluateFailCheck(targets, plan.options.fail),
+      failCheck,
+      outcome: evaluateOutcome(targets, plan.options, failCheck),
       warnings: [],
     });
     const outDir = resolve(io.cwd, plan.options.out);
@@ -270,6 +271,7 @@ export async function runPlan(plan, io) {
 
     const lines = ["", ...results.targets.map((t) => `  ${describeResult(t)}`)];
     if (results.failCheck) lines.push(`  Fail check (${results.failCheck.mode}): ${results.failCheck.tripped ? "tripped" : "not tripped"}`);
+    lines.push(`  CI outcome: ${results.outcome.status}`);
     lines.push(`  Wrote ${resolve(outDir, "results.json")}`, `  Wrote ${resolve(outDir, "report.md")}`);
     io.stdout.write(`${lines.join("\n")}\n`);
 
@@ -277,7 +279,7 @@ export async function runPlan(plan, io) {
       io.stderr.write("No target produced results.\n");
       return EXIT.ALL_TARGETS_FAILED;
     }
-    return results.failCheck?.tripped ? EXIT.FAIL_THRESHOLD : EXIT.OK;
+    return results.outcome.status === "incomplete" ? EXIT.INCOMPLETE : results.outcome.status === "failed" ? EXIT.FAIL_THRESHOLD : EXIT.OK;
   } finally {
     await browser.close().catch(() => {});
   }

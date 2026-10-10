@@ -17,6 +17,7 @@ const pageList = [
   { source: "docs/targets.md", out: "targets.html", route: "/targets" },
   { source: "docs/checks.md", out: "checks.html", route: "/checks" },
   { source: "docs/options.md", out: "options.html", route: "/options" },
+  { source: "docs/github-action.md", out: "github-action.html", route: "/github-action" },
   { source: "docs/reports.md", out: "reports.html", route: "/reports" },
   { source: "docs/npm-packages.md", out: "npm-packages.html", route: "/npm-packages" },
   { source: "skills/automatica11y-runner/references/fixtures.md", out: "fixtures.html", route: "/fixtures" },
@@ -69,7 +70,7 @@ test("all documentation sources build at clean VitePress routes", () => {
   assert.ok(html["index.html"].includes('class="brand-mark" aria-hidden="true"'));
   assert.doesNotMatch(html["index.html"], /<footer\b/);
   assert.match(html["index.html"], /Accessibility testing,<br\s*\/?>with evidence\./);
-  assert.match(html["index.html"], /Across frameworks/);
+  assert.match(html["index.html"], /Across different frameworks/);
   assert.match(html["index.html"], /React, Vue 3, Angular 22\+, Svelte 5\+, plain HTML, and web components\./);
 });
 

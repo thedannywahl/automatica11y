@@ -54,6 +54,7 @@ export function prepareDocs() {
 - [Targets](https://automatica11y.dev/targets)
 - [What it checks](https://automatica11y.dev/checks)
 - [Options and exit codes](https://automatica11y.dev/options)
+- [GitHub Action](https://automatica11y.dev/github-action)
 - [Reading a report](https://automatica11y.dev/reports)
 - [npm packages and fixtures](https://automatica11y.dev/npm-packages)
 - [Writing fixtures](https://automatica11y.dev/fixtures)

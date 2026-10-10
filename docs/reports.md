@@ -22,6 +22,12 @@ Checks in the interactions, computed, and conditions tiers report one of these:
 
 axe-core and IBM Equal Access findings are listed under their own names, and their counts are never added together. axe-core's `impact` and IBM's Toolkit level are different scales and aren't converted into each other. Computed checks and conditions checks are reported on their own as well, because they are automatica11y's own measurements.
 
+## CI outcome.
+
+When a CI policy is enabled, the report includes its outcome and lists coverage gaps, review findings, and non-rule check failures separately. `results.json` exposes the same information under `outcome`, alongside the independent engine threshold results in `failCheck`.
+
+A `passed` CI outcome means only that the configured gates did not trip. Disabling a gate does not remove its findings. The GitHub Action can also fail on setup or server errors even when an audit report was produced; its `exit-code` and `outcome` outputs describe the entire step.
+
 ## How much to trust a result.
 
 Each target carries the kind of evidence it gave:

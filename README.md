@@ -22,11 +22,21 @@ Install the [skill](skills/automatica11y/SKILL.md) and use it with an agent:
 ```text
 /automatica11y compare "example.com/a.html" "example.com/b.html"
 ```
-Add it to your CD/CI pipeline:
+Add it to your CI pipeline:
 
 ```bash
-automatica11y audit ./dist --fail-on-axe serious
+automatica11y ci ./dist
 ```
+
+Or use the [GitHub Action](docs/github-action.md) on an Ubuntu runner after building your site:
+
+```yaml
+- uses: thedannywahl/automatica11y@main
+	with:
+		targets: ./dist
+```
+
+Pin a reviewed commit containing the Action for production. The Action installs the tool and Chromium, writes a job summary, and uploads reports even when a CI gate fails. A shared `.automatica11y.yml` config controls audit options, failure policies, and optional local server startup.
 
 **[Read the documentation](https://automatica11y.dev/)**
 

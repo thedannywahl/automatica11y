@@ -6,9 +6,11 @@ import { readToolVersions } from "../env/versions.js";
 import { buildPlan, findDuplicateLabel } from "../plan/build-plan.js";
 import { loadMappingFile } from "../plan/mapping.js";
 import { runPlan } from "../run/run-plan.js";
+import { configArgs, loadConfig, validateServer } from "./config.js";
+import { EXIT } from "../exit.js";
 import { ARCHETYPES, ENGINES, FAIL_MODES, IMPACTS, LEVELS, LIB_A11Y, TIERS, TOOLKIT_LEVELS, WCAG_VERSIONS, parsePlan } from "../schema.js";
 
-export const EXIT = { OK: 0, FAIL_THRESHOLD: 1, USAGE: 2, ENVIRONMENT: 3, ALL_TARGETS_FAILED: 4 };
+export { EXIT };
 
 /** A bad command line. The CLI prints the message plus a usage hint and exits 2. */
 export class UsageError extends Error {}
@@ -18,6 +20,15 @@ export class UsageError extends Error {}
  */
 
 const OPTION_DEFS = /** @type {const} */ ({
+  config: { type: "string" },
+  generate: { type: "boolean" },
+  "fail-on-incomplete": { type: "string" },
+  "fail-on-review": { type: "string" },
+  "fail-on-checks": { type: "string" },
+  "server-command": { type: "string" },
+  "server-url": { type: "string" },
+  "server-timeout": { type: "string" },
+  "server-working-directory": { type: "string" },
   wcag: { type: "string" },
   level: { type: "string" },
   tiers: { type: "string" },
@@ -52,18 +63,24 @@ function parseChoice(flag, value, allowed) {
 
 /**
  * Turn `audit` or `compare` arguments into plan options and raw targets. Throws UsageError on any problem.
- * @param {"audit" | "compare"} command
+ * @param {"audit" | "compare" | "ci"} command
  * @param {string[]} argv
+ * @param {{ cwd?: string }} [context]
  */
-export function parseRunArgs(command, argv) {
+export function parseRunArgs(command, argv, context = {}) {
   let parsed;
+  let config = {};
   try {
     parsed = parseArgs({ args: argv, options: OPTION_DEFS, allowPositionals: true, strict: true });
+    if (!parsed.values.help && context.cwd) {
+      config = loadConfig(parsed.values.config, context.cwd);
+      parsed = parseArgs({ args: [...configArgs(config), ...argv], options: OPTION_DEFS, allowPositionals: true, strict: true, tokens: true });
+    }
   } catch (error) {
     throw new UsageError(error instanceof Error ? error.message.split(". ")[0] : String(error));
   }
   const values = /** @type {{ [K in keyof typeof OPTION_DEFS]?: typeof OPTION_DEFS[K]["type"] extends "boolean" ? boolean : string }} */ (parsed.values);
-  const { positionals } = parsed;
+  const positionals = parsed.positionals.length ? parsed.positionals : config.targets ?? [];
   if (values.help) return { help: true, targets: [], planOnly: false, options: null };
 
   if (command === "audit" && positionals.length !== 1) {
@@ -72,6 +89,7 @@ export function parseRunArgs(command, argv) {
   if (command === "compare" && positionals.length < 2) {
     throw new UsageError("compare needs at least two targets.");
   }
+  if (command === "ci" && positionals.length === 0) throw new UsageError("ci needs at least one target, in arguments or config.targets.");
   if (positionals.some((target) => !target.trim())) throw new UsageError("A target can't be empty.");
   const duplicate = findDuplicateLabel(positionals);
   if (duplicate) throw new UsageError(`Two targets use the label "${duplicate}". Labels must be unique.`);
@@ -87,17 +105,17 @@ export function parseRunArgs(command, argv) {
     if (!Number.isInteger(maxStories) || maxStories < 1) throw new UsageError(`--max-stories must be a whole number of 1 or more. Got "${values["max-stories"]}".`);
   }
 
-  const axeFlag = values["fail-on-axe"];
-  const ibmFlag = values["fail-on-ibm"];
+  const axeFlag = values["fail-on-axe"] ?? (command === "ci" && tiers.includes("rules") && engines.includes("axe") ? "serious" : undefined);
+  const ibmFlag = values["fail-on-ibm"] ?? (command === "ci" && tiers.includes("rules") && engines.includes("ibm") ? "1" : undefined);
   const modeFlag = values["fail-mode"];
   /** @type {import("valibot").InferOutput<typeof import("../schema.js").FailConfigSchema> | null} */
   let fail = null;
   if (axeFlag === undefined && ibmFlag === undefined) {
     if (modeFlag !== undefined) throw new UsageError("--fail-mode needs --fail-on-axe, --fail-on-ibm, or both.");
   } else {
-    if (!tiers.includes("rules")) throw new UsageError("The fail flags check the rules tier. Add rules to --tiers or drop the fail flags.");
-    const axe = axeFlag === undefined ? null : parseChoice("fail-on-axe", axeFlag, IMPACTS);
-    const ibm = ibmFlag === undefined ? null : Number(parseChoice("fail-on-ibm", ibmFlag, TOOLKIT_LEVELS.map(String)));
+    const axe = axeFlag === undefined || axeFlag === "none" ? null : parseChoice("fail-on-axe", axeFlag, IMPACTS);
+    const ibm = ibmFlag === undefined || ibmFlag === "none" ? null : Number(parseChoice("fail-on-ibm", ibmFlag, TOOLKIT_LEVELS.map(String)));
+    if ((axe || ibm) && !tiers.includes("rules")) throw new UsageError("The fail flags check the rules tier. Add rules to --tiers or drop the fail flags.");
     if (axe && !engines.includes("axe")) throw new UsageError("--fail-on-axe needs the axe engine. Add axe to --engine or drop the flag.");
     if (ibm && !engines.includes("ibm")) throw new UsageError("--fail-on-ibm needs the ibm engine. Add ibm to --engine or drop the flag.");
     fail = { mode: /** @type {"any" | "all"} */ (modeFlag === undefined ? "any" : parseChoice("fail-mode", modeFlag, FAIL_MODES)), axe, ibm };
@@ -112,11 +130,24 @@ export function parseRunArgs(command, argv) {
     archetypes,
     mapping: values.mapping ?? null,
     maxStories,
-    generate: !values["no-generate"],
+    generate: (parsed.tokens?.filter((token) => token.kind === "option" && ["generate", "no-generate"].includes(token.name)).at(-1)?.name ?? (values["no-generate"] ? "no-generate" : "generate")) === "generate",
     out: values.out ?? "./a11y-report",
     fail,
+    policy: {
+      incomplete: values["fail-on-incomplete"] === undefined ? command === "ci" : parseChoice("fail-on-incomplete", values["fail-on-incomplete"], ["true", "false"]) === "true",
+      review: values["fail-on-review"] === undefined ? false : parseChoice("fail-on-review", values["fail-on-review"], ["true", "false"]) === "true",
+      checks: values["fail-on-checks"] === undefined ? false : parseChoice("fail-on-checks", values["fail-on-checks"], ["true", "false"]) === "true",
+    },
   };
-  return { help: false, targets: positionals, planOnly: Boolean(values.plan), options };
+  const server = { ...config.server };
+  for (const [flag, key] of [["server-command", "command"], ["server-url", "url"], ["server-timeout", "timeoutSeconds"], ["server-working-directory", "cwd"]]) {
+    if (values[flag] !== undefined) server[key] = key === "timeoutSeconds" ? Number(values[flag]) : values[flag];
+  }
+  if (Object.keys(server).length && command !== "ci") throw new UsageError("Managed servers require the ci command.");
+  if (Object.keys(server).length) {
+    try { validateServer(server); } catch (error) { throw new UsageError(error.message); }
+  }
+  return { help: false, targets: positionals, planOnly: Boolean(values.plan), options, server: Object.keys(server).length ? server : null, config };
 }
 
 /** One line describing what a target resolved to. */
@@ -179,16 +210,37 @@ export async function executePlan(plan, { planOnly, savedPlanPath }, io) {
 
 /**
  * Shared body of `audit` and `compare`.
- * @param {"audit" | "compare"} command
+ * @param {"audit" | "compare" | "ci"} command
  * @param {string[]} argv
  * @param {Io} io
  */
 export async function runCommand(command, argv, io) {
-  const parsed = parseRunArgs(command, argv);
+  const parsed = parseRunArgs(command, argv, { cwd: io.cwd });
   if (parsed.help) {
     io.stdout.write(usage(command));
     return EXIT.OK;
   }
+  let server;
+  try {
+    if (parsed.server && !parsed.planOnly) {
+      const { startDevServer } = await import("../harness/dev-server.js");
+      try { server = await startDevServer(parsed.server, io); } catch (error) {
+        io.stderr.write(`Server startup failed: ${error.message}\n`);
+        return EXIT.ENVIRONMENT;
+      }
+    }
+    const code = await runParsedCommand(command, parsed, io);
+    if (server?.failure()) {
+      io.stderr.write(`${server.failure().message}\n`);
+      return code === EXIT.OK ? EXIT.ENVIRONMENT : code;
+    }
+    return code;
+  } finally {
+    await server?.close();
+  }
+}
+
+async function runParsedCommand(command, parsed, io) {
   const options = /** @type {NonNullable<typeof parsed.options>} */ (parsed.options);
   let browserVersion = null;
   if (!parsed.planOnly) {
@@ -203,7 +255,8 @@ export async function runCommand(command, argv, io) {
       throw new UsageError(error instanceof Error ? error.message : String(error));
     }
   }
-  const built = await buildPlan({ command, targets: parsed.targets, options, browserVersion, ctx: { cwd: io.cwd, fetch: io.fetch, npmView: io.npmView } });
+  const effectiveCommand = command === "ci" ? (parsed.targets.length === 1 ? "audit" : "compare") : command;
+  const built = await buildPlan({ command: effectiveCommand, targets: parsed.targets, options, browserVersion, ctx: { cwd: io.cwd, fetch: io.fetch, npmView: io.npmView } });
   if (mapping) {
     const ids = new Set(built.targets.map((t) => t.id));
     const unknown = Object.keys(mapping).filter((id) => !ids.has(id));
@@ -238,6 +291,7 @@ export async function runSavedPlan(argv, io) {
 }
 
 const FLAGS = `Options:
+  --config <file>            YAML configuration. Default .automatica11y.yml if present.
   --wcag <2.0|2.1|2.2>        WCAG version. Default 2.2.
   --level <A|AA|AAA>          Conformance level. Default AA.
   --tiers <list>              rules, interactions, computed, conditions, vsr. Default all five.
@@ -249,14 +303,23 @@ const FLAGS = `Options:
   --no-generate               Don't build fixtures for npm packages. Only authored fixtures and the button and link templates run.
   --plan                      Resolve and print the plan, then stop.
   --out <dir>                 Output directory. Default ./a11y-report.
-  --fail-on-axe <impact>      minor, moderate, serious, or critical.
-  --fail-on-ibm <level>       1, 2, or 3 (IBM Toolkit level).
+  --fail-on-axe <impact>      minor, moderate, serious, critical, or none.
+  --fail-on-ibm <level>       1, 2, 3 (IBM Toolkit level), or none.
   --fail-mode <any|all>       How to combine fail checks. Default any.
+  --fail-on-incomplete <bool> Fail execution and coverage gaps. true or false.
+  --fail-on-review <bool>     Fail findings requiring review. true or false.
+  --fail-on-checks <bool>     Fail explicit non-rule check failures. true or false.
+  --generate                Enable generated npm fixtures (overrides YAML).
+  --server-command <cmd>     CI only: trusted shell command to start a local server.
+  --server-url <url>         CI only: HTTP(S) loopback readiness URL.
+  --server-timeout <seconds> CI only: readiness timeout. Default 60.
+  --server-working-directory <dir> CI only: server command directory.
 `;
 
 /** @param {string} [command] */
 export function usage(command) {
   const header = {
+    ci: "Usage: automatica11y ci [<target>...] [options]\n\nAudit one target or compare multiple targets. Targets may come from YAML. Defaults: axe serious, IBM level 1, fail on incomplete coverage. Manual review and non-rule failures are opt-in. Relative paths use the working directory.\n\n",
     audit: "Usage: automatica11y audit <target> [options]\n       automatica11y check <target> [options]\n\nCheck how accessible one target is.\n\n",
     check: "Usage: automatica11y audit <target> [options]\n       automatica11y check <target> [options]\n\nCheck how accessible one target is.\n\n",
     compare: "Usage: automatica11y compare <target> <target> [<target>...] [options]\n\nCompare two or more targets.\n\n",
@@ -270,6 +333,7 @@ export function usage(command) {
   automatica11y audit <target> [options]
   automatica11y check <target> [options]
   automatica11y compare <target> <target> [<target>...] [options]
+  automatica11y ci [<target>...] [options]
   automatica11y run --plan <plan.json>
   automatica11y doctor
   automatica11y guide [agents|skill|fixtures]

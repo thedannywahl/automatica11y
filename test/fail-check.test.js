@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { evaluateFailCheck } from "../src/run/fail-check.js";
+import { parse } from "valibot";
+import { TargetResultSchema } from "../src/schema.js";
+import { evaluateFailCheck, evaluateOutcome } from "../src/run/fail-check.js";
 
 /**
  * Build a target result with the given findings per engine.
@@ -11,9 +13,13 @@ import { evaluateFailCheck } from "../src/run/fail-check.js";
  */
 function target(id, { axe, ibm, status = "ran" } = {}) {
   const engines = {};
-  if (axe) engines.axe = { status: axe.status ?? "ran", violations: (axe.impacts ?? []).map((impact, i) => ({ ruleId: `a${i}`, impact })) };
-  if (ibm) engines.ibm = { status: ibm.status ?? "ran", violations: (ibm.levels ?? []).map((toolkitLevel, i) => ({ ruleId: `i${i}`, impact: null, toolkitLevel })) };
-  return { id, status, archetypes: { page: { status: "ran", configs: [{ tiers: { rules: { engines } } }] } } };
+  if (axe) engines.axe = { status: axe.status ?? "ran", violations: (axe.impacts ?? []).map((impact, index) => ({ ...finding(`a${index}`), impact })) };
+  if (ibm) engines.ibm = { status: ibm.status ?? "ran", violations: (ibm.levels ?? []).map((toolkitLevel, index) => ({ ...finding(`i${index}`), toolkitLevel })) };
+  return parse(TargetResultSchema, { id, status, reason: null, summary: { engines: {}, gaps: [], notTestable: [] }, warnings: [], archetypes: { page: { status: "ran", configs: [{ libA11y: "n/a", tiers: { rules: { status: "ran", engines } } }] } } });
+}
+
+function finding(ruleId) {
+  return { ruleId, impact: null, wcag: [], help: "Review", helpUrl: "", nodeCount: 0, nodes: [] };
 }
 
 const both = { axe: { impacts: ["serious"] }, ibm: { levels: [1] } };
@@ -86,4 +92,49 @@ test("counts never add across engines", () => {
   const result = evaluateFailCheck([target("a", { axe: { impacts: ["serious", "critical"] }, ibm: { levels: [1] } })], { mode: "any", axe: "serious", ibm: 1 });
   assert.equal(result.axe.hits, 2);
   assert.equal(result.ibm.hits, 1);
+});
+
+test("coverage gaps fail independently of engine all-mode", () => {
+  const failed = target("broken", { status: "failed" });
+  const options = { tiers: ["rules"], engines: ["axe"], policy: { incomplete: true } };
+  assert.equal(evaluateOutcome([failed], options, null).status, "incomplete");
+  const engineFailure = target("page", { axe: { status: "failed" } });
+  engineFailure.archetypes.page.configs[0].tiers.rules.status = "ran";
+  assert.equal(evaluateOutcome([engineFailure], options, { tripped: false }).status, "incomplete");
+});
+
+test("deliberately excluded tiers and genuinely inapplicable checks do not fail", () => {
+  const clean = target("page", { axe: { impacts: [] } });
+  clean.archetypes.page.configs[0].tiers.rules.status = "ran";
+  const options = { tiers: ["rules"], engines: ["axe"], policy: { incomplete: true } };
+  assert.equal(evaluateOutcome([clean], options, null).status, "passed");
+  clean.archetypes.page.configs[0].tiers.rules = { status: "not-applicable" };
+  assert.equal(evaluateOutcome([clean], options, null).status, "passed");
+});
+
+test("manual engine review findings are opt-in and not coverage gaps", () => {
+  const clean = target("page", { axe: { impacts: [] } });
+  clean.archetypes.page.configs[0].tiers.rules.status = "ran";
+  clean.archetypes.page.configs[0].tiers.rules.engines.axe.incomplete = [finding("review")];
+  const options = { tiers: ["rules"], engines: ["axe"], policy: { incomplete: true, review: false } };
+  assert.equal(evaluateOutcome([clean], options, null).status, "passed");
+  options.policy.review = true;
+  assert.equal(evaluateOutcome([clean], options, null).status, "failed");
+});
+
+test("non-rule failures, undetermined checks, story failures and truncation have separate policies", () => {
+  const result = target("page");
+  result.archetypes.page.configs[0].tiers = { computed: { status: "ran", checks: [{ name: "contrast", result: "fail", detail: "Low contrast" }] } };
+  const options = { tiers: ["computed"], engines: [], policy: { incomplete: true, checks: false } };
+  assert.equal(evaluateOutcome([result], options, null).status, "passed");
+  options.policy.checks = true;
+  assert.equal(evaluateOutcome([result], options, null).status, "failed");
+  result.archetypes.page.configs[0].tiers.computed.checks[0].result = "undetermined";
+  assert.equal(evaluateOutcome([result], options, null).status, "incomplete");
+  options.policy.incomplete = false;
+  assert.equal(evaluateOutcome([result], options, null).status, "passed");
+  result.storybook = { index: "index.json", total: 3, matched: 3, audited: 1, truncated: true, maxStories: 1, archetypeMatches: {}, failedStories: [{ id: "broken", reason: "didn't render" }] };
+  const outcome = evaluateOutcome([result], options, null);
+  assert.ok(outcome.coverage.some((reason) => reason.includes("truncated")));
+  assert.ok(outcome.coverage.some((reason) => reason.includes("broken")));
 });

@@ -159,6 +159,7 @@ export default defineConfig({
         { text: "Targets", link: "/targets" },
         { text: "What it checks", link: "/checks" },
         { text: "Options and exit codes", link: "/options" },
+        { text: "GitHub Action", link: "/github-action" },
         { text: "Reading a report", link: "/reports" },
         { text: "npm packages and fixtures", link: "/npm-packages" },
         { text: "Writing fixtures", link: "/fixtures" },

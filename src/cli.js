@@ -1,6 +1,6 @@
 import { auditCommand } from "./commands/audit.js";
 import { compareCommand } from "./commands/compare.js";
-import { EXIT, UsageError, runSavedPlan, usage } from "./commands/common.js";
+import { EXIT, UsageError, runCommand, runSavedPlan, usage } from "./commands/common.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { guideCommand } from "./commands/guide.js";
 import { ownVersion } from "./env/versions.js";
@@ -9,6 +9,7 @@ const COMMANDS = {
   audit: auditCommand,
   check: auditCommand,
   compare: compareCommand,
+  ci: (argv, io) => runCommand("ci", argv, io),
   run: runSavedPlan,
   doctor: doctorCommand,
   guide: guideCommand,

@@ -68,3 +68,47 @@ export function evaluateFailCheck(targets, fail) {
   }
   return { mode: fail.mode, axe: totals.axe, ibm: totals.ibm, targets: perTarget, tripped };
 }
+
+/** @param {import("valibot").InferOutput<typeof import("../schema.js").TargetResultSchema>[]} targets */
+export function evaluateOutcome(targets, options, failCheck) {
+  const coverage = new Set();
+  const review = new Set();
+  const checks = new Set();
+  for (const target of targets) {
+    const id = target.id;
+    if (target.status !== "ran") coverage.add(`${id}: ${target.status}: ${target.reason ?? "no audit results"}`);
+    for (const reason of target.summary?.gaps ?? []) coverage.add(`${id}: ${reason}`);
+    for (const reason of target.summary?.notTestable ?? []) coverage.add(`${id}: ${reason}`);
+    if (target.storybook?.truncated) coverage.add(`${id}: Storybook story cap truncated coverage`);
+    for (const story of target.storybook?.failedStories ?? []) coverage.add(`${id}: story ${story.id} failed: ${story.reason}`);
+    if (target.status === "ran" && !Object.values(target.archetypes).some((archetype) => archetype.configs.length)) coverage.add(`${id}: no executable configurations`);
+    for (const [name, archetype] of Object.entries(target.archetypes)) {
+      if (archetype.status === "gap") coverage.add(`${id}/${name}: ${archetype.reason ?? "fixture gap"}`);
+      for (const [index, config] of archetype.configs.entries()) {
+        const location = `${id}/${name}/${index}`;
+        for (const tierName of options.tiers) {
+          const tier = config.tiers[tierName];
+          if (!tier || ["failed", "not-testable", "skipped"].includes(tier.status)) {
+            coverage.add(`${location}/${tierName}: ${tier?.reason ?? tier?.status ?? "missing requested tier"}`);
+            continue;
+          }
+          if (tier.status === "not-applicable") continue;
+          for (const reason of tier.notTestable ?? []) coverage.add(`${location}/${tierName}: ${reason}`);
+          for (const check of tier.checks ?? []) {
+            if (["error", "undetermined"].includes(check.result)) coverage.add(`${location}/${tierName}/${check.name}: ${check.result}: ${check.detail}`);
+            if (check.result === "fail") checks.add(`${location}/${tierName}/${check.name}: ${check.detail}`);
+          }
+          for (const flag of tier.flags ?? []) review.add(`${location}/${tierName}: ${flag.phrase}`);
+          if (tierName === "rules") for (const engine of options.engines) {
+            const result = tier.engines?.[engine];
+            if (!result || result.status !== "ran") coverage.add(`${location}/${engine}: ${result?.reason ?? result?.status ?? "missing requested engine"}`);
+            for (const finding of result?.incomplete ?? []) review.add(`${location}/${engine}: ${finding.ruleId}`);
+          }
+        }
+      }
+    }
+  }
+  const policy = options.policy ?? {};
+  const status = policy.incomplete && coverage.size ? "incomplete" : failCheck?.tripped || (policy.review && review.size) || (policy.checks && checks.size) ? "failed" : "passed";
+  return { status, coverage: [...coverage], review: [...review], checks: [...checks] };
+}

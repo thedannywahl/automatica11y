@@ -159,3 +159,19 @@ test("report rules: date and versions up top, snapshot note, simulated label, me
   assert.match(report, /No automated violations found by axe-core/);
   assert.ok(report.indexOf("## Coverage.") < report.indexOf("## Details by target."));
 });
+
+test("CI gates distinguish clean runs, partial execution, and untestable coverage", { skip }, async () => {
+  for (const { targets, expected } of [
+    { targets: [`${fixtures}clean.html`], expected: 0 },
+    { targets: [`clean=${fixtures}clean.html`, "broken=./missing.html"], expected: 5 },
+    { targets: [`canvas=${fixtures}canvas-only.html`, `clean=${fixtures}clean.html`], expected: 5 },
+  ]) {
+    const cwd = makeTree();
+    const { io, out } = makeIo({ cwd, env: process.env });
+    assert.equal(await main(["ci", ...targets, "--tiers", "rules"], io), expected, out.stderr);
+    const results = JSON.parse(readFileSync(join(cwd, "a11y-report/results.json"), "utf8"));
+    assert.equal(results.outcome.status, expected === 0 ? "passed" : "incomplete");
+    assert.equal(results.failCheck.tripped, false);
+    assert.ok(existsSync(join(cwd, "a11y-report/report.md")));
+  }
+});

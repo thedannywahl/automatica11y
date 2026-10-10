@@ -22,23 +22,49 @@ npx automatica11y compare radix=npm:@radix-ui/react-dialog aria=npm:react-aria-c
 
 ## CI {#quick-start-ci}
 
-Install the tool and audit your built site, failing the pipeline on serious axe findings:
+Install the tool and audit your built site:
 
 ```bash
 npm i -g automatica11y
-automatica11y audit ./dist --fail-on-axe serious
+automatica11y ci ./dist
 ```
 
-Your CI environment also needs Chrome or Chromium. Run `automatica11y doctor` to check the setup.
+The CI command fails on serious-or-higher axe violations, IBM Toolkit level 1 violations, and incomplete execution or coverage. All policies are configurable. Your CI environment also needs Chrome or Chromium; run `automatica11y doctor` to check the setup.
+
+For GitHub Actions on Ubuntu, use the [reusable Action](/github-action), which installs the tool and Chromium and uploads the reports:
+
+```yaml
+- uses: thedannywahl/automatica11y@main
+	with:
+		targets: ./dist
+```
+
+For production, replace `main` with a reviewed commit containing the Action.
 
 ## AI {#quick-start-ai}
 
-Give an AI agent the current instructions, then ask it to run a check:
+Automatica11y provides an evergreen bootstrap skill you can add to your agent of choice. Automatica11y cli bundles the latest version of the runner skill and its references, so every invocation is always compatible.
 
-```bash
-npx automatica11y@latest guide skill
+<<< ../skills/automatica11y/SKILL.md{ai}
+
+Once the skill is installed in your agent you can prompt it with the same commands and flags that are available to the cli.
+
+### Audit a web page
+
+You can audit web pages, static html files, Storybooks, and npm packages. To audit a live web page, simply provide the URL.
+
+```prompt
+/automatica11y audit "https://instructure.design/"
 ```
 
-For example: "Audit https://example.com and summarize the findings."
+### Compare two packages
 
-See [Using it with an AI agent](/agents) for skill installation and version checks.
+Automatica11y can compare two packages, even across different frameworks. It also supports versioning, sub-component exports, and aliases. Here's an example of comparing two different versions of a button from the same package:
+
+```prompt
+/automatica11y compare next-gen=npm:@instructure/ui-button/Button/v2 canvas=npm:@instructure/ui-buttons/Button/v1
+```
+
+The runner skill and references guide the Agent on how to write custom fixtures, how to interpret results, and how to turn the machine results (`report.json`) into a human-readable templated report.
+
+See [Using it with an AI agent](/agents) for additional details.

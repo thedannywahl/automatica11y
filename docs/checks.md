@@ -35,3 +35,5 @@ The announcements a simulated screen reader makes, recorded as data. The output 
 ## What every result says.
 
 Every result says what it ran, or why it didn't. A gap, a failure, or a result that can't be tested is a finding. It never counts as a pass.
+
+`automatica11y ci` fails on execution and coverage gaps by default: failed or unsupported targets, missing fixtures or requested results, untestable checks, `undetermined` or `error` measurements, failed Storybook stories, and coverage truncated by the story cap. Intentional tier/archetype exclusions and genuinely inapplicable checks are not failures. Engine findings needing manual review and explicit non-rule check failures have separate opt-in gates. See [CI configuration](github-action.md).
