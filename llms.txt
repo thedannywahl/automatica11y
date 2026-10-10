@@ -1,0 +1,16 @@
+# automatica11y
+
+> Test and compare the accessibility of web pages, Storybook builds, and npm component libraries.
+
+## Documentation
+
+- [Quick start](https://automatica11y.dev/quick-start)
+- [Targets](https://automatica11y.dev/targets)
+- [What it checks](https://automatica11y.dev/checks)
+- [Options and exit codes](https://automatica11y.dev/options)
+- [Reading a report](https://automatica11y.dev/reports)
+- [npm packages and fixtures](https://automatica11y.dev/npm-packages)
+- [Writing fixtures](https://automatica11y.dev/fixtures)
+- [Using it with an AI agent](https://automatica11y.dev/agents)
+- [The agent steps](https://automatica11y.dev/agent-steps)
+- [Limits](https://automatica11y.dev/limits)
