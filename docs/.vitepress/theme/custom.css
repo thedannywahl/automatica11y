@@ -62,7 +62,7 @@ html[data-pantoken-color="plum"]:has(.VPHome)::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image: radial-gradient(circle at 16px 16px, var(--home-pattern) 2.5px, transparent 2.5px);
+  background-image: radial-gradient(circle at 16px 16px, var(--home-pattern) 2px, transparent 3px);
   background-size: 32px 32px;
   background-repeat: repeat;
   background-position: right top;
@@ -196,6 +196,36 @@ button:focus-visible,
 .VPHero .tagline {
   color: var(--home-muted);
   max-width: 36rem;
+}
+
+.VPHero .actions .VPButton.brand {
+  --vp-button-brand-border: var(--instui-component-base-button-primary-border-color);
+  --vp-button-brand-text: var(--instui-component-base-button-primary-color);
+  --vp-button-brand-bg: var(--instui-component-base-button-primary-background);
+}
+
+.VPHero .actions .VPButton.brand:hover {
+  --vp-button-brand-hover-border: var(--instui-component-base-button-primary-hover-border-color);
+  --vp-button-brand-hover-text: var(--instui-component-base-button-primary-hover-text-color);
+  --vp-button-brand-hover-bg: var(--instui-component-base-button-primary-hover-background);
+}
+
+.VPHero .actions .VPButton.alt {
+  --vp-button-alt-border: light-dark(var(--instui-primitive-color-plum-plum100),var(--instui-primitive-color-plum-plum120));
+  --vp-button-alt-bg: light-dark(var(--instui-primitive-color-plum-plum100),var(--instui-primitive-color-plum-plum120));
+  --vp-button-alt-text: light-dark(var(--instui-component-base-button-primary-color), var(--instui-component-base-button-secondary-color));
+}
+
+.VPHero .actions .VPButton.alt:hover {
+  --vp-button-alt-hover-border: light-dark(var(--instui-primitive-color-plum-plum90),var(--instui-primitive-color-plum-plum110));
+  --vp-button-alt-hover-bg: light-dark(var(--instui-primitive-color-plum-plum90),var(--instui-primitive-color-plum-plum110));
+  --vp-button-alt-hover-text: light-dark(var(--instui-component-base-button-primary-hover-text-color), var(--instui-component-base-button-secondary-hover-text-color));
+}
+
+.VPHero .actions .VPButton.alt:active, .VPHero .actions .VPButton.alt:focus-visible {
+  --vp-button-alt-active-border: light-dark(var(--instui-primitive-color-plum-plum80),var(--instui-primitive-color-plum-plum100));
+  --vp-button-alt-active-bg: light-dark(var(--instui-primitive-color-plum-plum80),var(--instui-primitive-color-plum-plum100));
+  --vp-button-alt-active-text: light-dark(var(--instui-component-base-button-primary-hover-text-color), var(--instui-component-base-button-secondary-hover-text-color));
 }
 
 .VPFeature {
