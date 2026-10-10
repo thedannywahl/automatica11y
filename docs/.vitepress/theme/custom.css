@@ -1,4 +1,11 @@
 @import "@pantoken/vitepress/custom.css";
+@import "@pantoken/components/icons/terminal.css";
+@import "@pantoken/components/icons/igniteai-logo.css";
+@import "@pantoken/components/icons/scale.css";
+@import "@pantoken/components/icons/test-tube-diagonal.css";
+@import "@pantoken/components/icons/flag.css";
+@import "@pantoken/components/icons/shapes.css";
+@import "@pantoken/plugin-simple-icons/icons/githubactions.css";
 
 :root {
   --brand-mark-image: url("../../../site-assets/automatica11y-favicon.svg?inline");
@@ -198,6 +205,30 @@ button:focus-visible,
   max-width: 36rem;
 }
 
+.VPHero .actions a[href$="#quick-start-cli"]::before,
+.VPHero .actions a[href$="#quick-start-ci"]::before,
+.VPHero .actions a[href$="#quick-start-ai"]::before {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-inline-end: 0.5em;
+  vertical-align: -0.125em;
+  background: currentColor;
+}
+
+.VPHero .actions a[href$="#quick-start-cli"]::before {
+  mask: var(--instui-icon-terminal) center / contain no-repeat;
+}
+
+.VPHero .actions a[href$="#quick-start-ci"]::before {
+  mask: var(--instui-icon-githubactions) center / contain no-repeat;
+}
+
+.VPHero .actions a[href$="#quick-start-ai"]::before {
+  mask: var(--instui-icon-igniteai-logo) center / contain no-repeat;
+}
+
 .VPHero .actions .VPButton.brand {
   --vp-button-brand-border: var(--instui-component-base-button-primary-border-color);
   --vp-button-brand-text: var(--instui-component-base-button-primary-color);
@@ -232,6 +263,31 @@ button:focus-visible,
   border-radius: 4px;
 }
 
+.feature-icon {
+  display: block;
+  width: 1em;
+  height: 1em;
+  color: var(--vp-c-brand-1);
+  background: currentColor;
+  mask: var(--feature-icon-image) center / contain no-repeat;
+}
+
+.feature-icon.-scale {
+  --feature-icon-image: var(--instui-icon-scale);
+}
+
+.feature-icon.-test-tube-diagonal {
+  --feature-icon-image: var(--instui-icon-test-tube-diagonal);
+}
+
+.feature-icon.-flag {
+  --feature-icon-image: var(--instui-icon-flag);
+}
+
+.feature-icon.-shapes {
+  --feature-icon-image: var(--instui-icon-shapes);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html[data-pantoken-color="plum"] {
     scroll-behavior: auto;
@@ -257,5 +313,45 @@ button:focus-visible,
   button:focus-visible,
   [tabindex]:focus-visible {
     outline-color: Highlight;
+  }
+}
+
+.vp-doc div[class*="language-"] {
+  border-width: 1px;
+}
+
+.vp-doc div:is(.language-prompt, .language-ai) {
+  border-width: 0;
+  background:
+    linear-gradient(
+        to right,
+        var(--instui-component-shared-tokens-background-ai-top-gradient-color) 0%,
+        var(--instui-component-shared-tokens-background-ai-bottom-gradient-color) 100%
+      )
+      padding-box,
+    linear-gradient(
+        to right,
+        var(--instui-component-shared-tokens-background-ai-bottom-gradient-color) 0%,
+        var(--instui-component-shared-tokens-background-ai-top-gradient-color) 100%
+      )
+      border-box;
+
+  .lang {
+    margin-top: 4px;
+  }
+
+  pre {
+    border: 0 none;
+    border-radius: 7px;
+    margin: 1px;
+    padding: 20px 0;
+    background: var(--vp-code-block-bg);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+
+    span::selection {
+      background: var(--instui-component-text-ai-background-color);
+      color: var(--instui-component-text-ai-color);
+    }
   }
 }
