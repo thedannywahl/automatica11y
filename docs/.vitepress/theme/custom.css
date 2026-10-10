@@ -1,0 +1,231 @@
+@import "@pantoken/vitepress/custom.css";
+
+:root {
+  --brand-mark-image: url("../../../site-assets/automatica11y-favicon.svg?inline");
+  --vp-c-bg: var(--instui-color-background-container);
+  --vp-nav-bg-color: var(--instui-color-background-container);
+  --vp-local-nav-bg-color: var(--instui-color-background-container);
+  --vp-sidebar-bg-color: var(--instui-color-background-muted);
+  --vp-c-brand-1: var(--instui-color-institutional-brand-primary);
+  --vp-c-brand-2: var(--vp-c-brand-1);
+  --vp-c-brand-3: var(--vp-c-brand-1);
+  --vp-c-brand-soft: var(--instui-color-background-muted);
+  --vp-code-bg: var(--instui-color-background-muted);
+  --vp-button-brand-bg: var(--instui-primitive-color-plum-plum150);
+  --vp-button-brand-text: #fff;
+  --vp-button-brand-hover-bg: var(--instui-primitive-color-plum-plum160);
+  --vp-button-brand-hover-text: #fff;
+  --vp-button-brand-active-bg: var(--instui-primitive-color-plum-plum170);
+  --vp-button-brand-active-text: #fff;
+  --vp-home-hero-name-color: var(--vp-c-brand-1);
+  --vp-font-family-base: var(--instui-font-family-atkinson-hyperlegible-next, var(--instui-font-family-base));
+  color-scheme: light;
+  --instui-color-institutional-brand-primary: var(--instui-color-text-interactive-navigation-primary-base);
+  background-color: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+}
+
+html.dark {
+  --vp-c-bg: var(--instui-color-background-page);
+  --vp-nav-bg-color: var(--instui-color-background-page);
+  --vp-local-nav-bg-color: var(--instui-color-background-page);
+  --vp-sidebar-bg-color: var(--instui-color-background-container);
+  color-scheme: dark;
+}
+
+html[data-pantoken-color="plum"] {
+  scroll-behavior: smooth;
+  --vp-nav-home-bg-color: var(--vp-c-bg);
+}
+
+html[data-pantoken-color="plum"] .VPNavBar.home::before {
+  background-color: var(--vp-c-bg);
+  backdrop-filter: none;
+}
+
+html[data-pantoken-color="plum"]:has(.VPHome) {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  --home-bg: #faf1f6;
+  --home-fg: #26051a;
+  --home-accent: #a83780;
+  --home-heading: #651e4c;
+  --home-muted: #51424b;
+  --home-pattern: #a83780;
+  background-color: var(--home-bg);
+}
+
+html[data-pantoken-color="plum"]:has(.VPHome)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(circle at 16px 16px, var(--home-pattern) 2.5px, transparent 2.5px);
+  background-size: 32px 32px;
+  background-repeat: repeat;
+  background-position: right top;
+  opacity: 0.66;
+  mask-image:
+    linear-gradient(to left, black, transparent 66.666667%),
+    linear-gradient(to bottom, black, transparent 66.666667%);
+  mask-composite: intersect;
+}
+
+html[data-pantoken-color="plum"]:has(.VPHome) body,
+html[data-pantoken-color="plum"]:has(.VPHome) .VPFooter {
+  background-color: transparent;
+}
+
+html.dark[data-pantoken-color="plum"]:has(.VPHome) {
+  --home-bg: #26051a;
+  --home-fg: #fff;
+  --home-accent: #dd4ca8;
+  --home-heading: #f6d9e9;
+  --home-muted: #dfe1e3;
+  --home-pattern: #ec93c6;
+}
+
+body {
+  font-family: var(--vp-font-family-base);
+  background: transparent;
+}
+
+.scroll {
+  max-width: 100%;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+.scroll table {
+  display: table;
+  min-width: 100%;
+  margin: 0;
+}
+
+.VPSkipLink.visually-hidden {
+  position: fixed;
+  left: -10000px;
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  line-height: 1.5;
+}
+
+.VPSkipLink:focus-visible {
+  left: 1rem;
+}
+
+.VPDocOutlineItem .outline-link {
+  min-height: 2rem;
+  line-height: 2.2857143;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--instui-focus-outline-color);
+  outline-offset: 3px;
+}
+
+.VPHero .name {
+  display: inline-flex;
+  align-items: center;
+  color: var(--home-fg);
+  white-space: nowrap;
+  letter-spacing: 0;
+  -webkit-text-fill-color: currentColor;
+}
+
+.VPHero .brand-main {
+  color: var(--home-fg);
+}
+
+.VPHero .name .brand-mark {
+  flex: none;
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 0.18em;
+  background: currentColor;
+  mask: var(--brand-mark-image) center / contain no-repeat;
+}
+
+.brand-accent {
+  color: var(--home-accent, light-dark(#a83780, #dd4ca8));
+}
+
+.VPNavBarTitle .title > span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.VPNavBarTitle .brand-mark {
+  display: inline-block;
+  flex: none;
+  margin: 0 0.35rem 0 0;
+  width: 2rem;
+  height: 2rem;
+  background: var(--vp-c-text-1);
+  mask: var(--brand-mark-image) center / contain no-repeat;
+}
+
+@media (max-width: 639px) {
+  .VPHero .name {
+    font-size: 32px;
+    line-height: 1.25;
+  }
+}
+
+.VPHero .text {
+  color: var(--home-heading);
+  max-width: none;
+  line-height: 1.08;
+}
+
+.VPHero .tagline {
+  color: var(--home-muted);
+  max-width: 36rem;
+}
+
+.VPFeature {
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-pantoken-color="plum"] {
+    scroll-behavior: auto;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .VPSwitch,
+  .VPSkipLink,
+  .vp-doc :not(pre) > code {
+    background-color: var(--vp-c-bg-alt);
+    background-image: none;
+    backdrop-filter: none;
+  }
+
+  html[data-pantoken-color="plum"]:has(.VPHome)::before {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  a:focus-visible,
+  button:focus-visible,
+  [tabindex]:focus-visible {
+    outline-color: Highlight;
+  }
+}

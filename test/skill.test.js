@@ -16,7 +16,7 @@ const agents = read("AGENTS.md");
 const referenceFiles = readdirSync(join(runnerDir, "references")).map((name) => ({ name: `references/${name}`, text: readFileSync(join(runnerDir, "references", name), "utf8") }));
 /** Every Markdown file an agent might be handed. */
 /** Every Markdown page in docs/, which is where the long-form documentation lives. */
-const docPages = readdirSync(join(root, "docs")).filter((name) => name.endsWith(".md")).map((name) => ({ name: `docs/${name}`, text: read("docs", name) }));
+const docPages = readdirSync(join(root, "docs")).filter((name) => name.endsWith(".md") && !["agent-steps.md", "fixtures.md"].includes(name)).map((name) => ({ name: `docs/${name}`, text: read("docs", name) }));
 const docsText = docPages.map((page) => page.text).join("\n");
 const agentDocs = [{ name: "AGENTS.md", text: agents }, { name: "skills/automatica11y/SKILL.md", text: bootstrap }, { name: "skills/automatica11y-runner/SKILL.md", text: runner }, ...referenceFiles];
 
@@ -193,7 +193,7 @@ test("the archetypes the runner lists match the tool's", async () => {
 });
 
 test("every document tells a global install how to skip npx, without dropping the version check", () => {
-  const readme = read("docs", "index.md");
+  const readme = read("docs", "quick-start.md");
   assert.match(readme, /npm i -g automatica11y/);
   assert.match(readme, /`automatica11y` is on your `PATH`, with the short name `a11y` too/);
   assert.match(readme, /A global install doesn't update itself, so run `npm i -g automatica11y@latest` to upgrade/);

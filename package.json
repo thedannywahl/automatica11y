@@ -29,8 +29,9 @@
     "test": "node --test test/*.test.js",
     "lint": "tsc -p jsconfig.json",
     "update-wcag": "node scripts/update-wcag.js",
-    "docs:build": "node scripts/build-docs.js",
-    "docs:preview": "node scripts/build-docs.js && npx --yes serve site",
+    "docs:dev": "node scripts/prepare-docs.js && vitepress dev docs",
+    "docs:build": "node scripts/prepare-docs.js && vitepress build docs",
+    "docs:preview": "npm run docs:build && vitepress preview docs",
     "prepublishOnly": "npm run lint"
   },
   "dependencies": {
@@ -53,6 +54,7 @@
     "@pantoken/components": "^2.0.2",
     "@pantoken/css": "^0.4.3",
     "@pantoken/plugin-custom-theme-colors": "^0.3.3",
+    "@pantoken/vitepress": "0.3.0",
     "@shikijs/langs": "^4.5.0",
     "@shikijs/themes": "^4.5.0",
     "@types/node": "^26.6.4",
@@ -64,6 +66,7 @@
     "shiki": "^4.5.0",
     "svelte": "^5.57.2",
     "typescript": "^7.0.2",
+    "vitepress": "2.0.0-alpha.20",
     "vue": "^3.5.43",
     "zone.js": "^0.16.3"
   },

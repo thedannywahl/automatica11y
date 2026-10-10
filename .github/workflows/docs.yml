@@ -9,8 +9,11 @@ on:
     paths:
       - "docs/**"
       - "skills/**"
-      - "scripts/build-docs.js"
+      - "docs/.vitepress/**"
+      - "scripts/prepare-docs.js"
+      - "site-assets/**"
       - "package.json"
+      - "package-lock.json"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 

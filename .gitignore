@@ -4,3 +4,7 @@ a11y-report/
 .DS_Store
 tmp/
 site/
+/docs/agent-steps.md
+/docs/fixtures.md
+/docs/public/
+**/.vitepress/cache/

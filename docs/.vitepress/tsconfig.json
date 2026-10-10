@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "noEmit": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "types": ["vite/client"]
+  },
+  "include": ["./**/*.ts", "./**/*.d.ts", "./**/*.vue"]
+}
