@@ -10,7 +10,7 @@ import { shipsBrowserAssets } from "../frameworks/html.js";
 import { ANGULAR_FLOOR } from "../frameworks/angular.js";
 import { explainFrameworkError } from "../frameworks/errors.js";
 import { adapterFor, adapterForKind } from "../frameworks/index.js";
-import { offeredSubpaths, subpathProblem } from "../plan/subpath.js";
+import { offeredSubpaths, resolveInstalledSubpath, subpathProblem } from "../plan/subpath.js";
 import { closedShadowHosts, notTestableEntries } from "../harness/shadow.js";
 import { serveStatic } from "../harness/static-serve.js";
 import { openPage } from "../harness/url.js";
@@ -99,6 +99,7 @@ async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
     const tags = await opened.page.evaluate(() => [...(window.__a11yDefined ?? [])]);
     // What each element says about itself, so a fixture can be built around it: observed attributes, class members, slots.
     const facts = await opened.page.evaluate((names) => {
+      /** @type {Record<string, { attributes: string[], members: string[], slots: string[] }>} */
       const out = {};
       for (const name of names.slice(0, 80)) {
         const Element = customElements.get(name);
@@ -239,10 +240,11 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor });
     const warnings = [...installed.warnings];
     // What fixtures and templates import: the package, or the sub-path of it that was asked for.
-    const importSpec = resolved.subpath ? `${resolved.name}/${resolved.subpath}` : resolved.name;
+    let importSpec = resolved.subpath ? `${resolved.name}/${resolved.subpath}` : resolved.name;
     if (resolved.subpath) {
       const problem = subpathProblem(workDir, resolved.name, resolved.subpath, installed.version ?? resolved.version);
       if (problem) throw new Error(problem);
+      importSpec = `${resolved.name}/${resolveInstalledSubpath(workDir, resolved.name, resolved.subpath)}`;
     }
 
     // The other packages of a list target (`npm:a,b`) go into the same folder, so the scripts and styles of one see the others.
@@ -310,7 +312,9 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     const archetypes = {};
     const gaps = [];
     const hidden = [];
-    /** Files to write beside the report: the fixtures the tool generated, so they can be reviewed and adopted. */
+    /** Files to write beside the report: the fixtures the tool generated, so they can be reviewed and adopted.
+     * @type {Record<string, string>}
+     */
     const files = {};
     /** Where each archetype's fixture came from, for the results. */
     const sources = {};

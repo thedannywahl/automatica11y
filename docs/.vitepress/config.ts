@@ -147,15 +147,20 @@ export default defineConfig({
     writeFileSync(resolve(siteConfig.outDir, ".nojekyll"), "");
   },
   themeConfig: {
+    search: { provider: "local" },
     siteTitle: '<span class="brand-mark" aria-hidden="true"></span><span class="brand-main">automatic</span><span class="brand-accent">a11y</span>',
     nav: [
-      { text: "Guide", link: "/quick-start" },
+      { text: "Guide", link: "/quick-start-cli" },
       { text: "Options", link: "/options" },
       { text: "Reports", link: "/reports" },
     ],
     sidebar: [
       { text: "Guide", items: [
-        { text: "Quick start", link: "/quick-start" },
+        { text: "Quick Start", items: [
+          { text: "CLI", link: "/quick-start-cli" },
+          { text: "CI/CD", link: "/quick-start-ci" },
+          { text: "AI", link: "/quick-start-ai" },
+        ] },
         { text: "Targets", link: "/targets" },
         { text: "What it checks", link: "/checks" },
         { text: "Options and exit codes", link: "/options" },

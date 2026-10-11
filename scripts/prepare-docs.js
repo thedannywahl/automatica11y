@@ -50,7 +50,9 @@ export function prepareDocs() {
 
 ## Documentation
 
-- [Quick start](https://automatica11y.dev/quick-start)
+- [Quick start: CLI](https://automatica11y.dev/quick-start-cli)
+- [Quick start: CI/CD](https://automatica11y.dev/quick-start-ci)
+- [Quick start: AI](https://automatica11y.dev/quick-start-ai)
 - [Targets](https://automatica11y.dev/targets)
 - [What it checks](https://automatica11y.dev/checks)
 - [Options and exit codes](https://automatica11y.dev/options)

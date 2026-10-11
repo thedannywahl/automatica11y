@@ -193,7 +193,7 @@ test("the archetypes the runner lists match the tool's", async () => {
 });
 
 test("every document tells a global install how to skip npx, without dropping the version check", () => {
-  const readme = read("docs", "quick-start.md");
+  const readme = read("docs", "quick-start-cli.md");
   assert.match(readme, /npm i -g automatica11y/);
   assert.match(readme, /`automatica11y` is on your `PATH`, with the short name `a11y` too/);
   assert.match(readme, /A global install doesn't update itself, so run `npm i -g automatica11y@latest` to upgrade/);

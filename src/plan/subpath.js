@@ -2,8 +2,8 @@
  * Sub-paths of an npm package: `@scope/pkg/button/v2` imports `button/v2` from `@scope/pkg`.
  * A package says what it lets people import in its `exports` field. A package without one lets people import any file in it.
  */
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { dirname, join, posix } from "node:path";
 
 /**
  * Split a sub-path into clean segments, or say what's wrong with it. Rejects empty parts, `.` and `..`, and backslashes,
@@ -74,7 +74,35 @@ export function subpathProblem(workDir, name, subpath, version) {
   }
   const result = checkExports(manifest.exports, subpath);
   if (result.checked) return result.ok ? null : notExportedMessage({ name, version, subpath, exact: result.exact, patterns: result.patterns });
-  return fileExists(packageDir, subpath) ? null : `"${name}/${subpath}" isn't a file in ${name}${version ? `@${version}` : ""}, and the package has no exports map that lists what it offers.`;
+  if (fileExists(packageDir, subpath)) return null;
+  const path = join(packageDir, subpath);
+  const directory = isDirectory(path) ? path : dirname(path);
+  const prefix = isDirectory(path) ? subpath : posix.dirname(subpath);
+  let options = [];
+  try {
+    options = readdirSync(directory, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() || entry.isFile())
+      .map((entry) => `${name}/${posix.join(prefix, entry.name)}${entry.isDirectory() ? "/" : ""}`)
+      .sort();
+  } catch {}
+  const offered = options.length ? ` Available entries: ${options.slice(0, 12).join(", ")}${options.length > 12 ? `, and ${options.length - 12} more` : ""}.` : "";
+  return `"${name}/${subpath}" isn't a file in ${name}${version ? `@${version}` : ""}, and the package has no exports map that lists what it offers.${offered}`;
+}
+
+function isDirectory(path) {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/** @param {string} workDir @param {string} name @param {string} subpath */
+export function resolveInstalledSubpath(workDir, name, subpath) {
+  const packageDir = join(workDir, "node_modules", name);
+  const manifest = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8"));
+  if (checkExports(manifest.exports, subpath).checked) return subpath;
+  return fileSubpath(packageDir, subpath) ?? subpath;
 }
 
 /**
@@ -99,7 +127,18 @@ const EXTENSIONS = ["", ".js", ".mjs", ".cjs", ".json", "/index.js", "/index.mjs
 
 /** Is there a file for this sub-path in an installed package that has no exports map? */
 export function fileExists(packageDir, subpath) {
-  return EXTENSIONS.some((extension) => existsSync(join(packageDir, `${subpath}${extension}`)));
+  return fileSubpath(packageDir, subpath) !== null;
+}
+
+function fileSubpath(packageDir, subpath) {
+  const extension = EXTENSIONS.find((extension) => {
+    try {
+      return statSync(join(packageDir, `${subpath}${extension}`)).isFile();
+    } catch {
+      return false;
+    }
+  });
+  return extension === undefined ? null : `${subpath}${extension}`;
 }
 
 /** How many single-character edits turn one word into another. */

@@ -56,6 +56,7 @@
     "@pantoken/css": "^0.4.3",
     "@pantoken/plugin-custom-theme-colors": "^0.3.3",
     "@pantoken/plugin-simple-icons": "^0.3.12",
+    "@pantoken/plugin-custom-icons": "^0.3.14",
     "@pantoken/vitepress": "0.3.0",
     "@shikijs/langs": "^4.5.0",
     "@shikijs/themes": "^4.5.0",

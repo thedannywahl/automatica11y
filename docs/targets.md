@@ -41,3 +41,5 @@ automatica11y compare v1=npm:@scope/ui-buttons/button v2=npm:@scope/ui-buttons/b
 The sub-path is what a person would import (`import ... from "@scope/pkg/button"`), and it has to be something the package exports. The version stops at the first slash, and a sub-path can't contain empty parts, `.`, `..`, or backslashes. Capital letters are fine.
 
 The tool checks the sub-path twice. At plan time it reads the registry's `exports` field, so `--plan` rejects a wrong sub-path before anything installs. After the install it checks the package's own `package.json`, and a package with no exports map is checked against its files. A wrong sub-path names the package and version, suggests the closest exports, and lists what the package offers.
+
+For a package with no exports map, a directory uses its `index.js`, `index.mjs`, or `index.cjs` entry. For example, `npm:@instructure/ui-buttons/es/Button/v1/` and `npm:@instructure/ui-buttons/es/Button/v1/index.js` test the same entry. A directory without an index fails and lists available entries at that path, when present.

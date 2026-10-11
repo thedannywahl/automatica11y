@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { classifyTarget } from "../src/plan/classify.js";
-import { checkExports, cleanSubpath, notExportedMessage, subpathProblem } from "../src/plan/subpath.js";
+import { checkExports, cleanSubpath, notExportedMessage, resolveInstalledSubpath, subpathProblem } from "../src/plan/subpath.js";
 import { parseResults } from "../src/schema.js";
 import { makeIo, makeTree } from "./helpers/fixtures.js";
 import { installPackage, npmView } from "./helpers/npm-fakes.js";
@@ -103,15 +103,37 @@ test("--plan checks the sub-path against the registry's exports, before anything
 });
 
 test("after install, a package with no exports map is checked against its files", () => {
-  const dir = makeTree({ "node_modules/legacy/package.json": JSON.stringify({ name: "legacy" }), "node_modules/legacy/lib/widgets.js": "export const a = 1;", "node_modules/legacy/lib/deep/index.js": "export const b = 1;" });
+  const dir = makeTree({ "node_modules/legacy/package.json": JSON.stringify({ name: "legacy" }), "node_modules/legacy/lib/widgets.js": "export const a = 1;", "node_modules/legacy/lib/deep/index.js": "export const b = 1;", "node_modules/legacy/lib/no-index/button.js": "export const c = 1;" });
   assert.equal(subpathProblem(dir, "legacy", "lib/widgets", "1.0.0"), null, "an extension can be left off");
   assert.equal(subpathProblem(dir, "legacy", "lib/widgets.js", "1.0.0"), null);
   assert.equal(subpathProblem(dir, "legacy", "lib/deep", "1.0.0"), null, "a folder with an index file");
+  assert.equal(resolveInstalledSubpath(dir, "legacy", "lib/deep"), "lib/deep/index.js");
+  assert.equal(resolveInstalledSubpath(dir, "legacy", "lib/widgets"), "lib/widgets.js");
+  assert.equal(resolveInstalledSubpath(dir, "legacy", "lib/deep/index.js"), "lib/deep/index.js");
+  assert.match(subpathProblem(dir, "legacy", "lib/no-index", "1.0.0"), /isn't a file in legacy@1\.0\.0/, "a directory alone isn't an importable entry");
+  assert.match(subpathProblem(dir, "legacy", "lib/no-index", "1.0.0"), /Available entries: legacy\/lib\/no-index\/button\.js\./);
   assert.match(subpathProblem(dir, "legacy", "lib/missing", "1.0.0"), /"legacy\/lib\/missing" isn't a file in legacy@1\.0\.0, and the package has no exports map/);
   assert.match(subpathProblem(makeTree(), "ghost", "x", null), /ghost was installed, but its package\.json couldn't be read/);
 });
 
 // ---- audits in a real browser ----
+
+test("audit and compare resolve an npm directory to its index file", { skip, timeout: 300_000 }, async () => {
+  const audit = await run(["audit", "npm:fake-legacy/lib/deep/", "--archetypes", "button", "--tiers", "interactions"]);
+  assert.equal(audit.code, 0, audit.stderr);
+  assert.equal(audit.results.targets[0].archetypes.button.status, "ran");
+  assert.equal(audit.mapping["fake-legacy-lib-deep"].button.export, "Button");
+  const comparison = await run(["compare", "directory=npm:fake-legacy/lib/deep/", "file=npm:fake-legacy/lib/deep/index.js", "--archetypes", "button", "--tiers", "interactions"]);
+  assert.equal(comparison.code, 0, comparison.stderr);
+  const [directory, file] = comparison.results.targets;
+  assert.equal(directory.archetypes.button.status, "ran");
+  assert.equal(file.archetypes.button.status, "ran");
+  assert.deepEqual(directory.archetypes.button.configs[0].tiers.interactions.checks, file.archetypes.button.configs[0].tiers.interactions.checks);
+  assert.equal(comparison.mapping.directory.button.export, comparison.mapping.file.button.export);
+  const missing = await run(["audit", "npm:fake-legacy/lib/", "--archetypes", "button", "--tiers", "interactions"]);
+  assert.equal(missing.code, 4);
+  assert.match(missing.results.targets[0].reason, /Available entries: fake-legacy\/lib\/deep\/, fake-legacy\/lib\/widgets\.js\./);
+});
 
 test("the sub-path is what's tested: its button, not the package root's", { skip, timeout: 240_000 }, async () => {
   const result = await run(["audit", "npm:fake-subpaths/button", "--archetypes", "button", "--tiers", "rules,vsr"]);

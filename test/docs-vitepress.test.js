@@ -13,7 +13,9 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const out = join(root, "site");
 const pageList = [
   { source: "docs/index.md", out: "index.html", route: "/" },
-  { source: "docs/quick-start.md", out: "quick-start.html", route: "/quick-start" },
+  { source: "docs/quick-start-cli.md", out: "quick-start-cli.html", route: "/quick-start-cli" },
+  { source: "docs/quick-start-ci.md", out: "quick-start-ci.html", route: "/quick-start-ci" },
+  { source: "docs/quick-start-ai.md", out: "quick-start-ai.html", route: "/quick-start-ai" },
   { source: "docs/targets.md", out: "targets.html", route: "/targets" },
   { source: "docs/checks.md", out: "checks.html", route: "/checks" },
   { source: "docs/options.md", out: "options.html", route: "/options" },
@@ -60,8 +62,9 @@ test("all documentation sources build at clean VitePress routes", () => {
   for (const page of pageList.slice(1)) assert.ok(html[page.out].includes(page.route), `${page.route} appears in documentation navigation`);
   assert.match(html["index.html"], /<title>automatica11y: Accessibility Testing and Comparison<\/title>/);
   for (const anchor of ["quick-start-cli", "quick-start-ci", "quick-start-ai"]) {
-    assert.ok(html["index.html"].includes(`href="/quick-start#${anchor}"`), `home action links to ${anchor}`);
-    assert.ok(html["quick-start.html"].includes(`id="${anchor}"`), `${anchor} section exists in the guide`);
+    assert.ok(html["index.html"].includes(`href="/${anchor}#${anchor}"`), `home action links to ${anchor}`);
+    assert.ok(html[`${anchor}.html`].includes(`id="${anchor}"`), `${anchor} section exists in the guide`);
+    assert.ok(readFileSync(join(root, "docs/.vitepress/theme/custom.css"), "utf8").includes(`[href$="#${anchor}"]`), `${anchor} retains its hero icon selector`);
     assert.ok(!html["index.html"].includes(`id="${anchor}"`), "quick-start content is not on the homepage");
   }
   assert.ok(html["index.html"].includes('href="/llms.txt"'));
@@ -189,7 +192,7 @@ test("README preview and public domain remain correct", () => {
 });
 
 test("the home, quick-start, and runner pages pass the tool's accessibility checks", { skip, timeout: 400_000 }, async () => {
-  for (const page of ["index.html", "quick-start.html", "agent-steps.html"]) {
+  for (const page of ["index.html", "quick-start-cli.html", "quick-start-ci.html", "quick-start-ai.html", "agent-steps.html"]) {
     const cwd = makeTree();
     const { io } = makeIo({ cwd, env: process.env });
     const code = await main(["audit", join(out, page), "--tiers", "rules,conditions"], io);

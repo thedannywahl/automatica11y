@@ -1,9 +1,18 @@
 @import "@pantoken/vitepress/custom.css";
+@import "@pantoken/components/icon.css";
 @import "@pantoken/components/icons/terminal.css";
 @import "@pantoken/components/icons/igniteai-logo.css";
+@import "@pantoken/plugin-custom-icons/icons/vite-plus.css";
 @import "@pantoken/components/icons/scale.css";
 @import "@pantoken/components/icons/test-tube-diagonal.css";
 @import "@pantoken/components/icons/flag.css";
+@import "@pantoken/plugin-simple-icons/icons/nodedotjs.css";
+@import "@pantoken/plugin-simple-icons/icons/googlechrome.css";
+@import "@pantoken/plugin-simple-icons/icons/npm.css";
+@import "@pantoken/plugin-simple-icons/icons/bun.css";
+@import "@pantoken/plugin-simple-icons/icons/yarn.css";
+@import "@pantoken/plugin-simple-icons/icons/deno.css";
+@import "@pantoken/plugin-simple-icons/icons/pnpm.css";
 @import "@pantoken/components/icons/shapes.css";
 @import "@pantoken/plugin-simple-icons/icons/githubactions.css";
 
@@ -205,9 +214,9 @@ button:focus-visible,
   max-width: 36rem;
 }
 
-.VPHero .actions a[href$="#quick-start-cli"]::before,
-.VPHero .actions a[href$="#quick-start-ci"]::before,
-.VPHero .actions a[href$="#quick-start-ai"]::before {
+.VPHero .actions a[href$="quick-start-cli"]::before,
+.VPHero .actions a[href$="quick-start-ci"]::before,
+.VPHero .actions a[href$="quick-start-ai"]::before {
   content: "";
   display: inline-block;
   width: 1em;
@@ -217,15 +226,15 @@ button:focus-visible,
   background: currentColor;
 }
 
-.VPHero .actions a[href$="#quick-start-cli"]::before {
+.VPHero .actions a[href$="quick-start-cli"]::before {
   mask: var(--instui-icon-terminal) center / contain no-repeat;
 }
 
-.VPHero .actions a[href$="#quick-start-ci"]::before {
+.VPHero .actions a[href$="quick-start-ci"]::before {
   mask: var(--instui-icon-githubactions) center / contain no-repeat;
 }
 
-.VPHero .actions a[href$="#quick-start-ai"]::before {
+.VPHero .actions a[href$="quick-start-ai"]::before {
   mask: var(--instui-icon-igniteai-logo) center / contain no-repeat;
 }
 
@@ -316,8 +325,28 @@ button:focus-visible,
   }
 }
 
+.vp-doc h2 {
+  border-top: 0 none;
+}
+
 .vp-doc div[class*="language-"] {
   border-width: 1px;
+  border-color: light-dark(currentColor, transparent);
+}
+
+.vp-doc :is(.vp-code-group) div[class*="language-"] {
+  border-top-width: 0;
+}
+
+.vp-code-group .tabs {
+  box-shadow: light-dark(none, inherit);
+  border-width: 1px 1px 0 1px;
+  border-color: light-dark(currentColor, transparent);
+}
+
+.vp-code-group .tabs label::after {
+  border-radius: 0;
+  height: 4px;
 }
 
 .vp-doc div:is(.language-prompt, .language-ai) {
