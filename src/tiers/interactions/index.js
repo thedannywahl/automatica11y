@@ -4,10 +4,16 @@ import { ARCHETYPE_CHECKS, COMMON } from "./archetypes.js";
 import { installHelpers } from "./helpers.js";
 
 const CHECK_TIMEOUT_MS = 25_000;
+/** @param {number} ms */
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
-/** Everything a check can do, bound to one fresh page. */
+/**
+ * Everything a check can do, bound to one fresh page.
+ * @param {import("../../types.js").Page} page
+ * @returns {import("../../types.js").CheckContext}
+ */
 export function makeContext(page) {
+  /** @type {import("../../types.js").CheckContext} */
   const ctx = {
     page,
     trigger: page.locator("[data-a11y-trigger]").first(),
@@ -65,12 +71,20 @@ export function makeContext(page) {
   return ctx;
 }
 
-/** Run one check on a fresh page, so no check inherits another's state. */
+/**
+ * Run one check on a fresh page, so no check inherits another's state.
+ * @param {import("../../types.js").Browser} browser
+ * @param {string} url
+ * @param {import("../../types.js").Check} check
+ * @param {{ timeoutMs?: number, kits?: Array<() => void>, needsTrigger?: boolean, waitUntil?: "load" | "networkidle" }} [options]
+ * @returns {Promise<import("../../types.js").CheckResult>}
+ */
 export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_MS, kits = [installHelpers], needsTrigger = true, waitUntil = /** @type {"load" | "networkidle"} */ ("load") } = {}) {
   /** @type {Awaited<ReturnType<typeof openPage>> | null} */
   let opened = null;
   /** @type {Array<Awaited<ReturnType<typeof openPage>>>} */
   const variants = [];
+  /** @param {import("../../types.js").Page} page */
   const beforeGoto = async (page) => { for (const kit of kits) await page.addInitScript(kit); };
   try {
     opened = await openPage(browser, url, { beforeGoto, waitUntil });

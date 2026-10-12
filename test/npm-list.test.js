@@ -50,6 +50,7 @@ test("a list installs every package into one folder, and the report and results 
   const cwd = makeTree({});
   const { io, out } = makeIo({ cwd, env: process.env });
   io.npmView = npmView;
+  /** @type {[string, string][]} */
   const installs = [];
   io.installPackage = async (options) => {
     installs.push([options.name, options.dir]);

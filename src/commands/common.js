@@ -16,7 +16,7 @@ export { EXIT };
 export class UsageError extends Error {}
 
 /**
- * @typedef {{ stdout: { write(text: string): unknown }, stderr: { write(text: string): unknown }, cwd: string, env: NodeJS.ProcessEnv, fetch?: import("../plan/classify.js").FetchLike, npmView?: (spec: string) => Promise<unknown>, installPackage?: Function, platform?: NodeJS.Platform }} Io
+ * @typedef {{ stdout: { write(text: string): unknown }, stderr: { write(text: string): unknown }, cwd: string, env: NodeJS.ProcessEnv, fetch?: import("../plan/classify.js").FetchLike, npmView?: (spec: string) => Promise<unknown>, installPackage?: typeof import("../harness/npm-install.js").installPackage, platform?: NodeJS.Platform }} Io
  */
 
 const OPTION_DEFS = /** @type {const} */ ({
@@ -46,7 +46,24 @@ const OPTION_DEFS = /** @type {const} */ ({
   help: { type: "boolean", short: "h" },
 });
 
-/** Split a comma list and check every item against the allowed values. */
+/** @typedef {{ [K in keyof typeof OPTION_DEFS]?: typeof OPTION_DEFS[K]["type"] extends "boolean" ? boolean : string }} RunValues */
+
+/**
+ * @typedef {object} ParsedRun
+ * @property {boolean} help
+ * @property {string[]} targets
+ * @property {boolean} planOnly
+ * @property {import("../types.js").PlanOptions | null} options
+ * @property {import("./config.js").ServerConfig | null} [server]
+ * @property {import("./config.js").Config} [config]
+ */
+
+/**
+ * Split a comma list and check every item against the allowed values.
+ * @param {string} flag
+ * @param {string} text
+ * @param {string[]} allowed
+ */
 function parseList(flag, text, allowed) {
   const items = [...new Set(text.split(",").map((item) => item.trim()).filter(Boolean))];
   if (items.length === 0) throw new UsageError(`--${flag} needs at least one value. Choose from: ${allowed.join(", ")}.`);
@@ -66,20 +83,24 @@ function parseChoice(flag, value, allowed) {
  * @param {"audit" | "compare" | "ci"} command
  * @param {string[]} argv
  * @param {{ cwd?: string }} [context]
+ * @returns {ParsedRun}
  */
 export function parseRunArgs(command, argv, context = {}) {
+  /** @type {{ values: RunValues, positionals: string[], tokens?: Array<{ kind: string, name?: string }> }} */
   let parsed;
+  /** @type {import("./config.js").Config} */
   let config = {};
   try {
-    parsed = parseArgs({ args: argv, options: OPTION_DEFS, allowPositionals: true, strict: true });
+    // Node's types widen values to string | string[] because OPTION_DEFS never sets `multiple`.
+    parsed = /** @type {typeof parsed} */ (/** @type {unknown} */ (parseArgs({ args: argv, options: OPTION_DEFS, allowPositionals: true, strict: true })));
     if (!parsed.values.help && context.cwd) {
       config = loadConfig(parsed.values.config, context.cwd);
-      parsed = parseArgs({ args: [...configArgs(config), ...argv], options: OPTION_DEFS, allowPositionals: true, strict: true, tokens: true });
+      parsed = /** @type {typeof parsed} */ (/** @type {unknown} */ (parseArgs({ args: [...configArgs(config), ...argv], options: OPTION_DEFS, allowPositionals: true, strict: true, tokens: true })));
     }
   } catch (error) {
     throw new UsageError(error instanceof Error ? error.message.split(". ")[0] : String(error));
   }
-  const values = /** @type {{ [K in keyof typeof OPTION_DEFS]?: typeof OPTION_DEFS[K]["type"] extends "boolean" ? boolean : string }} */ (parsed.values);
+  const values = parsed.values;
   const positionals = parsed.positionals.length ? parsed.positionals : config.targets ?? [];
   if (values.help) return { help: true, targets: [], planOnly: false, options: null };
 
@@ -140,8 +161,11 @@ export function parseRunArgs(command, argv, context = {}) {
     },
   };
   const server = { ...config.server };
-  for (const [flag, key] of [["server-command", "command"], ["server-url", "url"], ["server-timeout", "timeoutSeconds"], ["server-working-directory", "cwd"]]) {
-    if (values[flag] !== undefined) server[key] = key === "timeoutSeconds" ? Number(values[flag]) : values[flag];
+  /** @type {Array<["server-command" | "server-url" | "server-timeout" | "server-working-directory", string]>} */
+  const serverFlags = [["server-command", "command"], ["server-url", "url"], ["server-timeout", "timeoutSeconds"], ["server-working-directory", "cwd"]];
+  const serverFields = /** @type {Record<string, string | number | undefined>} */ (server);
+  for (const [flag, key] of serverFlags) {
+    if (values[flag] !== undefined) serverFields[key] = key === "timeoutSeconds" ? Number(values[flag]) : values[flag];
   }
   if (Object.keys(server).length && command !== "ci") throw new UsageError("Managed servers require the ci command.");
   if (Object.keys(server).length) {
@@ -150,7 +174,10 @@ export function parseRunArgs(command, argv, context = {}) {
   return { help: false, targets: positionals, planOnly: Boolean(values.plan), options, server: Object.keys(server).length ? server : null, config };
 }
 
-/** One line describing what a target resolved to. */
+/**
+ * One line describing what a target resolved to.
+ * @param {import("../types.js").PlanTarget} target
+ */
 export function describeTarget(target) {
   if (target.status === "failed") return `failed: ${target.reason}`;
   const r = target.resolved ?? {};
@@ -175,7 +202,10 @@ function printSummary(plan, planPath, planOnly, io) {
   io.stdout.write(`${lines.join("\n")}\n`);
 }
 
-/** Warn when installed tool versions differ from the ones a saved plan recorded. */
+/**
+ * Warn when installed tool versions differ from the ones a saved plan recorded.
+ * @param {ReturnType<typeof parsePlan>} plan
+ */
 function versionWarnings(plan) {
   const now = readToolVersions({ chromium: plan.tools.chromium });
   return Object.entries(plan.tools)
@@ -240,6 +270,11 @@ export async function runCommand(command, argv, io) {
   }
 }
 
+/**
+ * @param {"audit" | "compare" | "ci"} command
+ * @param {ParsedRun} parsed
+ * @param {Io} io
+ */
 async function runParsedCommand(command, parsed, io) {
   const options = /** @type {NonNullable<typeof parsed.options>} */ (parsed.options);
   let browserVersion = null;
@@ -267,7 +302,11 @@ async function runParsedCommand(command, parsed, io) {
   return executePlan(plan, { planOnly: parsed.planOnly }, io);
 }
 
-/** `run --plan <file>`: re-run a saved plan. */
+/**
+ * `run --plan <file>`: re-run a saved plan.
+ * @param {string[]} argv
+ * @param {Io} io
+ */
 export async function runSavedPlan(argv, io) {
   let parsed;
   try {

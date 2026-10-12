@@ -4,7 +4,12 @@
  */
 import { markingSource } from "./marking.js";
 
+/** @param {string} text */
 const cap = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+/**
+ * @param {string} text
+ * @param {number} spaces
+ */
 const indentBy = (text, spaces) => text.split("\n").map((line) => (line ? " ".repeat(spaces) + line : line)).join("\n");
 
 /** @typedef {{ id: string, extension: string, openProps: string[][], labelFor: string, click: (action: string) => string, fragment: (inner: string) => string, when: (condition: string, markup: string) => string, declare: (name: string, init: string) => string, read: (name: string) => string, write: (name: string, value: string) => string, attr: (name: string, expr: string) => string, frame: (archetype: string, pkg: string, body: string, hooks?: string) => string }} Dialect */

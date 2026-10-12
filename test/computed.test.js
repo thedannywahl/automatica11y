@@ -85,6 +85,7 @@ test("a state-dependent failure names the state that failed", { skip, timeout: 6
 });
 
 test("the focus check says how it measured: styles for a ring on the control, pixels for anything else", { skip, timeout: 60_000 }, async () => {
+  /** @param {string} page */
   const method = async (page) => (await runComputed(session.browser, `${server.origin}/${page}.html`, "button")).checks.find((c) => c.name === "focus-indicator-contrast").method;
   assert.equal(await method("good"), "computed-style");
   assert.equal(await method("focus-ring-child"), "pixels");

@@ -6,6 +6,7 @@
     "moduleResolution": "nodenext",
     "target": "es2022",
     "strict": false,
+    "noImplicitAny": true,
     "skipLibCheck": true,
     "types": [
       "node"

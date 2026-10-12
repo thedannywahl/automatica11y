@@ -1,3 +1,5 @@
+/** @typedef {Node & { assignedSlot?: Node | null, host?: Node | null }} TreeNode */
+
 /**
  * Runs inside the page before any page script. It sets `window.__a11y`, a small kit the interaction checks use.
  * It reaches through open shadow roots, because fixtures often put the trigger or the options there.
@@ -5,23 +7,38 @@
  */
 export function installHelpers() {
   let uidCounter = 0;
+  /** @type {WeakMap<Node, number>} */
   const uids = new WeakMap();
+  /** @param {Node | null} el */
   const uid = (el) => {
     if (!el) return null;
     if (!uids.has(el)) uids.set(el, (uidCounter += 1));
     return uids.get(el);
   };
 
+  /** @type {Array<keyof CSSStyleDeclaration & keyof A11yFocusPart>} */
   const FOCUS_PROPS = ["outlineStyle", "outlineWidth", "outlineColor", "boxShadow", "borderTopStyle", "borderTopColor", "borderTopWidth", "backgroundColor", "color", "textDecorationLine"];
+  /** @param {Element | null} el */
   const snapshotOf = (el) => {
     if (!el) return null;
+    /**
+     * @param {Element} node
+     * @param {string} [pseudo]
+     * @returns {A11yFocusPart | null}
+     */
     const read = (node, pseudo) => {
       const s = getComputedStyle(node, pseudo);
       if (pseudo && (s.content === "none" || s.content === "normal")) return null;
       const box = node.getBoundingClientRect();
-      return { ...Object.fromEntries(FOCUS_PROPS.map((key) => [key, s[key]])), rendered: s.display !== "none" && s.visibility !== "hidden" && Number(s.opacity) > 0 && box.width > 0 && box.height > 0 };
+      return /** @type {A11yFocusPart} */ ({ ...Object.fromEntries(FOCUS_PROPS.map((key) => [key, s[key]])), rendered: s.display !== "none" && s.visibility !== "hidden" && Number(s.opacity) > 0 && box.width > 0 && box.height > 0 });
     };
+    /** @type {Record<string, A11yFocusPart>} */
     const parts = {};
+    /**
+     * @param {string} key
+     * @param {Element} node
+     * @param {string} [pseudo]
+     */
     const add = (key, node, pseudo) => {
       const part = read(node, pseudo);
       if (part) parts[key] = part;
@@ -34,12 +51,18 @@ export function installHelpers() {
     return { parts, box: { x: box.x, y: box.y, width: box.width, height: box.height } };
   };
 
-  /** All matches in the document and in every open shadow root. */
-  const queryAllDeep = (selector, root = /** @type {Document | ShadowRoot} */ (document)) => {
+  /**
+   * All matches in the document and in every open shadow root.
+   * @param {string} selector
+   * @param {Document | ShadowRoot} [root]
+   * @returns {Element[]}
+   */
+  const queryAllDeep = (selector, root = document) => {
     const found = [...root.querySelectorAll(selector)];
     for (const el of root.querySelectorAll("*")) if (el.shadowRoot) found.push(...queryAllDeep(selector, el.shadowRoot));
     return found;
   };
+  /** @param {string} selector */
   const queryDeep = (selector) => queryAllDeep(selector)[0] ?? null;
 
   const deepActive = () => {
@@ -47,7 +70,11 @@ export function installHelpers() {
     while (active && active.shadowRoot && active.shadowRoot.activeElement) active = active.shadowRoot.activeElement;
     return active;
   };
-  /** True when `node` is `root` or sits inside it, across shadow boundaries. */
+  /**
+   * True when `node` is `root` or sits inside it, across shadow boundaries.
+   * @param {Node | null} root
+   * @param {TreeNode | null} node
+   */
   const within = (root, node) => {
     while (node) {
       if (node === root) return true;
@@ -55,22 +82,35 @@ export function installHelpers() {
     }
     return false;
   };
+  /** @param {Element | null} el */
   const visible = (el) => {
     if (!el || el.getClientRects().length === 0) return false;
     const style = getComputedStyle(el);
     return style.visibility !== "hidden" && style.display !== "none";
   };
-  const byId = (el, id) => (el.getRootNode().getElementById ? el.getRootNode().getElementById(id) : document.getElementById(id));
+  /**
+   * @param {Element} el
+   * @param {string} id
+   */
+  const byId = (el, id) => {
+    const root = /** @type {Document | ShadowRoot} */ (el.getRootNode());
+    return root.getElementById ? root.getElementById(id) : document.getElementById(id);
+  };
+  /** @param {Node | null} el */
   const text = (el) => (el?.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 80);
 
-  /** The text a person sees in an element, following slots to the text assigned to them. */
+  /**
+   * The text a person sees in an element, following slots to the text assigned to them.
+   * @param {Node | null} el
+   */
   const flatText = (el) => {
     if (!el) return "";
     let out = "";
+    /** @param {Node} node */
     const walk = (node) => {
       if (node.nodeType === 3) out += node.nodeValue;
-      else if (node.nodeType === 1 && node.localName === "slot") {
-        const assigned = node.assignedNodes({ flatten: true });
+      else if (node.nodeType === 1 && /** @type {Element} */ (node).localName === "slot") {
+        const assigned = /** @type {HTMLSlotElement} */ (node).assignedNodes({ flatten: true });
         (assigned.length ? assigned : [...node.childNodes]).forEach(walk);
       } else if (node.nodeType === 1) node.childNodes.forEach(walk);
     };
@@ -86,17 +126,25 @@ export function installHelpers() {
     return (pointed && byId(active, pointed)) || active;
   };
 
+  /** @type {Record<string, string>} */
   const LIVE_ROLES = { alert: "assertive", status: "polite", log: "polite", marquee: "off", timer: "off" };
-  /** How a live region announces: its aria-live value if it has a valid one, otherwise what its role implies. */
+  /**
+   * How a live region announces: its aria-live value if it has a valid one, otherwise what its role implies.
+   * @param {Element} el
+   */
   const politeness = (el) => {
     const set = (el.getAttribute("aria-live") ?? "").trim().toLowerCase();
     if (["off", "polite", "assertive"].includes(set)) return set;
     return LIVE_ROLES[el.getAttribute("role") ?? ""] ?? "off";
   };
+  /** @param {Element} el */
   const isLiveElement = (el) => Object.hasOwn(LIVE_ROLES, el.getAttribute("role") ?? "") || el.hasAttribute("aria-live");
-  /** The closest element, from `el` upward, that is a live region or has an aria-live attribute. */
+  /**
+   * The closest element, from `el` upward, that is a live region or has an aria-live attribute.
+   * @param {Element} el
+   */
   const liveRegionOf = (el) => {
-    for (let node = el; node; node = node.assignedSlot || node.parentElement || node.getRootNode?.().host) if (node.nodeType === 1 && isLiveElement(node)) return node;
+    for (let node = el; node; node = node.assignedSlot || node.parentElement || /** @type {ShadowRoot} */ (node.getRootNode?.()).host) if (node.nodeType === 1 && isLiveElement(node)) return node;
     return null;
   };
 
@@ -121,7 +169,7 @@ export function installHelpers() {
         triggerTag: trigger?.localName ?? null,
         triggerRole: trigger?.getAttribute("role") ?? null,
         // A native disclosure (<summary> in <details>) says whether it's open with the details element's own state, not an attribute.
-        expanded: trigger?.getAttribute("aria-expanded") ?? (trigger?.localName === "summary" && trigger.parentElement?.localName === "details" ? String(trigger.parentElement.open) : null),
+        expanded: trigger?.getAttribute("aria-expanded") ?? (trigger?.localName === "summary" && trigger.parentElement?.localName === "details" ? String(/** @type {HTMLDetailsElement} */ (trigger.parentElement).open) : null),
         rootExists: Boolean(root),
         rootVisible: visible(root),
         rootModal: root?.getAttribute("aria-modal") === "true" || root?.getAttribute("role") === "alertdialog",
@@ -134,7 +182,10 @@ export function installHelpers() {
         bodyActive: !active || active === document.body,
       };
     },
-    /** Items for a role selector, with which one is active and which are selected. */
+    /**
+     * Items for a role selector, with which one is active and which are selected.
+     * @param {string} selector
+     */
     items(selector) {
       const target = activeTarget();
       return queryAllDeep(selector).map((el) => ({
@@ -153,7 +204,7 @@ export function installHelpers() {
       // A web component can keep the role on a wrapper inside its shadow root, around a slot that shows the message.
       if (!region && root?.shadowRoot) region = [...root.shadowRoot.querySelectorAll("[role], [aria-live]")].find((el) => isLiveElement(el) && el.querySelector("slot")) ?? null;
       const chain = [];
-      for (let node = root; node && chain.length < 200; node = node.assignedSlot || node.parentElement || node.getRootNode?.().host) chain.push(uid(node));
+      for (let node = root; node && chain.length < 200; node = node.assignedSlot || node.parentElement || /** @type {ShadowRoot} */ (node.getRootNode?.()).host) chain.push(uid(node));
       return {
         /** The message and everything above it, so a later check can tell whether the region's element was already in the page. */
         ancestorUids: chain,
@@ -168,14 +219,14 @@ export function installHelpers() {
     /** Move focus to the first control inside the message, such as a dismiss button. Returns what it found. */
     focusDismiss() {
       const root = queryDeep("[data-a11y-root]");
-      const control = root ? [...root.querySelectorAll('button, a[href], input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])')].find(visible) : null;
+      const control = root ? /** @type {HTMLElement[]} */ ([...root.querySelectorAll('button, a[href], input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])')]).find(visible) : null;
       if (!control) return { found: false };
       control.focus();
       return { found: true, tag: control.localName, label: text(control) || control.getAttribute("aria-label") || "" };
     },
     /** The name a control gets from its label, in the order browsers use. */
     nameSources() {
-      const control = queryDeep("[data-a11y-trigger]");
+      const control = /** @type {HTMLInputElement | null} */ (queryDeep("[data-a11y-trigger]"));
       if (!control) return null;
       const sources = [];
       if (control.labels && control.labels.length) sources.push("label element");
@@ -210,7 +261,7 @@ export function installHelpers() {
       return snapshotOf(window.__a11yLast);
     },
     inputValue() {
-      const el = queryDeep("[data-a11y-trigger]");
+      const el = /** @type {HTMLInputElement | null} */ (queryDeep("[data-a11y-trigger]"));
       return el ? (el.value ?? el.textContent ?? "").toString().trim() : null;
     },
   };

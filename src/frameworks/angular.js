@@ -16,6 +16,7 @@ const FLOOR = ANGULAR_FLOOR;
 /**
  * Does a peer range allow Angular 22 or newer? A part counts when it names version 22 or later, or has no upper limit (`>=15`, `*`).
  * `^20 || ^21` doesn't, and `^21 || ^22` does.
+ * @param {string} range
  */
 function allowsSupported(range) {
   return String(range)
@@ -33,6 +34,7 @@ function allowsSupported(range) {
  * Loads the compiler, then the whole target, and records what each Angular export is: its kind, selectors, inputs, outputs,
  * `exportAs`, and whether it's standalone. Services get their method names, and modules the classes they declare.
  * Exports with no Angular definition (functions, tokens, types) are left out.
+ * @param {string} pkg
  */
 export const discoverEntry = (pkg) => `import "@angular/compiler";
 import * as lib from ${JSON.stringify(pkg)};
@@ -74,6 +76,9 @@ window.__a11yExports = out;
  * Mounts a fixture. The runtime compiler goes first. `zone.js` is loaded only when a library brought it in, because Angular 22
  * runs without it. The fixture's default export is its component class, and an optional `providers` export adds application providers.
  * A failure to start is logged and kept on `window.__error`, so the report can say why.
+ * @param {string} fixturePath
+ * @param {string} _pkg
+ * @param {{ zone?: boolean }} [context]
  */
 export const entry = (fixturePath, _pkg, context = {}) => `import "@angular/compiler";
 ${context.zone ? 'import "zone.js";\n' : ""}import { bootstrapApplication } from "@angular/platform-browser";
@@ -92,6 +97,10 @@ try {
 /**
  * A fixture for a button or a link, from the class's own selector. A class that isn't standalone is imported through its module.
  * A class whose selector can't be written from its name alone (a class name, a :not() form) is left for a person to write.
+ * @param {string} archetype
+ * @param {string} pkg
+ * @param {string} exportName
+ * @param {{ angular?: { kind: string, selectors?: unknown[][], standalone?: boolean, moduleName?: string | null } }} [info]
  */
 export function template(archetype, pkg, exportName, info) {
   const want = { button: "button", link: "a" }[archetype];
@@ -113,7 +122,11 @@ export default Fixture;
 `;
 }
 
-/** Keeps one copy of every Angular package and of rxjs, so a library and a fixture never load two. Secondary entry points need the resolver, not an alias. */
+/**
+ * Keeps one copy of every Angular package and of rxjs, so a library and a fixture never load two. Secondary entry points need the resolver, not an alias.
+ * @param {string} workDir
+ * @returns {import("esbuild").Plugin}
+ */
 function singleCopy(workDir) {
   return {
     name: "single-angular-copy",
@@ -140,7 +153,10 @@ export default {
   noun: "export",
   extension: "js",
   runtime: ["@angular/core", "@angular/common", "@angular/compiler", "@angular/platform-browser", "rxjs"],
-  /** @returns {import("./index.js").AdapterDetection | null} */
+  /**
+   * @param {import("./index.js").PackageMeta} meta
+   * @returns {import("./index.js").AdapterDetection | null}
+   */
   detect(meta) {
     const peers = meta.peerDependencies ?? {};
     const deps = meta.dependencies ?? {};
@@ -150,13 +166,13 @@ export default {
     return { kind: "npm-angular", framework: "Angular", reason: `The package lists @angular/core as a ${"@angular/core" in peers ? "peer dependency" : "dependency"}.` };
   },
   /** What the install left behind that the entry needs to know about. */
-  inspect: (workDir) => ({ zone: existsSync(join(workDir, "node_modules", "zone.js")) }),
+  inspect: (/** @type {string} */ workDir) => ({ zone: existsSync(join(workDir, "node_modules", "zone.js")) }),
   // Fixtures can be TypeScript. esbuild strips the types, and legacy decorators are what Angular's JIT reads. It can't emit
   // constructor parameter metadata, so a TypeScript fixture gets its services from inject().
-  bundle: (workDir) => ({ alias: {}, plugins: [singleCopy(workDir)], esbuild: { tsconfigRaw: { compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false } } } }),
+  bundle: (/** @type {string} */ workDir) => ({ alias: {}, plugins: [singleCopy(workDir)], esbuild: { tsconfigRaw: { compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false } } } }),
   entry,
   discoverEntry,
   template,
-  generate: (input) => generateAngular(input),
-  describe: (npm) => `Angular${npm.angular ? ` (core ${npm.angular})` : ""}`,
+  generate: (/** @type {import("./index.js").GenerateInput} */ input) => generateAngular(input),
+  describe: (/** @type {{ angular?: string }} */ npm) => `Angular${npm.angular ? ` (core ${npm.angular})` : ""}`,
 };

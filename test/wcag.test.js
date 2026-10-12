@@ -7,6 +7,7 @@ import { ARCHETYPE_CHECKS, COMMON } from "../src/tiers/interactions/archetypes.j
 import { allCriteria, criterion, criterionFromDigits, criterionName, criterionRef, inVersion, wcagAttribution, wcagSource } from "../src/wcag/index.js";
 import { criteriaCell } from "../src/report/parts.js";
 
+/** @param {string} path */
 const read = (path) => readFileSync(new URL(path, import.meta.url));
 
 test("the WCAG file is the W3C's, byte for byte", () => {

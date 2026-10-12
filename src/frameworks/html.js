@@ -14,7 +14,10 @@ const SCRIPT = /\.(m?js)$/i;
 export const isStyle = (subpath) => Boolean(subpath && STYLE.test(subpath));
 /** @param {string | null | undefined} subpath */
 export const isScript = (subpath) => Boolean(subpath && SCRIPT.test(subpath));
-/** Is this sub-path a file the page loads, rather than something a framework imports? */
+/**
+ * Is this sub-path a file the page loads, rather than something a framework imports?
+ * @param {string | null | undefined} subpath
+ */
 export const isAsset = (subpath) => isStyle(subpath) || isScript(subpath);
 
 /**
@@ -23,7 +26,7 @@ export const isAsset = (subpath) => isStyle(subpath) || isScript(subpath);
  * @returns {{ styles: string[], scripts: string[] }}
  */
 export function assetsOf(entries) {
-  const spec = (entry) => `${entry.name}/${entry.subpath}`;
+  const spec = (/** @type {{ name: string, subpath: string | null }} */ entry) => `${entry.name}/${entry.subpath}`;
   return {
     styles: entries.filter((entry) => isStyle(entry.subpath)).map(spec),
     scripts: entries.filter((entry) => isScript(entry.subpath)).map(spec),
@@ -33,7 +36,7 @@ export function assetsOf(entries) {
 /**
  * Does the registry's metadata say a package is plain HTML and CSS? It has to ship a stylesheet or a browser script, and it can't
  * need a framework (those are decided before this runs).
- * @param {any} meta
+ * @param {import("./index.js").PackageMeta} meta
  */
 export function shipsBrowserAssets(meta) {
   if (typeof meta?.style === "string" || typeof meta?.unpkg === "string" || typeof meta?.jsdelivr === "string") return true;
@@ -41,7 +44,10 @@ export function shipsBrowserAssets(meta) {
   return keys.some((key) => STYLE.test(key) || /\.(iife|umd)\.m?js$/.test(key));
 }
 
-/** Does the package have a JavaScript entry to import? Then loading it is what tells plain HTML from web components. */
+/**
+ * Does the package have a JavaScript entry to import? Then loading it is what tells plain HTML from web components.
+ * @param {import("./index.js").PackageMeta} meta
+ */
 function hasScriptEntry(meta) {
   if (typeof meta?.main === "string" || typeof meta?.module === "string") return true;
   const exported = meta?.exports;
@@ -142,7 +148,10 @@ export default {
   noun: "element",
   extension: "html",
   runtime: [],
-  /** @returns {import("./index.js").AdapterDetection | null} */
+  /**
+   * @param {import("./index.js").PackageMeta} meta
+   * @returns {import("./index.js").AdapterDetection | null}
+   */
   detect(meta) {
     // A package that also has a JavaScript entry could be web components, so the run decides after it loads the package.
     if (!shipsBrowserAssets(meta) || hasScriptEntry(meta)) return null;
@@ -154,9 +163,9 @@ export default {
   entry,
   discoverEntry: () => "window.__a11yExports = [];\n",
   template: (/** @type {string} */ archetype) => TEMPLATES[/** @type {keyof typeof TEMPLATES} */ (archetype)] ?? null,
-  generate: () => ({ candidates: [], reason: "Plain HTML has no exports or selectors to build a fixture from." }),
-  describe: (npm) => {
-    const loaded = /** @type {any} */ (npm).assets;
+  generate: /** @returns {import("./index.js").GenerateResult} */ () => ({ candidates: [], reason: "Plain HTML has no exports or selectors to build a fixture from." }),
+  describe: (/** @type {{ assets?: { styles: string[], scripts: string[] } }} */ npm) => {
+    const loaded = npm.assets;
     return `plain HTML${loaded ? ` (${loaded.styles.length} ${loaded.styles.length === 1 ? "stylesheet" : "stylesheets"}, ${loaded.scripts.length} ${loaded.scripts.length === 1 ? "script" : "scripts"})` : ""}`;
   },
 };

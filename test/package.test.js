@@ -7,7 +7,10 @@ import { test } from "node:test";
 const root = new URL("../", import.meta.url).pathname;
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 
-/** What `npm pack` would put in the tarball, without writing one. */
+/**
+ * What `npm pack` would put in the tarball, without writing one.
+ * @returns {{ files: { path: string, size: number }[] }}
+ */
 function packed() {
   const out = execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], { cwd: root, encoding: "utf8" });
   return JSON.parse(out)[0];
@@ -46,6 +49,7 @@ test("the tarball holds the tool, the skill, the docs, and the license, and noth
 
 test("every dependency the code imports is a real dependency", () => {
   const imports = new Set();
+  /** @param {string} dir */
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const path = join(dir, entry.name);

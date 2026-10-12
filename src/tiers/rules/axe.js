@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { criterionFromDigits } from "../../wcag/index.js";
 
 const require = createRequire(import.meta.url);
+/** @type {string | null} */
 let axeSource = null;
 
 /** Hand AxeBuilder our own axe-core, so the version we record is the version that ran. */
@@ -11,7 +12,11 @@ function loadAxe() {
   return axeSource;
 }
 
-/** Tag sets that match a WCAG version and level. Best-practice rules aren't WCAG, so they stay out. */
+/**
+ * Tag sets that match a WCAG version and level. Best-practice rules aren't WCAG, so they stay out.
+ * @param {string} wcag
+ * @param {string} level
+ */
 export function axeTags(wcag, level) {
   const tags = ["wcag2a"];
   if (level !== "A") tags.push("wcag2aa");
@@ -28,17 +33,27 @@ export function axeTags(wcag, level) {
   return tags;
 }
 
-/** `wcag143` becomes `1.4.3`, using the W3C's list of criteria. Returns null for tags that aren't success criteria. */
+/**
+ * `wcag143` becomes `1.4.3`, using the W3C's list of criteria. Returns null for tags that aren't success criteria.
+ * @param {string} tag
+ */
 function criterionFromTag(tag) {
   const match = /^wcag(\d{3,4})$/.exec(tag);
   return match ? (criterionFromDigits(match[1])?.num ?? null) : null;
 }
 
-/** An axe target can be nested for iframes and shadow roots. Flatten it to one readable selector. */
+/**
+ * An axe target can be nested for iframes and shadow roots. Flatten it to one readable selector.
+ * @param {import("axe-core").NodeResult["target"]} target
+ */
 function selectorFor(target) {
   return (Array.isArray(target) ? target.flat(Infinity) : [target]).join(" ");
 }
 
+/**
+ * @param {import("axe-core").Result[]} items
+ * @param {number} maxNodes
+ */
 function normalize(items, maxNodes) {
   return items.map((item) => ({
     ruleId: item.id,

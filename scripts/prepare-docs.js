@@ -9,7 +9,7 @@ const publicDir = join(docs, "public");
 const skillSources = [
   {
     source: "skills/automatica11y-runner/references/fixtures.md",
-    destination: "fixtures.md",
+    destination: "writing-fixtures.md",
   },
   {
     source: "skills/automatica11y-runner/SKILL.md",
@@ -58,8 +58,7 @@ export function prepareDocs() {
 - [Options and exit codes](https://automatica11y.dev/options)
 - [GitHub Action](https://automatica11y.dev/github-action)
 - [Reading a report](https://automatica11y.dev/reports)
-- [npm packages and fixtures](https://automatica11y.dev/npm-packages)
-- [Writing fixtures](https://automatica11y.dev/fixtures)
+- [Writing fixtures](https://automatica11y.dev/writing-fixtures)
 - [Using it with an AI agent](https://automatica11y.dev/agents)
 - [The agent steps](https://automatica11y.dev/agent-steps)
 - [Limits](https://automatica11y.dev/limits)

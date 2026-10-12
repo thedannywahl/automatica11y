@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { explainFrameworkError } from "../frameworks/errors.js";
 import { probeFixture } from "../harness/generate/probe.js";
 
-const firstLine = (error) => explainFrameworkError((error instanceof Error ? error.message : String(error)).split("\n").find((l) => l.trim()) ?? "unknown error");
+const firstLine = (/** @type {unknown} */ error) => explainFrameworkError((error instanceof Error ? error.message : String(error)).split("\n").find((l) => l.trim()) ?? "unknown error");
 
 /**
  * Build a fixture for an archetype from what discovery found, and keep it only if it works.
@@ -40,7 +40,7 @@ export async function generateFixture({ browser, adapter, archetype, entry, foun
     writeFileSync(file, candidate.source);
     const entryFile = join(tmp, "entries", `${name}.js`);
     writeFileSync(entryFile, adapter.entry(file, pkg, context));
-    return { candidate, name, file, entryFile, bundled: null };
+    return { candidate, name, file, entryFile, bundled: /** @type {boolean | string | null} */ (null) };
   });
 
   // One build for every candidate. If a single bad one breaks it, build them one by one so the rest still get a chance.

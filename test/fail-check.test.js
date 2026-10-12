@@ -18,6 +18,12 @@ function target(id, { axe, ibm, status = "ran" } = {}) {
   return parse(TargetResultSchema, { id, status, reason: null, summary: { engines: {}, gaps: [], notTestable: [] }, warnings: [], archetypes: { page: { status: "ran", configs: [{ libA11y: "n/a", tiers: { rules: { status: "ran", engines } } }] } } });
 }
 
+/** @typedef {import("../src/types.js").FailConfig} FailConfig */
+
+/**
+ * @param {string} ruleId
+ * @returns {import("../src/types.js").Finding}
+ */
 function finding(ruleId) {
   return { ruleId, impact: null, wcag: [], help: "Review", helpUrl: "", nodeCount: 0, nodes: [] };
 }
@@ -29,6 +35,10 @@ test("no fail flags means no check", () => {
 });
 
 test("--fail-on-axe alone counts axe violations at or above the impact", () => {
+  /**
+   * @param {FailConfig["axe"]} axe
+   * @returns {FailConfig}
+   */
   const fail = (axe) => ({ mode: "any", axe, ibm: null });
   const t = [target("a", { axe: { impacts: ["minor", "serious"] }, ibm: { levels: [1, 1, 1] } })];
   assert.equal(evaluateFailCheck(t, fail("critical")).tripped, false);
@@ -40,6 +50,10 @@ test("--fail-on-axe alone counts axe violations at or above the impact", () => {
 });
 
 test("--fail-on-ibm alone counts IBM violations at or below the Toolkit level", () => {
+  /**
+   * @param {FailConfig["ibm"]} ibm
+   * @returns {FailConfig}
+   */
   const fail = (ibm) => ({ mode: "any", axe: null, ibm });
   const t = [target("a", { axe: { impacts: ["critical"] }, ibm: { levels: [2, 3] } })];
   assert.equal(evaluateFailCheck(t, fail(1)).tripped, false);
@@ -80,6 +94,7 @@ test("an engine that failed, or a target that failed, counts as no hit", () => {
 });
 
 test("with compare, any target tripping trips the run, and each target is recorded", () => {
+  /** @type {FailConfig} */
   const fail = { mode: "any", axe: "serious", ibm: null };
   const result = evaluateFailCheck([target("clean", { axe: { impacts: [] } }), target("bad", { axe: { impacts: ["critical"] } })], fail);
   assert.equal(result.tripped, true);
@@ -125,6 +140,8 @@ test("manual engine review findings are opt-in and not coverage gaps", () => {
 test("non-rule failures, undetermined checks, story failures and truncation have separate policies", () => {
   const result = target("page");
   result.archetypes.page.configs[0].tiers = { computed: { status: "ran", checks: [{ name: "contrast", result: "fail", detail: "Low contrast" }] } };
+  /** @type {Parameters<typeof evaluateOutcome>[1]} */
+  /** @type {Parameters<typeof evaluateOutcome>[1]} */
   const options = { tiers: ["computed"], engines: [], policy: { incomplete: true, checks: false } };
   assert.equal(evaluateOutcome([result], options, null).status, "passed");
   options.policy.checks = true;

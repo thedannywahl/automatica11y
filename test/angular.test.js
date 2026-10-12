@@ -17,12 +17,17 @@ const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
 const angular = adapterFor("angular");
 
+/**
+ * @param {string[]} args
+ * @param {Record<string, string>} [files]
+ */
 async function run(args, files = {}) {
   const cwd = makeTree(files);
   const { io, out } = makeIo({ cwd, env: process.env });
   io.npmView = npmView;
   io.installPackage = installPackage;
   const code = await main(args, io);
+  /** @param {string} file */
   const read = (file) => {
     try {
       return readFileSync(join(cwd, "a11y-report", file), "utf8");
@@ -165,6 +170,14 @@ test("Angular: the real Angular Material button is covered by a template", { ski
 
 // ---- generated fixtures ----
 
+/** @typedef {Parameters<typeof generateAngular>[0]["exports"][number]} Part */
+
+/**
+ * @param {string} name
+ * @param {string} kind
+ * @param {Partial<NonNullable<Part["angular"]>>} [extra]
+ * @returns {Part & { type: string, parts: string[] }}
+ */
 const record = (name, kind, extra = {}) => ({ name, type: "function", parts: [], angular: { kind, standalone: true, selectors: [], inputs: [], outputs: [], exportAs: [], ...extra } });
 
 test("generated candidates are built from selectors, inputs, and exportAs names, and a package with none says why", () => {
@@ -259,11 +272,13 @@ export default class Fixture {
 });
 
 test("Angular: a library that peers on zone.js runs with it, and gives the same results as the same library without it", { skip, timeout: 400_000 }, async () => {
+  /** @param {string} name */
   const args = (name) => ["audit", `lib=npm:${name}`, "--archetypes", "button,dialog,menu,live-region", "--tiers", "rules,interactions,conditions"];
   const withZone = await run(args("fake-ng-zone"));
   const without = await run(args("fake-ng-ui"));
   assert.equal(withZone.code, 0, withZone.stderr);
   assert.equal(without.code, 0, without.stderr);
+  /** @param {Awaited<ReturnType<typeof run>>} result */
   const summarize = (result) => Object.fromEntries(Object.entries(result.results.targets[0].archetypes).map(([name, found]) => [name, {
     status: found.status,
     source: found.fixture?.source,

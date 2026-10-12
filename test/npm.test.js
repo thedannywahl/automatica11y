@@ -41,11 +41,16 @@ const WC_DIALOG = `export default function mount(container) {
 }
 `;
 
+/**
+ * @param {string[]} args
+ * @param {{ files?: Record<string, string>, cwd?: string, env?: NodeJS.ProcessEnv }} [options]
+ */
 async function run(args, { files = {}, cwd = makeTree(files), env = process.env } = {}) {
   const { io, out } = makeIo({ cwd, env });
   io.npmView = npmView;
   io.installPackage = installPackage;
   const code = await main(args, io);
+  /** @param {string} file */
   const read = (file) => {
     try {
       return JSON.parse(readFileSync(join(cwd, "a11y-report", file), "utf8"));
@@ -57,8 +62,18 @@ async function run(args, { files = {}, cwd = makeTree(files), env = process.env 
   return { code, ...out, cwd, results: results && parseResults(results), plan: read("plan.json"), mapping: read("mapping.json"), report: existsSync(join(cwd, "a11y-report", "report.md")) ? readFileSync(join(cwd, "a11y-report", "report.md"), "utf8") : null };
 }
 
+/** @typedef {Awaited<ReturnType<typeof run>>} RunResult */
+
 const leftovers = () => readdirSync(tmpdir()).filter((name) => name.startsWith("automatica11y-npm-"));
+/**
+ * @param {RunResult} run
+ * @param {string} name
+ */
 const archetype = (run, name, index = 0) => run.results.targets[index].archetypes[name];
+/**
+ * @param {import("../src/types.js").ConfigResult} config
+ * @param {string} engine
+ */
 const violations = (config, engine) => config.tiers.rules.engines[engine].violations.map((v) => v.ruleId).sort();
 
 test("detectFlavor: React wins, then web components, then Vue, then other frameworks, then unknown", () => {
@@ -82,6 +97,7 @@ test("detectFlavor says whether react is a peer dependency or a dependency", () 
 test("a package that peers on react but not react-dom gets react-dom without losing react", async () => {
   // The package's install left react behind as a peer. Adding react-dom loosely would prune it, so the call names both.
   const dir = makeTree({ "node_modules/react/package.json": JSON.stringify({ name: "react", version: "19.1.0" }) });
+  /** @type {string[][]} */
   const calls = [];
   const result = await realInstall({ dir, name: "pkg", version: "1.0.0", flavor: "react", run: async (args) => void calls.push(args) });
   assert.equal(calls.length, 2);
@@ -91,7 +107,9 @@ test("a package that peers on react but not react-dom gets react-dom without los
 });
 
 test("an install that says a version doesn't exist is retried once with fresh package data", async () => {
+  /** @type {string[][]} */
   const calls = [];
+  /** @param {string[]} args */
   const stale = async (args) => {
     calls.push(args);
     if (args.includes("--prefer-offline")) throw Object.assign(new Error("npm error code ETARGET\nnpm error notarget No matching version found for pkg@1.2.3."), { code: "NPM_FAILED" });
@@ -106,7 +124,9 @@ test("an install that says a version doesn't exist is retried once with fresh pa
 });
 
 test("an install that fails for another reason isn't retried, and a retry that fails says why", async () => {
+  /** @type {string[][]} */
   const calls = [];
+  /** @param {string[]} args */
   const down = async (args) => {
     calls.push(args);
     throw new Error("npm error code ENOTFOUND\nnpm error network request failed");
@@ -119,6 +139,7 @@ test("an install that fails for another reason isn't retried, and a retry that f
   await assert.rejects(realInstall({ dir: makeTree(), name: "pkg", version: "9.9.9", flavor: "wc", run: alwaysMissing }), /npm couldn't install pkg@9\.9\.9/);
 });
 
+/** @param {Record<string, Record<string, unknown>>} packages */
 function fakeInstall(packages) {
   const dir = mkdtempSync(join(tmpdir(), "a11y-peers-"));
   for (const [name, pkg] of Object.entries(packages)) {
@@ -139,6 +160,7 @@ test("the harness page puts the fixture inside a main landmark with a language a
 });
 
 test("unresolvedPackages names each missing package once and ignores relative paths", () => {
+  /** @param {string} name */
   const text = (name) => ({ text: `Could not resolve "${name}"` });
   assert.deepEqual(
     unresolvedPackages([text("@emotion/react"), text("@emotion/styled/base"), text("lodash/get"), text("./local.js"), text("lodash"), { text: "Something else" }]),
@@ -151,7 +173,9 @@ test("optional peers: only packages an installed library declares as optional ar
     "ui-lib": { peerDependencies: { "@emotion/react": "^11.0.0", react: "^19" }, peerDependenciesMeta: { "@emotion/react": { optional: true } } },
   });
   assert.deepEqual([...declaredOptionalPeers(dir)], [["@emotion/react", "^11.0.0"]]);
+  /** @type {string[][]} */
   const calls = [];
+  /** @type {NonNullable<Parameters<typeof installOptionalPeers>[0]["run"]>} */
   const run = async (args) => void calls.push(args);
   const result = await installOptionalPeers({ dir, unresolved: ["@emotion/react", "left-pad"], run });
   assert.deepEqual(result.installed, ["@emotion/react"]);
@@ -168,6 +192,7 @@ test("optional peers: an installed React is named again so the install can't pru
     react: { version: "19.1.0" },
     "react-dom": { version: "19.1.0" },
   });
+  /** @type {string[][]} */
   const calls = [];
   await installOptionalPeers({ dir, unresolved: ["@emotion/react"], run: async (args) => void calls.push(args) });
   assert.ok(calls[0].includes("react@19.1.0") && calls[0].includes("react-dom@19.1.0"));
@@ -175,6 +200,7 @@ test("optional peers: an installed React is named again so the install can't pru
 
 test("companion packages: the mapping's install list is installed beside the library, with React kept", async () => {
   const dir = fakeInstall({ react: { version: "19.1.0" }, "react-dom": { version: "19.1.0" } });
+  /** @type {string[][]} */
   const calls = [];
   const result = await installExtraPackages({ dir, specs: ["@scope/tokens", "theme@^2", "@scope/tokens"], run: async (args) => void calls.push(args) });
   assert.deepEqual(result.installed, ["@scope/tokens", "theme@^2"]);
@@ -211,7 +237,7 @@ test("optional peers: an install failure says which packages and why", async () 
 });
 
 test("candidateMapping: a button next to ButtonBase and ButtonGroup is still a template, but real parts make it a compound", () => {
-  const flat = candidateMapping({ flavor: "react", exports: ["Button", "ButtonBase", "ButtonGroup", "ButtonGroupContext"].map((name) => ({ name, type: "function", parts: [] })) });
+  const flat = candidateMapping({ flavor: "react", exports: ["Button", "ButtonBase", "ButtonGroup", "ButtonGroupContext"].map((name) => ({ name, type: "function", parts: /** @type {string[]} */ ([]) })) });
   assert.deepEqual([flat.button.export, flat.button.status], ["Button", "template"]);
   const parted = candidateMapping({ flavor: "react", exports: [{ name: "Button", type: "object", parts: ["Root", "Label"] }] });
   assert.equal(parted.button.status, "needs-fixture");
@@ -323,6 +349,7 @@ test("the virtual screen reader walks each state, and the logs differ between cl
   const [closed, open] = archetype(result, "dialog").configs;
   assert.equal(closed.tiers.vsr.log[0].state, "closed");
   assert.equal(open.tiers.vsr.log[0].state, "open");
+  /** @param {import("../src/types.js").ConfigResult} config */
   const said = (config) => config.tiers.vsr.log[0].announcements.join("|");
   assert.doesNotMatch(said(closed), /Edit profile/);
   assert.match(said(open), /\|dialog\b/);
@@ -407,6 +434,10 @@ test("--mapping points a target at its fixtures and overrides the export", { ski
 });
 
 test("--mapping errors exit 2", async () => {
+  /**
+   * @param {Record<string, string>} files
+   * @param {RegExp} pattern
+   */
   const bad = async (files, pattern) => {
     const result = await run(["audit", "ui=npm:fake-ui", "--mapping", "map.json", "--plan"], { files });
     assert.equal(result.code, 2, result.stderr);
@@ -478,6 +509,7 @@ test("an unsupported framework is named, and nothing is installed", { skip }, as
 });
 
 test("an install failure fails that target and the comparison goes on", { skip }, async () => {
+  /** @param {string} spec */
   const flaky = async (spec) => (spec.startsWith("flaky") ? { name: "flaky", version: "1.0.0", peerDependencies: { react: "*" } } : npmView(spec));
   const cwd = makeTree();
   const { io } = makeIo({ cwd, env: process.env });
@@ -485,6 +517,7 @@ test("an install failure fails that target and the comparison goes on", { skip }
   io.installPackage = installPackage;
   const code = await main(["compare", "npm:flaky", "npm:closed-wc", "--archetypes", "button", "--tiers", "rules"], io);
   assert.equal(code, 0);
+  /** @type {import("../src/types.js").Results} */
   const results = JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8"));
   assert.deepEqual(results.targets.map((t) => t.status), ["failed", "ran"]);
   assert.match(results.targets[0].reason, /npm couldn't install flaky@1\.0\.0/);
@@ -494,6 +527,10 @@ test("the same npm audit twice gives the same findings", { skip }, async () => {
   const files = { "fixtures/ui/dialog.jsx": REACT_DIALOG_BAD };
   const one = await run(["audit", "ui=npm:fake-ui", "--archetypes", "button,dialog", "--tiers", "rules"], { files });
   const two = await run(["audit", "ui=npm:fake-ui", "--archetypes", "button,dialog", "--tiers", "rules"], { files });
+  /**
+   * @param {Record<string, unknown>} r
+   * @returns {Record<string, unknown>}
+   */
   const strip = (r) => ({ ...r, runAt: null });
   assert.deepEqual(strip(two.results), strip(one.results));
 });

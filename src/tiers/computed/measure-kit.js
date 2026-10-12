@@ -10,7 +10,10 @@ export function installMeasure() {
   canvas.height = 1;
   const context = canvas.getContext("2d", { willReadFrequently: true });
 
-  /** Any CSS color to [r, g, b, a] in sRGB, or null. The canvas does the conversion, so modern color spaces work. */
+  /**
+   * Any CSS color to [r, g, b, a] in sRGB, or null. The canvas does the conversion, so modern color spaces work.
+   * @param {string} css
+   */
   const rgba = (css) => {
     if (!css || !context) return null;
     context.clearRect(0, 0, 1, 1);
@@ -21,15 +24,24 @@ export function installMeasure() {
     // The canvas stores premultiplied values, so a translucent color loses a little precision. That's fine for contrast.
     return a === 0 ? [0, 0, 0, 0] : [r, g, b, a / 255];
   };
+  /**
+   * @param {number[]} top
+   * @param {number[]} under
+   */
   const over = (top, under) => [0, 1, 2].map((i) => top[i] * top[3] + under[i] * (1 - top[3])).concat(1);
-  const parentOf = (el) => el.assignedSlot || el.parentElement || (el.getRootNode() instanceof ShadowRoot ? el.getRootNode().host : null);
+  /** @param {Element} el */
+  const parentOf = (el) => el.assignedSlot || el.parentElement || (el.getRootNode() instanceof ShadowRoot ? /** @type {ShadowRoot} */ (el.getRootNode()).host : null);
 
   /**
    * The opaque color behind an element: its ancestors' backgrounds laid over each other, ending at white.
    * `includeSelf` adds the element's own background. Gradients, images, and transparency can't be reduced to one color,
    * so those return a reason instead of a guess.
+   * @param {Element} el
+   * @param {boolean} includeSelf
+   * @returns {{ reason?: string, color?: number[] }}
    */
   const backdrop = (el, includeSelf) => {
+    /** @type {number[][]} */
     const layers = [];
     let node = includeSelf ? el : parentOf(el);
     for (let hops = 0; node && hops < 60; hops += 1) {
@@ -49,6 +61,7 @@ export function installMeasure() {
     return { color: result };
   };
 
+  /** @param {Element} el */
   const visibleBox = (el) => {
     const box = el.getBoundingClientRect();
     return box.width > 0 && box.height > 0;
@@ -59,8 +72,12 @@ export function installMeasure() {
     return active;
   };
   const trigger = () => {
+    /**
+     * @param {Document | ShadowRoot} root
+     * @returns {HTMLElement | null}
+     */
     const find = (root) => {
-      const hit = root.querySelector("[data-a11y-trigger]");
+      const hit = /** @type {HTMLElement | null} */ (root.querySelector("[data-a11y-trigger]"));
       if (hit) return hit;
       for (const el of root.querySelectorAll("*")) if (el.shadowRoot) { const inner = find(el.shadowRoot); if (inner) return inner; }
       return null;
@@ -68,8 +85,12 @@ export function installMeasure() {
     return find(document);
   };
 
-  /** Split a computed box-shadow list at its top-level commas. */
+  /**
+   * Split a computed box-shadow list at its top-level commas.
+   * @param {string} value
+   */
   const splitShadows = (value) => {
+    /** @type {string[]} */
     const out = [];
     let depth = 0;
     let start = 0;
@@ -81,6 +102,7 @@ export function installMeasure() {
     out.push(value.slice(start).trim());
     return out.filter(Boolean);
   };
+  /** @param {string} text */
   const parseShadow = (text) => {
     const color = /(rgba?\([^)]*\)|color\([^)]*\)|oklab\([^)]*\)|oklch\([^)]*\)|lab\([^)]*\)|lch\([^)]*\)|hsla?\([^)]*\)|#[0-9a-f]{3,8}|\b[a-z]+\b(?=\s|$))/i.exec(text.replace(/\binset\b/, ""));
     const rest = text.replace(/\binset\b/, "").replace(color ? color[0] : "", "");
@@ -88,8 +110,10 @@ export function installMeasure() {
     return { inset: /\binset\b/.test(text), x: x ?? 0, y: y ?? 0, blur: blur ?? 0, spread: spread ?? 0, color: color ? rgba(color[0]) : null };
   };
 
+  /** @type {WeakMap<Text | Element, number>} */
   const keys = new WeakMap();
   let keyCounter = 0;
+  const SIDES = /** @type {const} */ (["Top", "Right", "Bottom", "Left"]);
 
   window.__a11yMeasure = {
     rgba,
@@ -102,8 +126,15 @@ export function installMeasure() {
       const wholePage = scope === "page" || scope === "all";
       const el = trigger();
       if (!el && !wholePage) return null;
+      /** @type {A11yTextPart[]} */
       const parts = [];
+      /** @type {Set<Text | Element>} */
       const seen = new Set();
+      /**
+       * @param {Text | Element} textNode
+       * @param {string} label
+       * @param {Element} [own]
+       */
       const consider = (textNode, label, own) => {
         const host = own ?? textNode.parentElement;
         const node = own ?? textNode.assignedSlot ?? host;
@@ -126,10 +157,11 @@ export function installMeasure() {
           undetermined: behind.reason ?? (color ? null : "its color couldn't be read"),
         });
       };
+      /** @param {Document | ShadowRoot | Element} root */
       const walk = (root) => {
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, wholePage ? { acceptNode: (n) => (n.parentElement?.closest(scope === "all" ? "script, style, noscript" : "script, style, noscript, [data-a11y-trigger]") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) } : undefined);
         for (let node = walker.nextNode(); node && parts.length < (scope === "all" ? 300 : 30); node = walker.nextNode()) {
-          if (node.nodeValue && node.nodeValue.trim() && node.parentElement) consider(node, node.nodeValue);
+          if (node.nodeValue && node.nodeValue.trim() && node.parentElement) consider(/** @type {Text} */ (node), node.nodeValue);
         }
         if (wholePage) for (const host of root.querySelectorAll("*")) if (host.shadowRoot) walk(host.shadowRoot);
       };
@@ -149,11 +181,12 @@ export function installMeasure() {
       const parts = [];
       if (outside.color && inside.color) {
         parts.push({ kind: "fill", color: inside.color });
-        for (const side of ["Top", "Right", "Bottom", "Left"]) {
-          const border = parseFloat(style[`border${side}Width`]) > 0 && style[`border${side}Style`] !== "none" ? rgba(style[`border${side}Color`]) : null;
-          if (border && border[3] > 0) parts.push({ kind: `${side.toLowerCase()} border`, color: over(border, inside.color), width: parseFloat(style[`border${side}Width`]) });
+        for (const side of SIDES) {
+          const border = parseFloat(style[/** @type {const} */ (`border${side}Width`)]) > 0 && style[/** @type {const} */ (`border${side}Style`)] !== "none" ? rgba(style[/** @type {const} */ (`border${side}Color`)]) : null;
+          if (border && border[3] > 0) parts.push({ kind: `${side.toLowerCase()} border`, color: over(border, inside.color), width: parseFloat(style[/** @type {const} */ (`border${side}Width`)]) });
         }
       }
+      /** @type {Array<{ kind: string, color: number[] }>} */
       const graphics = [];
       for (const shape of el.querySelectorAll("svg path, svg circle, svg ellipse, svg rect, svg line, svg polyline, svg polygon")) {
         const s = getComputedStyle(shape);
@@ -179,15 +212,15 @@ export function installMeasure() {
       const style = getComputedStyle(el);
       const outside = backdrop(el, false);
       const inside = backdrop(el, true);
-      const side = ["Top", "Right", "Bottom", "Left"].find((name) => parseFloat(style[`border${name}Width`]) > 0 && style[`border${name}Style`] !== "none");
-      const border = side ? rgba(style[`border${side}Color`]) : null;
+      const side = SIDES.find((name) => parseFloat(style[/** @type {const} */ (`border${name}Width`)]) > 0 && style[/** @type {const} */ (`border${name}Style`)] !== "none");
+      const border = side ? rgba(style[/** @type {const} */ (`border${side}Color`)]) : null;
       return {
         outside: outside.color ?? null,
         inside: inside.color ?? null,
         undetermined: outside.reason ?? inside.reason ?? null,
         outline: style.outlineStyle !== "none" && parseFloat(style.outlineWidth) > 0 ? { width: parseFloat(style.outlineWidth), offset: parseFloat(style.outlineOffset) || 0, color: rgba(style.outlineColor) } : null,
         shadows: style.boxShadow === "none" ? [] : splitShadows(style.boxShadow).map(parseShadow),
-        border: border ? { width: parseFloat(style[`border${side}Width`]), color: border } : null,
+        border: border ? { width: parseFloat(style[/** @type {const} */ (`border${side}Width`)]), color: border } : null,
         box: (() => { const b = el.getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height }; })(),
       };
     },
@@ -196,7 +229,7 @@ export function installMeasure() {
      * its two colors. Used when a focus indicator isn't a plain outline or ring, such as a ripple or a background change.
      */
     async compareShots(before, after) {
-      const load = async (url) => {
+      const load = async (/** @type {string} */ url) => {
         const bitmap = await createImageBitmap(await (await fetch(url)).blob());
         const c = document.createElement("canvas");
         c.width = bitmap.width;
@@ -206,8 +239,8 @@ export function installMeasure() {
         return ctx.getImageData(0, 0, c.width, c.height);
       };
       const [a, b] = [await load(before), await load(after)];
-      const lin = (v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
-      const lum = (d, i) => 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
+      const lin = (/** @type {number} */ v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+      const lum = (/** @type {Uint8ClampedArray} */ d, /** @type {number} */ i) => 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
       let changed = 0;
       let strong = 0;
       let max = 1;

@@ -4,7 +4,13 @@ import { join } from "node:path";
 
 const NPM_FLAGS = ["--ignore-scripts", "--no-audit", "--no-fund", "--prefer-offline", "--loglevel=error"];
 
-/** Run npm in `cwd`. Resolves with stdout and rejects with npm's own words. */
+/**
+ * Run npm in `cwd`. Resolves with stdout and rejects with npm's own words.
+ * @param {string[]} args
+ * @param {string} cwd
+ * @param {{ timeoutMs?: number }} [options]
+ * @returns {Promise<string>}
+ */
 export function runNpm(args, cwd, { timeoutMs = 300_000 } = {}) {
   return new Promise((resolve, reject) => {
     execFile(
@@ -22,7 +28,11 @@ export function runNpm(args, cwd, { timeoutMs = 300_000 } = {}) {
 /** npm's local copy of a package list can lag behind the registry, so a version that exists looks missing. */
 const STALE_CACHE = /ETARGET|notarget|No matching version/i;
 
-/** The version of an installed package, or null. */
+/**
+ * The version of an installed package, or null.
+ * @param {string} dir
+ * @param {string} name
+ */
 export function installedVersion(dir, name) {
   try {
     return JSON.parse(readFileSync(join(dir, "node_modules", name, "package.json"), "utf8")).version ?? null;
@@ -43,7 +53,10 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
   /** @type {string[]} */
   const warnings = [];
   let refreshed = false;
-  /** Run npm. If it says a version doesn't exist, ask once more with fresh package data, since the version came from the registry. */
+  /**
+   * Run npm. If it says a version doesn't exist, ask once more with fresh package data, since the version came from the registry.
+   * @param {string[]} args
+   */
   const npm = async (args) => {
     try {
       return await run(args, dir);
@@ -191,6 +204,7 @@ export async function installOptionalPeers({ dir, unresolved, run = runNpm }) {
   return { installed: wanted, warnings: [`The library lists ${wanted.join(", ")} as optional peer dependencies and its code needs them to load, so they were installed.`] };
 }
 
+/** @param {unknown} text */
 function firstLine(text) {
   return String(text).split("\n").find((line) => line.trim())?.replace(/^npm (error|ERR!)\s*/i, "").trim() ?? "unknown error";
 }

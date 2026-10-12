@@ -19,10 +19,21 @@ import {
   targetSection,
 } from "./parts.js";
 
+/** @typedef {import("../types.js").Plan} Plan */
+/** @typedef {import("../types.js").PlanTarget} PlanTarget */
+/** @typedef {import("../types.js").Results} Results */
+/** @typedef {import("../types.js").TargetResult} TargetResult */
+/** @typedef {import("../types.js").ConfigResult} ConfigResult */
+/** @typedef {{ label: string, note?: string, configs?: ConfigResult[], always?: boolean }} Row */
+
 const TIER_ORDER = ["rules", "interactions", "computed", "conditions", "vsr"];
 
-/** The archetype rows: component archetypes in a fixed order, then whole pages, then Storybook stories. */
+/**
+ * The archetype rows: component archetypes in a fixed order, then whole pages, then Storybook stories.
+ * @param {Results} results
+ */
 function archetypeKeys(results) {
+  /** @type {Set<string>} */
   const keys = new Set();
   for (const target of results.targets) {
     for (const key of Object.keys(target.archetypes)) if (!key.startsWith("story:")) keys.add(key);
@@ -31,7 +42,13 @@ function archetypeKeys(results) {
   return [...ARCHETYPES.filter((a) => keys.has(a)), ...[...keys].filter((k) => !ARCHETYPES.includes(k) && k !== "page"), ...(keys.has("page") ? ["page"] : [])];
 }
 
-/** Configs for one target and one archetype row, as labeled lines for the findings table. */
+/**
+ * Configs for one target and one archetype row, as labeled lines for the findings table.
+ * @param {PlanTarget} planTarget
+ * @param {TargetResult} target
+ * @param {string} key
+ * @returns {Row[]}
+ */
 function rowsFor(planTarget, target, key) {
   // A target that failed outright has nothing per archetype. One whose archetypes were all gaps still says what each gap was.
   if (target.status !== "ran" && Object.keys(target.archetypes).length === 0) return [{ label: "-", note: `${target.status}: ${sentence(target.reason ?? "")}` }];
@@ -50,7 +67,11 @@ function rowsFor(planTarget, target, key) {
   return archetype.configs.map((config) => ({ label: configLabel(config).replace(/^ \(|\)$/g, "") || "-", configs: [config] }));
 }
 
-/** A coverage cell for one tier: what happened to that tier for the target and archetype. */
+/**
+ * A coverage cell for one tier: what happened to that tier for the target and archetype.
+ * @param {Row[]} rows
+ * @param {string} tier
+ */
 function tierStatus(rows, tier) {
   const row = rows[0];
   if (row.note) return row.note.split(":")[0];
@@ -60,6 +81,12 @@ function tierStatus(rows, tier) {
   return statuses.includes("ran") ? "partly ran" : statuses[0];
 }
 
+/**
+ * @param {Plan} plan
+ * @param {Results} results
+ * @param {string} tier
+ * @param {string[]} keys
+ */
 function coverageTable(plan, results, tier, keys) {
   const head = ["Archetype", ...results.targets.map((t) => t.id)];
   const lines = [`| ${head.join(" | ")} |`, `| ${head.map(() => "---").join(" | ")} |`];
@@ -80,10 +107,16 @@ function coverageTable(plan, results, tier, keys) {
   return lines;
 }
 
-/** Rule IDs for one engine across configs, with element counts, for a findings cell. */
+/**
+ * Rule IDs for one engine across configs, with element counts, for a findings cell.
+ * @param {ConfigResult[]} configs
+ * @param {string} engine
+ */
 function ruleCell(configs, engine) {
+  /** @type {Map<string, number>} */
   const found = new Map();
   let review = 0;
+  /** @type {string[]} */
   let statuses = [];
   for (const config of configs) {
     const result = config.tiers.rules?.engines?.[engine];
@@ -101,6 +134,7 @@ function ruleCell(configs, engine) {
   return `${text}${review ? `; ${num(review)} to review` : ""}`;
 }
 
+/** @param {ConfigResult[]} configs */
 function interactionsCell(configs) {
   const checks = configs.flatMap((c) => c.tiers.interactions?.checks ?? []);
   if (checks.length === 0) return configs.map((c) => c.tiers.interactions?.status).find(Boolean) ?? "-";
@@ -110,6 +144,10 @@ function interactionsCell(configs) {
   return parts.filter(Boolean).join("; ");
 }
 
+/**
+ * @param {ConfigResult[]} configs
+ * @param {string} tier
+ */
 function measuredCell(configs, tier) {
   const checks = configs.flatMap((c) => c.tiers[tier]?.checks ?? []);
   if (checks.length === 0) return configs.map((c) => c.tiers[tier]?.status).find(Boolean) ?? "-";
@@ -120,6 +158,7 @@ function measuredCell(configs, tier) {
   return parts.filter(Boolean).join("; ");
 }
 
+/** @param {ConfigResult[]} configs */
 function vsrCell(configs) {
   const walks = configs.map((c) => c.tiers.vsr).filter((v) => v?.status === "ran");
   if (walks.length === 0) return configs.map((c) => c.tiers.vsr?.status).find(Boolean) ?? "-";
@@ -128,6 +167,11 @@ function vsrCell(configs) {
   return flags.length ? `${plural(flags.length, "phrase")} flagged: ${unique.slice(0, 3).map(code).join(", ")}` : "none flagged";
 }
 
+/**
+ * @param {Plan} plan
+ * @param {Results} results
+ * @param {string} key
+ */
 function findingsTable(plan, results, key) {
   const head = ["Target", "Configuration", ENGINE_NAMES.axe, ENGINE_NAMES.ibm, "Interactions", "Computed checks", "Conditions", "Virtual screen reader (simulated)"];
   const lines = [`| ${head.join(" | ")} |`, `| ${head.map(() => "---").join(" | ")} |`];
@@ -145,14 +189,19 @@ function findingsTable(plan, results, key) {
   return lines;
 }
 
-/** Violations by axe impact and by IBM Toolkit level, in separate tables. Counts are never added across engines. */
+/**
+ * Violations by axe impact and by IBM Toolkit level, in separate tables. Counts are never added across engines.
+ * @param {Results} results
+ * @param {string[]} engines
+ */
 function impactTables(results, engines) {
+  /** @type {string[]} */
   const lines = [];
   if (engines.includes("axe")) {
     lines.push("### axe-core, violations by impact.", "", "| Target | Critical | Serious | Moderate | Minor | Needs review |", "| --- | --- | --- | --- | --- | --- |");
     for (const target of results.targets) {
       const s = target.summary.engines.axe;
-      lines.push(s?.status === "ran" ? `| ${target.id} | ${["critical", "serious", "moderate", "minor"].map((k) => s.violationsByImpact[k]).join(" | ")} | ${s.needsReview} |` : `| ${target.id} | ${s?.status ?? target.status} | | | | |`);
+      lines.push(s?.status === "ran" ? `| ${target.id} | ${(/** @type {const} */ (["critical", "serious", "moderate", "minor"])).map((k) => s.violationsByImpact[k]).join(" | ")} | ${s.needsReview} |` : `| ${target.id} | ${s?.status ?? target.status} | | | | |`);
     }
     lines.push("");
   }
@@ -170,7 +219,7 @@ function impactTables(results, engines) {
 /**
  * Render report.md for a comparison of two or more targets.
  * Every target ran with the same settings, so the columns line up. A gap or a failure shows in its cell, and never reads as a pass.
- * @param {{ plan: ReturnType<typeof import("../schema.js").parsePlan>, results: ReturnType<typeof import("../schema.js").parseResults> }} input
+ * @param {{ plan: Plan, results: Results }} input
  */
 export function renderComparison({ plan, results }) {
   const o = plan.options;

@@ -30,7 +30,11 @@ export function allowsSvelte5(range) {
     });
 }
 
-/** Mounts a fixture's default export. */
+/**
+ * Mounts a fixture's default export.
+ * @param {string} fixturePath
+ * @param {string} _pkg
+ */
 export const entry = (fixturePath, _pkg) => `import { mount } from "svelte";
 import Fixture from ${JSON.stringify(fixturePath)};
 const libA11y = new URLSearchParams(location.search).get("libA11y") === "on";
@@ -44,11 +48,11 @@ try {
 
 /**
  * A fixture for the simple archetypes, from the export name alone.
- * @param {string} archetype @param {string} pkg @param {string} exportName @param {unknown} [info]
+ * @param {string} archetype @param {string} pkg @param {string} exportName @param {{ parts?: string[] }} [info]
  */
 export function template(archetype, pkg, exportName, info) {
   // A namespace with a root part (`Button.Root`) is used through its root.
-  const root = /** @type {any} */ (info)?.parts?.find((part) => /^root$/i.test(part));
+  const root = info?.parts?.find((part) => /^root$/i.test(part));
   const tag = root ? `Component.${root}` : "Component";
   const body = {
     button: `<${tag} data-a11y-trigger data-a11y-root type="button">Save</${tag}>`,
@@ -70,7 +74,12 @@ ${body}
  */
 const compiled = new Map();
 
-/** Compile a file once per version of the file. */
+/**
+ * Compile a file once per version of the file.
+ * @param {string} path
+ * @param {string} kind
+ * @param {() => string} build
+ */
 function cached(path, kind, build) {
   const stat = statSync(path);
   const key = `${kind}\0${path}\0${stat.size}\0${stat.mtimeMs}`;
@@ -111,7 +120,7 @@ function compilerPlugin(workDir) {
         }
         return resolved.get(key);
       });
-      const failure = (error, file) => ({ errors: [{ text: String(error?.message ?? error).split("\n")[0], location: { file, line: error?.start?.line ?? 0, column: error?.start?.column ?? 0 } }] });
+      const failure = (/** @type {{ message?: string, start?: { line?: number, column?: number } } | undefined} */ error, /** @type {string} */ file) => ({ errors: [{ text: String(error?.message ?? error).split("\n")[0], location: { file, line: error?.start?.line ?? 0, column: error?.start?.column ?? 0 } }] });
       build.onLoad({ filter: /\.svelte$/ }, async (args) => {
         try {
           const { compile } = await load();
@@ -139,7 +148,10 @@ export default {
   noun: "export",
   extension: "svelte",
   runtime: ["svelte"],
-  /** @returns {import("./index.js").AdapterDetection | null} */
+  /**
+   * @param {import("./index.js").PackageMeta} meta
+   * @returns {import("./index.js").AdapterDetection | null}
+   */
   detect(meta) {
     const peers = meta.peerDependencies ?? {};
     const deps = meta.dependencies ?? {};
@@ -148,7 +160,7 @@ export default {
     if (!allowsSvelte5(range)) return { kind: "npm-unsupported", framework: "Svelte", reason: `The package needs svelte ${range}. Only Svelte ${SVELTE_FLOOR} and newer is supported.` };
     return { kind: "npm-svelte", framework: "Svelte", reason: `The package lists svelte as a ${"svelte" in peers ? "peer dependency" : "dependency"}.` };
   },
-  bundle: (workDir) => ({
+  bundle: (/** @type {string} */ workDir) => ({
     alias: {},
     plugins: [compilerPlugin(workDir)],
     // Svelte libraries name their source entry with the `svelte` condition, and some with the `svelte` field.
@@ -157,6 +169,6 @@ export default {
   entry,
   discoverEntry,
   template,
-  generate: (input) => generateJsx(svelteDialect, input),
-  describe: (npm) => `Svelte${/** @type {any} */ (npm).svelte ? ` (svelte ${/** @type {any} */ (npm).svelte})` : ""}`,
+  generate: (/** @type {import("./index.js").GenerateInput} */ input) => generateJsx(svelteDialect, input),
+  describe: (/** @type {{ svelte?: string }} */ npm) => `Svelte${npm.svelte ? ` (svelte ${npm.svelte})` : ""}`,
 };

@@ -8,15 +8,26 @@ import { STORYBOOK_INDEX, fakeFetch, makeFakeBrowser, makeIo, makeTree } from ".
 
 const onUnix = process.platform !== "win32";
 
-/** The registry, faked. Every package looks like a React library at version 1.1.0. */
+/**
+ * The registry, faked. Every package looks like a React library at version 1.1.0.
+ * @param {string} spec
+ */
 const npmView = async (spec) => ({ name: spec.replace(/@[^@/]*$/, ""), version: "1.1.0", peerDependencies: { react: "*" } });
 
+/**
+ * @param {string[]} argv
+ * @param {Partial<import("../src/commands/common.js").Io>} [overrides]
+ */
 async function run(argv, overrides = {}) {
   const { io, out } = makeIo({ npmView, ...overrides });
   const code = await main(argv, io);
   return { code, ...out, cwd: io.cwd };
 }
 
+/**
+ * @param {string[]} argv
+ * @param {RegExp} pattern
+ */
 async function usageError(argv, pattern) {
   const result = await run(argv);
   assert.equal(result.code, 2, `${argv.join(" ")} should exit 2, got ${result.code}: ${result.stderr}`);
@@ -102,6 +113,7 @@ test("--plan respects --out and shows the same names for duplicate ids", async (
   const cwd = makeTree({ "a/page.html": "", "b/page.html": "" });
   const result = await run(["compare", "./a/page.html", "./b/page.html", "--plan", "--out", "./out"], { cwd });
   assert.equal(result.code, 0);
+  /** @type {import("../src/types.js").Plan} */
   const plan = JSON.parse(readFileSync(join(cwd, "out", "plan.json"), "utf8"));
   assert.deepEqual(plan.targets.map((t) => t.id), ["page.html", "page.html-2"]);
 });
@@ -131,6 +143,7 @@ test("a failed target doesn't stop a comparison, but all failing exits 4", async
   const cwd = makeTree({ "page.html": "" });
   const mixed = await run(["compare", "./page.html", "./missing.html", "--plan"], { cwd });
   assert.equal(mixed.code, 0);
+  /** @type {import("../src/types.js").Plan} */
   const plan = JSON.parse(readFileSync(join(cwd, "a11y-report", "plan.json"), "utf8"));
   assert.deepEqual(plan.targets.map((t) => t.status), ["ok", "failed"]);
   assert.match(plan.targets[1].reason, /Path not found/);
@@ -189,6 +202,7 @@ test("doctor: exits 0 with a browser, 3 without", { skip: !onUnix }, async () =>
 
 test("guide prints the guidance files, and each topic prints its own file", async () => {
   const { readFileSync } = await import("node:fs");
+  /** @param {string} path */
   const file = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
   assert.equal((await run(["guide"])).stdout, file("AGENTS.md"), "no topic prints AGENTS.md");
   assert.equal((await run(["guide", "agents"])).stdout, file("AGENTS.md"));

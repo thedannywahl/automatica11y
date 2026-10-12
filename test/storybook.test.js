@@ -14,6 +14,12 @@ const sbDir = new URL("./fixtures/storybook-static/", import.meta.url).pathname;
 const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
 
+/**
+ * @param {string} id
+ * @param {string} title
+ * @param {string} [name]
+ * @param {string[]} [tags]
+ */
 const story = (id, title, name = "Default", tags = []) => ({ id, title, name, tags });
 
 test("listStories: reads index.json entries and leaves out docs pages", () => {
@@ -99,6 +105,10 @@ test("mapPool: keeps order and respects the limit", async () => {
   assert.ok(peak <= 2);
 });
 
+/**
+ * @param {string[]} args
+ * @param {string} [cwd]
+ */
 async function audit(args, cwd = makeTree()) {
   const { io, out } = makeIo({ cwd, env: process.env });
   const code = await main(args, io);
@@ -113,7 +123,13 @@ async function audit(args, cwd = makeTree()) {
   return { code, results, report, ...out };
 }
 
+/** @param {import("../src/types.js").Results} result */
 const storyIds = (result) => Object.keys(result.targets[0].archetypes).map((k) => k.replace("story:", "")).sort();
+/**
+ * @param {import("../src/types.js").Results} result
+ * @param {string} key
+ * @param {string} engine
+ */
 const engineViolations = (result, key, engine) => result.targets[0].archetypes[`story:${key}`].configs[0].tiers.rules.engines[engine].violations.map((v) => v.ruleId);
 
 test("audits a local Storybook build: each story is a unit, and failures are gaps", { skip }, async () => {
@@ -197,6 +213,10 @@ test("fail flags count violations across stories", { skip }, async () => {
 });
 
 test("the same Storybook run twice picks the same stories and finds the same things", { skip }, async () => {
+  /**
+   * @param {Record<string, unknown>} r
+   * @returns {Record<string, unknown>}
+   */
   const strip = (r) => ({ ...r, runAt: null });
   const a = await audit(["audit", sbDir, "--max-stories", "5"]);
   const b = await audit(["audit", sbDir, "--max-stories", "5"]);

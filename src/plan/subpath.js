@@ -23,16 +23,23 @@ export function cleanSubpath(text) {
 /**
  * The export keys that name a sub-path (`./button`), and the patterns (`./es/*`), from an `exports` field.
  * A string, an array, or an object with no `./` keys only exports the package root.
+ * @param {unknown} exportsField
+ * @returns {{ exact: string[], patterns: string[], hasMap: boolean }}
  */
 function exportKeys(exportsField) {
   if (!exportsField || typeof exportsField !== "object" || Array.isArray(exportsField)) return { exact: [], patterns: [], hasMap: false };
-  const keys = Object.keys(exportsField).filter((key) => key === "." || key.startsWith("./"));
+  const map = /** @type {Record<string, unknown>} */ (exportsField);
+  const keys = Object.keys(map).filter((key) => key === "." || key.startsWith("./"));
   if (keys.length === 0) return { exact: [], patterns: [], hasMap: false };
-  const usable = keys.filter((key) => exportsField[key] !== null);
+  const usable = keys.filter((key) => map[key] !== null);
   return { exact: usable.filter((key) => !key.includes("*") && key !== "." && key !== "./package.json"), patterns: usable.filter((key) => key.includes("*")), hasMap: true };
 }
 
-/** Does a pattern key like `./es/*` or `./features/*.js` match a sub-path? */
+/**
+ * Does a pattern key like `./es/*` or `./features/*.js` match a sub-path?
+ * @param {string} pattern
+ * @param {string} subpath
+ */
 function matchesPattern(pattern, subpath) {
   const [before, after] = pattern.slice(2).split("*");
   return subpath.length >= before.length + after.length && subpath.startsWith(before) && subpath.endsWith(after);
@@ -78,6 +85,7 @@ export function subpathProblem(workDir, name, subpath, version) {
   const path = join(packageDir, subpath);
   const directory = isDirectory(path) ? path : dirname(path);
   const prefix = isDirectory(path) ? subpath : posix.dirname(subpath);
+  /** @type {string[]} */
   let options = [];
   try {
     options = readdirSync(directory, { withFileTypes: true })
@@ -89,6 +97,7 @@ export function subpathProblem(workDir, name, subpath, version) {
   return `"${name}/${subpath}" isn't a file in ${name}${version ? `@${version}` : ""}, and the package has no exports map that lists what it offers.${offered}`;
 }
 
+/** @param {string} path */
 function isDirectory(path) {
   try {
     return statSync(path).isDirectory();
@@ -125,11 +134,19 @@ export function offeredSubpaths(workDir, name, limit = 4) {
 /** The extensions a file can be imported without writing, for a package with no exports map. */
 const EXTENSIONS = ["", ".js", ".mjs", ".cjs", ".json", "/index.js", "/index.mjs", "/index.cjs"];
 
-/** Is there a file for this sub-path in an installed package that has no exports map? */
+/**
+ * Is there a file for this sub-path in an installed package that has no exports map?
+ * @param {string} packageDir
+ * @param {string} subpath
+ */
 export function fileExists(packageDir, subpath) {
   return fileSubpath(packageDir, subpath) !== null;
 }
 
+/**
+ * @param {string} packageDir
+ * @param {string} subpath
+ */
 function fileSubpath(packageDir, subpath) {
   const extension = EXTENSIONS.find((extension) => {
     try {
@@ -141,7 +158,11 @@ function fileSubpath(packageDir, subpath) {
   return extension === undefined ? null : `${subpath}${extension}`;
 }
 
-/** How many single-character edits turn one word into another. */
+/**
+ * How many single-character edits turn one word into another.
+ * @param {string} a
+ * @param {string} b
+ */
 function distance(a, b) {
   let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i += 1) {
@@ -152,7 +173,11 @@ function distance(a, b) {
   return previous[b.length];
 }
 
-/** The exports closest to what was asked for: a shared start, a shared last part, or a typo of it. */
+/**
+ * The exports closest to what was asked for: a shared start, a shared last part, or a typo of it.
+ * @param {string} subpath
+ * @param {string[]} exact
+ */
 function closest(subpath, exact) {
   const wanted = subpath.toLowerCase().split("/");
   const last = wanted[wanted.length - 1];
@@ -176,7 +201,7 @@ function closest(subpath, exact) {
  * @param {{ name: string, version: string | null, subpath: string, exact: string[], patterns: string[] }} input
  */
 export function notExportedMessage({ name, version, subpath, exact, patterns }) {
-  const spec = (key) => `${name}${key === "." ? "" : key.slice(1)}`;
+  const spec = (/** @type {string} */ key) => `${name}${key === "." ? "" : key.slice(1)}`;
   const close = closest(subpath, exact);
   const shown = exact.slice(0, 12).map(spec);
   const more = exact.length > shown.length ? `, and ${exact.length - shown.length} more` : "";

@@ -5,6 +5,7 @@ import { doctorCommand } from "./commands/doctor.js";
 import { guideCommand } from "./commands/guide.js";
 import { ownVersion } from "./env/versions.js";
 
+/** @type {Record<string, (argv: string[], io: import("./commands/common.js").Io) => Promise<number>>} */
 const COMMANDS = {
   audit: auditCommand,
   check: auditCommand,

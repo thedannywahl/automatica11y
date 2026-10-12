@@ -15,7 +15,11 @@ const fixtures = new URL("./fixtures/", import.meta.url).pathname;
 const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
 
-/** Run the CLI against real fixtures and read back what it wrote. */
+/**
+ * Run the CLI against real fixtures and read back what it wrote.
+ * @param {string[]} args
+ * @param {{ cwd?: string }} [options]
+ */
 async function audit(args, { cwd = makeTree() } = {}) {
   const { io, out } = makeIo({ cwd, env: process.env });
   const code = await main(args, io);
@@ -30,7 +34,12 @@ async function audit(args, { cwd = makeTree() } = {}) {
   return { code, results, report, ...out, cwd };
 }
 
+/**
+ * @param {import("../src/types.js").Results} results
+ * @param {number} [index]
+ */
 const tiersOf = (results, index = 0) => results.targets[index].archetypes.page.configs[0].tiers;
+/** @param {import("../src/types.js").EngineResult} engineResult */
 const ids = (engineResult) => engineResult.violations.map((v) => v.ruleId).sort();
 
 test("clean page: neither engine reports violations, and the wording stays careful", { skip }, async () => {
@@ -160,6 +169,7 @@ test("a page that returns an error status fails that target and the rest still r
     writeFileSync(planFile, JSON.stringify(plan));
     const { io } = makeIo({ cwd, env: process.env });
     assert.equal(await main(["run", "--plan", planFile], io), 0);
+    /** @type {import("../src/types.js").Results} */
     const results = JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8"));
     assert.deepEqual(results.targets.map((t) => t.status), ["ran", "failed"]);
     assert.match(results.targets[1].reason, /HTTP 404/);
@@ -217,6 +227,10 @@ test("the same plan run twice gives the same findings", { skip }, async () => {
   const { io } = makeIo({ cwd, env: process.env });
   assert.equal(await main(["run", "--plan", join(cwd, "one", "plan.json")], io), 0);
   const b = JSON.parse(readFileSync(join(cwd, "one", "results.json"), "utf8"));
+  /**
+   * @param {Record<string, unknown>} r
+   * @returns {Record<string, unknown>}
+   */
   const strip = (r) => ({ ...r, runAt: null });
   assert.deepEqual(strip(b), strip(a));
   assert.equal(first.code, 0);
@@ -226,7 +240,7 @@ test("self-test: passes with real engines, and refuses when an engine misses a k
   const { browser } = await launchBrowser();
   try {
     assert.deepEqual(await selfTest(browser, ["axe", "ibm"]), { passed: true, problems: [] });
-    const blind = async () => ({ engines: { axe: { status: "ran", violations: [] }, ibm: { status: "failed", reason: "boom" } } });
+    const blind = async () => ({ engines: { axe: { status: "ran", violations: /** @type {import("../src/types.js").Finding[]} */ ([]) }, ibm: { status: "failed", reason: "boom" } } });
     const result = await selfTest(browser, ["axe", "ibm"], blind);
     assert.equal(result.passed, false);
     assert.match(result.problems.join("\n"), /axe missed image-alt, color-contrast/);
@@ -250,6 +264,7 @@ test("results.json validates against the schema and records tool versions", { sk
 test("the static server never serves files outside its root", async () => {
   const root = makeTree({ "site/index.html": "<h1>ok</h1>", "secret.txt": "secret" });
   const server = await serveStatic(join(root, "site"));
+  /** @param {string} path */
   const get = (path) =>
     new Promise((resolve, reject) => {
       const port = Number(new URL(server.origin).port);

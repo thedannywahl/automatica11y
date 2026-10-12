@@ -17,42 +17,36 @@ You can install `automatica11y` and run it as a linked node.js binary, or you ca
 
 The preferred method of running `automatica11y` is to use your package manager's script runner and directly invoke the script. This prevents  drift and allows you to always use the latest version.
 
-::: code-group
+| Package manager | Command |
+|---|---|
+| Vite Plus | `vpx automatica11y audit ./dist` |
+| pnpm | `pnpm dlx automatica11y audit ./dist` |
+| bun | `bunx automatica11y audit ./dist` |
+| npm | `npx -y automatica11y audit ./dist` |
+| deno | `deno run npm:automatica11y audit ./dist` |
+| yarn | `yarn dlx automatica11y audit ./dist` |
 
-```bash [<span class="instui-icon -icon-vite-plus" aria-hidden="true"></span> vp]
-vpx automatica11y audit ./dist
-```
+### Global install
 
-```bash [<span class="instui-icon -icon-pnpm" aria-hidden="true"></span> pnpm]
-pnpm dlx automatica11y audit ./dist
-```
+A global install doesn't update itself, so run `npm i -g automatica11y@latest` (or whichever package manager you use) to upgrade and `automatica11y --version` to see what you have.
 
-```bash [<span class="instui-icon -icon-bun" aria-hidden="true"></span> bun]
-bunx automatica11y audit ./dist
-```
+Install it once with `npm i -g automatica11y`; Make sure that `automatica11y` is on your `$PATH` and then run:
 
-```bash [<span class="instui-icon -icon-npm" aria-hidden="true"></span> npm]
-npx -y automatica11y audit ./dist
-```
+deno install -g -A npm:automatica11y
+| Package manager | Command |
+|---|---|
+| Vite Plus | `vp install -g automatica11y` |
+| pnpm | `pnpm add -g automatica11y` |
+| bun | `bun add -g automatica11y` |
+| npm | `npm i -g automatica11y` |
+| deno | `deno install -g -A npm:automatica11y` |
+| yarn | Yarn v2 has no `global` command; use `yarn dlx automatica11y <command>`. |
 
-```bash [<span class="instui-icon -icon-deno" aria-hidden="true"></span> deno]
-deno run npm:automatica11y audit ./dist
-```
+### Alias
 
-```bash [<span class="instui-icon -icon-yarn" aria-hidden="true"></span> yarn]
-yarn dlx automatica11y audit ./dist
-```
-
-:::
-
-### Installation
-
-A global install doesn't update itself, so run `npm i -g automatica11y@latest` to upgrade and `automatica11y --version` to see what you have.
-
-Install it once with `npm i -g automatica11y`; Make sure that `automatica11y` is on your `$PATH`, with the short name `a11y` too:
+When you install `automatica11y` it also provides an alias `a11y` with the exact same functionality.
 
 ```bash
-npm i -g automatica11y;
 a11y audit ./dist
 ```
 
@@ -60,102 +54,55 @@ a11y audit ./dist
 
 `automatica11y` includes three main commands: `audit`, `compare`, and `doctor`.
 
-### audit
+### `audit` command
 
 The `audit` command takes an input which can be a static file or folder, a live website, an npm package, or a Storybook. `audit` knows how to install, build, and test npm packages that have a UI including: html, web components, React, Svelte, Vue, and Angular.
 
-::: code-group
-
-```bash [<span class="instui-icon -icon-vite-plus" aria-hidden="true"></span> vp]
 vpx automatica11y audit ./path/to/file.html
-```
-
-```bash [<span class="instui-icon -icon-pnpm" aria-hidden="true"></span> pnpm]
 pnpm dlx automatica11y audit ./path/to/file.html
-```
-
-```bash [<span class="instui-icon -icon-bun" aria-hidden="true"></span> bun]
 bunx automatica11y audit ./path/to/file.html
-```
-
-```bash [<span class="instui-icon -icon-npm" aria-hidden="true"></span> npm]
 npx -y automatica11y audit ./path/to/file.html
-```
-
-```bash [<span class="instui-icon -icon-deno" aria-hidden="true"></span> deno]
 deno run npm:automatica11y audit ./path/to/file.html
-```
-
-```bash [<span class="instui-icon -icon-yarn" aria-hidden="true"></span> yarn]
 yarn dlx automatica11y audit ./path/to/file.html
-```
-
-:::
+| Package manager | Command |
+|---|---|
+| Vite Plus | `vpx automatica11y audit ./path/to/file.html` |
+| pnpm | `pnpm dlx automatica11y audit ./path/to/file.html` |
+| bun | `bunx automatica11y audit ./path/to/file.html` |
+| npm | `npx -y automatica11y audit ./path/to/file.html` |
+| deno | `deno run npm:automatica11y audit ./path/to/file.html` |
+| yarn | `yarn dlx automatica11y audit ./path/to/file.html` |
 
 You can also use `check` as an alias for `audit`. The audit will generate a `plan.json`, `mappings.json`, and when it's complete it will save `results.json` (machine readable) and `report.md` (human readable) in `./a11y-report`.
 
-### compare
+### `compare` command
 
+deno run automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
+yarn dlx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
 The `compare` command performs two or more audits and provides a comparative report. You can compare across multiple sources and frameworks.
 
-::: code-group
+| Package manager | Command |
+|---|---|
+| Vite Plus | `vpx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons` |
+| pnpm | `pnpm dlx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons` |
+| bun | `bunx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons` |
+| npm | `npx -y automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons` |
+| deno | `deno run automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons` |
+| yarn | `yarn dlx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons` |
 
-```bash [<span class="instui-icon -icon-vite-plus" aria-hidden="true"></span> vp]
-vpx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
-```
+### `doctor` command
 
-```bash [<span class="instui-icon -icon-pnpm" aria-hidden="true"></span> pnpm]
-pnpm dlx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
-```
-
-```bash [<span class="instui-icon -icon-bun" aria-hidden="true"></span> bun]
-bunx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
-```
-
-```bash [<span class="instui-icon -icon-npm" aria-hidden="true"></span> npm]
-npx -y automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
-```
-
-```bash [<span class="instui-icon -icon-deno" aria-hidden="true"></span> deno]
-deno run automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
-```
-
-```bash [<span class="instui-icon -icon-yarn" aria-hidden="true"></span> yarn]
-yarn dlx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
-```
-
-:::
-
-### doctor
-
+deno run automatica11y doctor
+yarn dlx automatica11y doctor
 `doctor` checks your setup to make sure your system meets the [requirements](#requirements). If it can't find a browser, it prints the command to install one.
 
-::: code-group
-
-```bash [<span class="instui-icon -icon-vite-plus" aria-hidden="true"></span> vp]
-vpx automatica11y doctor
-```
-
-```bash [<span class="instui-icon -icon-pnpm" aria-hidden="true"></span> pnpm]
-pnpm dlx automatica11y doctor
-```
-
-```bash [<span class="instui-icon -icon-bun" aria-hidden="true"></span> bun]
-bunx automatica11y doctor
-```
-
-```bash [<span class="instui-icon -icon-npm" aria-hidden="true"></span> npm]
-npx -y automatica11y doctor
-```
-
-```bash [<span class="instui-icon -icon-deno" aria-hidden="true"></span> deno]
-deno run automatica11y doctor
-```
-
-```bash [<span class="instui-icon -icon-yarn" aria-hidden="true"></span> yarn]
-yarn dlx automatica11y doctor
-```
-
-:::
+| Package manager | Command |
+|---|---|
+| Vite Plus | `vpx automatica11y doctor` |
+| pnpm | `pnpm dlx automatica11y doctor` |
+| bun | `bunx automatica11y doctor` |
+| npm | `npx -y automatica11y doctor` |
+| deno | `deno run automatica11y doctor` |
+| yarn | `yarn dlx automatica11y doctor` |
 
 Each run writes `report.md`, `results.json`, and `plan.json` to `./a11y-report` by default. [Read a report](/reports) to understand the results.

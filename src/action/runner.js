@@ -7,6 +7,10 @@ import { fileURLToPath } from "node:url";
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const FLAGS = ["config", "wcag", "level", "tiers", "engine", "archetypes", "lib-a11y", "mapping", "max-stories", "out", "fail-on-axe", "fail-on-ibm", "fail-mode", "fail-on-incomplete", "fail-on-review", "fail-on-checks", "server-command", "server-url", "server-timeout", "server-working-directory"];
 
+/**
+ * @param {Record<string, string | undefined>} inputs
+ * @returns {string[]}
+ */
 export function inputArgs(inputs) {
   const args = [];
   for (const flag of FLAGS) if (inputs[flag]?.trim()) args.push(`--${flag}`, inputs[flag].trim());
@@ -18,6 +22,10 @@ export function inputArgs(inputs) {
   return [...args, "--", ...targets];
 }
 
+/**
+ * @param {Record<string, unknown>} values
+ * @param {string | undefined} file
+ */
 export function writeOutputs(values, file) {
   if (!file) return;
   for (const [key, value] of Object.entries(values)) {
@@ -26,6 +34,12 @@ export function writeOutputs(values, file) {
   }
 }
 
+/**
+ * @param {string} file
+ * @param {string[]} args
+ * @param {import("node:child_process").SpawnOptions} options
+ * @returns {Promise<number>}
+ */
 export function execute(file, args, options) {
   return new Promise((done, reject) => {
     const child = spawn(file, args, { ...options, shell: false, stdio: "inherit" });
@@ -54,12 +68,18 @@ export async function installTool(env = process.env) {
   return tool;
 }
 
+/** @param {string | undefined} input @param {boolean} fallback @param {string} name */
 function booleanInput(input, fallback, name) {
   if (!input?.trim()) return fallback;
   if (!["true", "false"].includes(input)) throw new Error(`${name} must be true or false.`);
   return input === "true";
 }
 
+/**
+ * @param {Record<string, string | undefined>} inputs
+ * @param {NodeJS.ProcessEnv} [env]
+ * @param {{ run?: typeof execute, installBrowser?: boolean, root?: string }} [deps]
+ */
 export async function runAudit(inputs, env = process.env, { run = execute, installBrowser = true, root = ROOT } = {}) {
   const { parseRunArgs, UsageError } = await import("../commands/common.js");
   let code = 2;
@@ -111,6 +131,7 @@ export async function runAudit(inputs, env = process.env, { run = execute, insta
   if (settings.summary && env.GITHUB_STEP_SUMMARY) {
     let text = `## automatica11y\n\nOutcome: **${status}** (exit ${code}).\n\n`;
     if (results) {
+      /** @type {import("../types.js").Results} */
       const data = JSON.parse(readFileSync(results, "utf8"));
       for (const engine of parsed.options.engines) {
         const count = data.targets.reduce((total, target) => total + (target.summary.engines[engine]?.violations ?? 0), 0);

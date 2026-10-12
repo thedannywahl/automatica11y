@@ -30,9 +30,15 @@ export function buildKit(exports, base) {
     base,
     /** The component itself (`Lib.Dialog`), or null for a package with no single base. */
     self: base && baseInfo ? `Lib.${base}` : null,
-    /** True when any of these part names exists. */
+    /**
+     * True when any of these part names exists.
+     * @param {...string} names
+     */
     has: (...names) => names.some((name) => parts.has(name)),
-    /** The first part that exists, as a JSX tag. Records what was used. */
+    /**
+     * The first part that exists, as a JSX tag. Records what was used.
+     * @param {...string} names
+     */
     pick(...names) {
       for (const name of names) {
         const ref = parts.get(name);

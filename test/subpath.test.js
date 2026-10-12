@@ -13,12 +13,17 @@ import { installPackage, npmView } from "./helpers/npm-fakes.js";
 const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
 
+/**
+ * @param {string[]} args
+ * @param {Record<string, string>} [files]
+ */
 async function run(args, files = {}) {
   const cwd = makeTree(files);
   const { io, out } = makeIo({ cwd, env: process.env });
   io.npmView = npmView;
   io.installPackage = installPackage;
   const code = await main(args, io);
+  /** @param {string} file */
   const read = (file) => {
     try {
       return readFileSync(join(cwd, "a11y-report", file), "utf8");
@@ -68,7 +73,9 @@ test("a sub-path that could point outside the package, or isn't a path, is refus
 // ---- the exports map ----
 
 test("exports: exact keys, patterns, null entries, and a root-only package", () => {
+  /** @type {Record<string, string | null>} */
   const exportsField = { ".": "./i.js", "./button": "./b.js", "./button/v2": "./b2.js", "./es/*": "./es/*", "./feat/*.js": "./feat/*.js", "./internal/*": null, "./package.json": "./package.json" };
+  /** @param {string} subpath */
   const ok = (subpath) => checkExports(exportsField, subpath).ok;
   assert.ok(ok("button") && ok("button/v2") && ok("es/Button.js") && ok("es/a/b.js") && ok("feat/x.js") && ok("package.json"));
   assert.ok(!ok("button/v3") && !ok("feat/x.css") && !ok("internal/secret") && !ok("lib/x.js"));
@@ -149,6 +156,7 @@ test("the sub-path is what's tested: its button, not the package root's", { skip
 test("two versions of a component, side by side, show different results", { skip, timeout: 300_000 }, async () => {
   const result = await run(["compare", "v1=npm:fake-subpaths/button", "v2=npm:fake-subpaths/button/v2", "--archetypes", "button", "--tiers", "interactions"]);
   assert.equal(result.code, 0, result.stderr);
+  /** @param {string} id */
   const checks = (id) => Object.fromEntries(result.results.targets.find((t) => t.id === id).archetypes.button.configs[0].tiers.interactions.checks.map((c) => [c.name, c.result]));
   assert.equal(checks("v1")["trigger-reachable-by-tab"], "pass");
   assert.equal(checks("v2")["trigger-reachable-by-tab"], "fail", "the second version can't be reached with Tab");

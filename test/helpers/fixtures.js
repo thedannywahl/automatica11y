@@ -40,8 +40,12 @@ export function makeIo(overrides = {}) {
   };
 }
 
-/** A fetch stand-in. `routes` maps URL to { status, body }. Unlisted URLs fail like a dead host. */
+/**
+ * A fetch stand-in. `routes` maps URL to { status, body }. Unlisted URLs fail like a dead host.
+ * @param {Record<string, { status?: number, body?: string }>} routes
+ */
 export function fakeFetch(routes) {
+  /** @param {string | URL} input */
   return async (input) => {
     const url = String(input);
     const route = routes[url];

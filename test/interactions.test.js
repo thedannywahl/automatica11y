@@ -28,10 +28,24 @@ after(async () => {
 const P = "pass";
 const F = "fail";
 const N = "not-applicable";
-/** The common checks come first, then the archetype's own. */
+/**
+ * The common checks come first, then the archetype's own.
+ * @param {string} reach
+ * @param {string} focus
+ * @param {string} trap
+ */
 const common = (reach, focus, trap) => ({ "trigger-reachable-by-tab": reach, "focus-indicator-visible": focus, "no-focus-trap": trap });
 
-/** The live-region checks, in table order. */
+/**
+ * The live-region checks, in table order.
+ * @param {string} inRegion
+ * @param {string} text
+ * @param {string} before
+ * @param {string} politeness
+ * @param {string} focus
+ * @param {string} dismiss
+ * @param {string} kept
+ */
 const live = (inRegion, text, before, politeness, focus, dismiss, kept) => ({
   "message-in-live-region": inRegion,
   "message-has-text": text,
@@ -116,7 +130,7 @@ test("a check that throws reports an error, never a pass or a fail", { skip }, a
 });
 
 test("a check that hangs times out as an error", { skip }, async () => {
-  const hang = { name: "hang", criteria: [], run: () => new Promise(() => {}) };
+  const hang = { name: "hang", criteria: /** @type {string[]} */ ([]), run: () => new Promise(() => {}) };
   const result = await runCheck(session.browser, `${server.origin}/button-good.html`, hang, { timeoutMs: 400 });
   assert.equal(result.result, "error");
   assert.match(result.detail, /took longer than 0\.4 seconds/);
@@ -149,6 +163,10 @@ test("the focus indicator check says which method found the change", { skip }, a
 test("focus indicator: only changes a person could see count", async () => {
   const { focusIndicatorChanges } = await import("../src/tiers/interactions/focus-indicator.js");
   const base = { outlineStyle: "none", outlineWidth: "0px", outlineColor: "rgb(0, 0, 0)", boxShadow: "none", borderTopStyle: "none", borderTopColor: "rgb(0, 0, 0)", borderTopWidth: "0px", backgroundColor: "rgba(0, 0, 0, 0)", color: "rgb(0, 0, 0)", textDecorationLine: "none", rendered: true };
+  /**
+   * @param {Partial<import("../src/tiers/interactions/focus-indicator.js").FocusPart>} over
+   * @param {Record<string, import("../src/tiers/interactions/focus-indicator.js").FocusPart>} [extra]
+   */
   const parts = (over, extra = {}) => ({ "the element": { ...base, ...over }, ...extra });
   assert.deepEqual(focusIndicatorChanges(parts({}), parts({})), []);
   assert.deepEqual(focusIndicatorChanges(parts({ outlineStyle: "solid", outlineWidth: "2px" }), parts({})), ["the element: outline"]);

@@ -1,6 +1,6 @@
-# Options and exit codes.
+# Options and exit codes
 
-## Options.
+## Options
 
 | Option | Default | What it does |
 |---|---|---|
@@ -10,7 +10,7 @@
 | `--engine axe,ibm` | both | Which rule engines run. |
 | `--tiers rules,interactions,computed,conditions,vsr` | all | Which tiers run. |
 | `--archetypes a,b` | all | Limit npm and Storybook targets to these archetypes. |
-| `--lib-a11y on,off` | both | For libraries with opt-in accessibility features. See [Writing fixtures](fixtures.md). |
+| `--lib-a11y on,off` | both | For libraries with opt-in accessibility features. See [Writing fixtures](writing-fixtures.md). |
 | `--mapping <file>` | none | A mapping file for npm targets. |
 | `--no-generate` | off | Don't build fixtures for npm packages. Only authored fixtures and the `button` and `link` templates run. |
 | `--generate` | on | Enable generated fixtures, overriding YAML `generate: false`. |
@@ -30,14 +30,14 @@
 
 Run `automatica11y run --plan <plan.json>` to repeat a saved plan. It warns if tool versions have changed.
 
-## Output.
+## Output
 
 - `report.md` is a complete report, written without any model. It opens with a coverage matrix, then lists findings, then ends with a method note.
 - `results.json` holds everything, including element selectors and announcement logs.
 - `plan.json` records what ran and the resolved tool and package versions.
-- `mapping.json` appears for npm targets. See [npm packages and fixtures](npm-packages.md).
+- `mapping.json` appears for npm targets. See [Writing fixtures](writing-fixtures.md).
 
-## Exit codes.
+## Exit codes
 
 | Code | Meaning |
 |---|---|
@@ -49,13 +49,3 @@ Run `automatica11y run --plan <plan.json>` to repeat a saved plan. It warns if t
 | 5 | At least one target ran, but the enabled incomplete-coverage gate tripped. Takes precedence over exit 1. |
 
 One failing target doesn't stop a comparison. It's recorded with its reason, and the others run. Reports are written before findings or coverage cause a nonzero exit. Environment and all-resolution failures can produce only a plan or no files.
-
-## Using it in CI.
-
-```bash
-npx automatica11y ci ./dist
-```
-
-One target audits; multiple targets compare. Targets may instead come from YAML. CI defaults are axe `serious`, IBM `1`, `any`, and failure on incomplete execution or coverage. Excluding an engine or the rules tier removes its inherited threshold; explicitly incompatible thresholds are errors. Manual-review findings and non-rule check failures are opt-in.
-
-Configuration precedence is defaults, then YAML, then explicitly supplied flags or Action inputs. Arrays replace rather than append. See [GitHub Action and YAML configuration](github-action.md) for the complete contract and managed-server examples.

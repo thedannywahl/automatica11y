@@ -4,7 +4,10 @@ import { join } from "node:path";
 const packages = new URL("../fixtures/packages/", import.meta.url).pathname;
 const repoModules = new URL("../../node_modules/", import.meta.url).pathname;
 
-/** Registry metadata for the fake packages, as `npm view` would return it. */
+/**
+ * Registry metadata for the fake packages, as `npm view` would return it.
+ * @type {Record<string, { name: string, version: string, peerDependencies?: Record<string, string>, customElements?: string, exports?: Record<string, string | null> }>}
+ */
 export const REGISTRY = {
   "fake-ui": { name: "fake-ui", version: "1.0.0", peerDependencies: { react: "*", "react-dom": "*" } },
   "fake-nospread": { name: "fake-nospread", version: "1.0.0", peerDependencies: { react: "*", "react-dom": "*" } },
@@ -38,6 +41,7 @@ export const REGISTRY = {
   "svelte-lib": { name: "svelte-lib", version: "1.0.0", peerDependencies: { svelte: "^4" } },
 };
 
+/** @param {string} spec */
 export const npmView = async (spec) => {
   const name = spec.replace(/@[^@/]*$/, "");
   const meta = REGISTRY[name];
@@ -45,7 +49,10 @@ export const npmView = async (spec) => {
   return meta;
 };
 
-/** Stand in for npm: copy the fake package into the install folder and link the repo's React. */
+/**
+ * Stand in for npm: copy the fake package into the install folder and link the repo's React.
+ * @param {Pick<Parameters<typeof import("../../src/harness/npm-install.js").installPackage>[0], "dir" | "name" | "version" | "flavor">} options
+ */
 export async function installPackage({ dir, name, version, flavor }) {
   if (!REGISTRY[name]) throw new Error(`npm couldn't install ${name}@${version}: not found`);
   mkdirSync(join(dir, "node_modules"), { recursive: true });
@@ -68,6 +75,8 @@ export async function installPackage({ dir, name, version, flavor }) {
   const vue = flavor === "vue" ? JSON.parse(readFileSync(join(repoModules, "vue", "package.json"), "utf8")).version : null;
   const angular = flavor === "angular" ? JSON.parse(readFileSync(join(repoModules, "@angular", "core", "package.json"), "utf8")).version : null;
   const svelte = flavor === "svelte" ? JSON.parse(readFileSync(join(repoModules, "svelte", "package.json"), "utf8")).version : null;
-  return { dir, warnings: [], react, reactDom: react, vue, angular, svelte, version };
+  /** @type {string[]} */
+  const warnings = [];
+  return { dir, warnings, react, reactDom: react, vue, angular, svelte, version };
 }
 

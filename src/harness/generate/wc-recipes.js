@@ -6,7 +6,14 @@
 import { markingSource } from "./marking.js";
 import { ATTEMPT_LIMIT, GENERATABLE } from "./shared.js";
 
-/** The module around every candidate: the marking code and a mount function that starts it. */
+/** @typedef {import("../../types.js").Candidate} Candidate */
+/** @typedef {import("../../types.js").WcFacts} WcFacts */
+
+/**
+ * The module around every candidate: the marking code and a mount function that starts it.
+ * @param {string} archetype
+ * @param {string} body
+ */
 function frame(archetype, body) {
   return `${markingSource(archetype)}
 export default function mount(container) {
@@ -16,13 +23,17 @@ ${body.split("\n").map((line) => (line ? `  ${line}` : line)).join("\n")}
 `;
 }
 
-const has = (facts, name) => facts.attributes.includes(name) || facts.members.includes(name);
-const slotFor = (facts, pattern) => facts.slots.find((name) => pattern.test(name));
+const has = (/** @type {WcFacts} */ facts, /** @type {string} */ name) => facts.attributes.includes(name) || facts.members.includes(name);
+const slotFor = (/** @type {WcFacts} */ facts, /** @type {RegExp} */ pattern) => facts.slots.find((name) => pattern.test(name));
 
 // ---- dialog ----
 
-/** The ways a dialog element is commonly opened, from what it has. */
+/**
+ * The ways a dialog element is commonly opened, from what it has.
+ * @param {WcFacts} facts
+ */
 function openers(facts) {
+  /** @type {Array<[string, string]>} */
   const found = [];
   if (facts.attributes.includes("open")) found.push(["attribute", `dialog.setAttribute("open", "");`]);
   if (facts.members.includes("open")) found.push(["property", "dialog.open = true;"]);
@@ -31,6 +42,11 @@ function openers(facts) {
   return found;
 }
 
+/**
+ * @param {string} tagName
+ * @param {WcFacts} facts
+ * @returns {Candidate[]}
+ */
 function dialogs(tagName, facts) {
   const titleSlot = slotFor(facts, /title|header|heading/i);
   const heading = titleSlot ? `<h2 slot="${titleSlot}">Edit profile</h2>` : "<h2>Edit profile</h2>";
@@ -48,6 +64,11 @@ container.querySelector("[data-a11y-trigger]").addEventListener("click", () => {
 
 // ---- tooltip ----
 
+/**
+ * @param {string} tagName
+ * @param {WcFacts} facts
+ * @returns {Candidate[]}
+ */
 function tooltips(tagName, facts) {
   return facts.attributes.filter((name) => /^(tip|tooltip|content|text|label|title|message|description)$/.test(name)).map((name) => ({
     id: `tooltip-${name}`,
@@ -59,6 +80,11 @@ function tooltips(tagName, facts) {
 
 // ---- live region ----
 
+/**
+ * @param {string} tagName
+ * @param {WcFacts} facts
+ * @returns {Candidate[]}
+ */
 function messages(tagName, facts) {
   const list = [{
     id: "message-appended",
@@ -86,7 +112,12 @@ container.querySelector("[data-a11y-trigger]").addEventListener("click", () => m
 
 // ---- form field ----
 
-/** The element isn't marked as the trigger here. The marking code finds the input inside its shadow root, which is the thing a person types in. */
+/**
+ * The element isn't marked as the trigger here. The marking code finds the input inside its shadow root, which is the thing a person types in.
+ * @param {string} tagName
+ * @param {WcFacts} facts
+ * @returns {Candidate[]}
+ */
 function fields(tagName, facts) {
   if (!["value", "name", "label", "placeholder", "checked", "type"].some((name) => has(facts, name))) return [];
   const list = [{
@@ -109,7 +140,8 @@ function fields(tagName, facts) {
 /**
  * Candidates for one element and archetype. Archetypes with no recipe here (menu, tabs, accordion, combobox) return none,
  * because those depend on child elements and slots that an element can't describe well enough to guess.
- * @param {{ archetype: string, tag: string, facts: { attributes: string[], members: string[], slots: string[] } }} input
+ * @param {{ archetype: string, tag: string, facts: WcFacts }} input
+ * @returns {Candidate[]}
  */
 export function wcCandidates({ archetype, tag, facts }) {
   const build = { dialog: dialogs, tooltip: tooltips, "live-region": messages, "form-field": fields }[archetype];
@@ -118,8 +150,8 @@ export function wcCandidates({ archetype, tag, facts }) {
 
 /**
  * Candidates for a web component package, from what the element the mapping found says about itself.
- * @param {{ archetype: string, entry: { tag?: string }, facts: Record<string, { attributes: string[], members: string[], slots: string[] }> }} input
- * @returns {{ candidates: Array<{ id: string, summary: string, source: string, used: string[] }>, reason: string | null }}
+ * @param {{ archetype: string, entry: { tag?: string }, facts: Record<string, WcFacts> }} input
+ * @returns {{ candidates: Candidate[], reason: string | null }}
  */
 export function generateWc({ archetype, entry, facts }) {
   if (!GENERATABLE.has(archetype)) return { candidates: [], reason: `Nothing is generated for the ${archetype} archetype.` };

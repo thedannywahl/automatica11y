@@ -19,6 +19,7 @@ const FOCUSABLE_FIELD = "input:not([type=hidden]), textarea, select, [contentedi
  * @returns {Promise<{ ok: boolean, reason: string | null }>}
  */
 export async function probeFixture(browser, url, archetype) {
+  /** @type {string[]} */
   const errors = [];
   /** @type {Awaited<ReturnType<typeof openPage>> | null} */
   let opened = null;
@@ -61,7 +62,10 @@ export async function probeFixture(browser, url, archetype) {
     } catch (error) {
       return { ok: false, reason: `the trigger couldn't be activated: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}` };
     }
-    /** Wait for the surface. A tooltip gets a second chance below, so this one is short for it. */
+    /**
+     * Wait for the surface. A tooltip gets a second chance below, so this one is short for it.
+     * @param {number} timeout
+     */
     const waitForSurface = (timeout) => page.waitForFunction(
         ({ live, needsRoot }) => {
           const state = window.__a11y.live();

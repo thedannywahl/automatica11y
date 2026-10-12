@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Name patterns that suggest an archetype. They read the story title, name, and tags. */
+/** Name patterns that suggest an archetype. They read the story title, name, and tags. @type {Record<string, RegExp>} */
 export const ARCHETYPE_PATTERNS = {
   button: /\bbuttons?\b/i,
   link: /\blinks?\b|\banchors?\b/i,
@@ -46,7 +46,10 @@ export function listStories(index) {
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
-/** The archetypes a story's title, name, and tags suggest. */
+/**
+ * The archetypes a story's title, name, and tags suggest.
+ * @param {{ title: string, name: string, tags: string[] }} story
+ */
 export function matchArchetypes(story) {
   const text = `${story.title} ${story.name} ${story.tags.join(" ")}`;
   return Object.entries(ARCHETYPE_PATTERNS)
@@ -92,7 +95,11 @@ export function selectStories(stories, { archetypes = null, max }) {
   return { selected, total: stories.length, matched: pool.length, truncated: pool.length > selected.length, matchedByArchetype, filtered };
 }
 
-/** The URL that renders one story on its own. `base` must end with a slash. */
+/**
+ * The URL that renders one story on its own. `base` must end with a slash.
+ * @param {string} base
+ * @param {string} id
+ */
 export function storyUrl(base, id) {
   return `${base}iframe.html?id=${encodeURIComponent(id)}&viewMode=story`;
 }

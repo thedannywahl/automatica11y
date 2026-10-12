@@ -7,15 +7,38 @@
 
 import { focusIndicatorChanges } from "./focus-indicator.js";
 
+/**
+ * @typedef {import("../../types.js").Check} Check
+ * @typedef {import("../../types.js").CheckContext} CheckContext
+ * @typedef {import("../../types.js").CheckOutcome} CheckOutcome
+ */
+
+/**
+ * @param {string} detail
+ * @param {Partial<CheckOutcome>} [extra]
+ * @returns {CheckOutcome}
+ */
 const pass = (detail, extra = {}) => ({ result: "pass", detail, ...extra });
+/**
+ * @param {string} detail
+ * @param {Partial<CheckOutcome>} [extra]
+ * @returns {CheckOutcome}
+ */
 const fail = (detail, extra = {}) => ({ result: "fail", detail, ...extra });
+/**
+ * @param {string} detail
+ * @returns {CheckOutcome}
+ */
 const na = (detail) => ({ result: "not-applicable", detail });
 
+/** @param {import("../../types.js").PageSnapshot} s */
 const where = (s) => (s.bodyActive ? "nothing (the page body)" : `${s.activeTag}${s.activeText ? ` "${s.activeText}"` : ""}`);
+/** @param {string[]} list */
 const quote = (list) => list.map((item) => `"${item}"`).join(", ");
 
 // ---- Shared by every archetype ----
 
+/** @type {Check[]} */
 const COMMON = [
   {
     name: "trigger-reachable-by-tab",
@@ -64,6 +87,11 @@ const COMMON = [
 
 // ---- button and link ----
 
+/**
+ * @param {string} key
+ * @param {string} label
+ * @returns {Check["run"]}
+ */
 const activates = (key, label) => async (ctx) => {
   const s0 = await ctx.snap();
   if (key === "Space" && (s0.triggerTag === "a" || s0.triggerRole === "link")) return na("Links activate with Enter only.");
@@ -75,13 +103,18 @@ const activates = (key, label) => async (ctx) => {
 
 // ---- dialog and menu ----
 
-/** Open with the keyboard and wait for the root to show. Returns the snapshot, or null. */
+/**
+ * Open with the keyboard and wait for the root to show. Returns the snapshot, or null.
+ * @param {CheckContext} ctx
+ * @param {string} [key]
+ */
 async function openWith(ctx, key = "Enter") {
   await ctx.focus();
   await ctx.press(key);
   return ctx.waitFor((s) => s.rootVisible || s.expanded === "true");
 }
 
+/** @param {CheckContext} ctx */
 async function openMenu(ctx) {
   for (const key of ["Enter", "ArrowDown"]) {
     const s = await openWith(ctx, key);
@@ -92,7 +125,10 @@ async function openMenu(ctx) {
 
 // ---- live-region: a message that appears or changes without moving focus ----
 
-/** Press Enter on the trigger and wait for the message. Returns what the page looked like before, and after. */
+/**
+ * Press Enter on the trigger and wait for the message. Returns what the page looked like before, and after.
+ * @param {CheckContext} ctx
+ */
 async function showMessage(ctx) {
   await ctx.focus();
   const before = await ctx.page.evaluate(() => window.__a11y.live());
@@ -108,6 +144,7 @@ async function showMessage(ctx) {
 
 const NO_MESSAGE = "The message didn't appear when Enter was pressed on the trigger.";
 
+/** @type {Check[]} */
 const LIVE_REGION_CHECKS = [
   {
     name: "message-in-live-region",
@@ -201,6 +238,7 @@ const LIVE_REGION_CHECKS = [
 
 // ---- The tables ----
 
+/** @type {Record<string, Check[]>} */
 export const ARCHETYPE_CHECKS = {
   "live-region": LIVE_REGION_CHECKS,
 
@@ -510,7 +548,11 @@ export const ARCHETYPE_CHECKS = {
   ],
 };
 
-/** An accordion toggle check for one key. The state flips on the first press and flips back on the second. */
+/**
+ * An accordion toggle check for one key. The state flips on the first press and flips back on the second.
+ * @param {string} key
+ * @returns {Check["run"]}
+ */
 function toggles(key) {
   return async (ctx) => {
     const read = async () => {
@@ -522,6 +564,7 @@ function toggles(key) {
     await ctx.press(key);
     await ctx.settle(150);
     const after = await read();
+    /** @param {typeof before} a @param {typeof before} b */
     const changed = (a, b) => (a.expanded !== null ? a.expanded !== b.expanded : a.shown !== b.shown);
     if (!changed(before, after)) return fail(`${key} didn't toggle the section.`);
     await ctx.press(key);

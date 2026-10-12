@@ -10,8 +10,13 @@ import { IMPACTS } from "../schema.js";
 
 const RANK = Object.fromEntries(IMPACTS.map((impact, index) => [impact, index]));
 
-/** All findings an engine reported for one target, across every archetype and configuration. */
+/**
+ * All findings an engine reported for one target, across every archetype and configuration.
+ * @param {FailTarget} target
+ * @param {string} engine
+ */
 function violationsFor(target, engine) {
+  /** @type {FailFinding[]} */
   const found = [];
   for (const archetype of Object.values(target.archetypes)) {
     for (const config of archetype.configs) {
@@ -22,12 +27,20 @@ function violationsFor(target, engine) {
   return found;
 }
 
-/** Count axe violations at or above the impact threshold. */
+/**
+ * Count axe violations at or above the impact threshold.
+ * @param {FailTarget} target
+ * @param {string | number} threshold
+ */
 export function countAxeHits(target, threshold) {
   return violationsFor(target, "axe").filter((finding) => finding.impact && RANK[finding.impact] >= RANK[threshold]).length;
 }
 
-/** Count IBM violations whose Toolkit level is at or below the threshold. */
+/**
+ * Count IBM violations whose Toolkit level is at or below the threshold.
+ * @param {FailTarget} target
+ * @param {number} threshold
+ */
 export function countIbmHits(target, threshold) {
   return violationsFor(target, "ibm").filter((finding) => finding.toolkitLevel != null && finding.toolkitLevel <= threshold).length;
 }
@@ -43,9 +56,10 @@ export function evaluateFailCheck(targets, fail) {
   if (!fail) return null;
   const checked = [fail.axe ? "axe" : null, fail.ibm ? "ibm" : null].filter(Boolean);
   const totals = { axe: fail.axe ? { threshold: fail.axe, hits: 0, tripped: false } : null, ibm: fail.ibm ? { threshold: fail.ibm, hits: 0, tripped: false } : null };
-  const perTarget = {};
+  const perTarget = /** @type {NonNullable<import("../types.js").Results["failCheck"]>["targets"]} */ ({});
   let tripped = false;
   for (const target of targets) {
+    /** @type {NonNullable<import("../types.js").Results["failCheck"]>["targets"][string]} */
     const entry = { axe: null, ibm: null, tripped: false };
     if (target.status === "ran") {
       if (fail.axe && totals.axe) {
@@ -69,10 +83,17 @@ export function evaluateFailCheck(targets, fail) {
   return { mode: fail.mode, axe: totals.axe, ibm: totals.ibm, targets: perTarget, tripped };
 }
 
-/** @param {import("valibot").InferOutput<typeof import("../schema.js").TargetResultSchema>[]} targets */
+/**
+ * @param {import("../types.js").TargetResult[]} targets
+ * @param {Pick<import("../types.js").PlanOptions, "tiers" | "engines"> & { policy?: Partial<import("../types.js").PlanOptions["policy"]> }} options
+ * @param {Pick<import("../types.js").FailCheck, "tripped"> | null} failCheck
+ */
 export function evaluateOutcome(targets, options, failCheck) {
+  /** @type {Set<string>} */
   const coverage = new Set();
+  /** @type {Set<string>} */
   const review = new Set();
+  /** @type {Set<string>} */
   const checks = new Set();
   for (const target of targets) {
     const id = target.id;
@@ -108,6 +129,7 @@ export function evaluateOutcome(targets, options, failCheck) {
       }
     }
   }
+  /** @type {Partial<import("../types.js").PlanOptions["policy"]>} */
   const policy = options.policy ?? {};
   const status = policy.incomplete && coverage.size ? "incomplete" : failCheck?.tripped || (policy.review && review.size) || (policy.checks && checks.size) ? "failed" : "passed";
   return { status, coverage: [...coverage], review: [...review], checks: [...checks] };

@@ -21,8 +21,7 @@ const pageList = [
   { source: "docs/options.md", out: "options.html", route: "/options" },
   { source: "docs/github-action.md", out: "github-action.html", route: "/github-action" },
   { source: "docs/reports.md", out: "reports.html", route: "/reports" },
-  { source: "docs/npm-packages.md", out: "npm-packages.html", route: "/npm-packages" },
-  { source: "skills/automatica11y-runner/references/fixtures.md", out: "fixtures.html", route: "/fixtures" },
+  { source: "docs/writing-fixtures.md", out: "writing-fixtures.html", route: "/writing-fixtures" },
   { source: "docs/agents.md", out: "agents.html", route: "/agents" },
   { source: "skills/automatica11y-runner/SKILL.md", out: "agent-steps.html", route: "/agent-steps" },
   { source: "docs/limits.md", out: "limits.html", route: "/limits" },
@@ -36,7 +35,7 @@ const skip = available ? false : "No Chrome or Chromium found";
 
 test("all documentation sources build at clean VitePress routes", () => {
   const sources = readdirSync(join(root, "docs"))
-    .filter((name) => name.endsWith(".md") && !["404.md", "agent-steps.md", "fixtures.md"].includes(name))
+    .filter((name) => name.endsWith(".md") && !["404.md", "agent-steps.md"].includes(name))
     .map((name) => `docs/${name}`)
     .sort();
   assert.deepEqual(pageList.filter((page) => page.source.startsWith("docs/")).map((page) => page.source).sort(), sources);
@@ -62,10 +61,9 @@ test("all documentation sources build at clean VitePress routes", () => {
   for (const page of pageList.slice(1)) assert.ok(html[page.out].includes(page.route), `${page.route} appears in documentation navigation`);
   assert.match(html["index.html"], /<title>automatica11y: Accessibility Testing and Comparison<\/title>/);
   for (const anchor of ["quick-start-cli", "quick-start-ci", "quick-start-ai"]) {
-    assert.ok(html["index.html"].includes(`href="/${anchor}#${anchor}"`), `home action links to ${anchor}`);
-    assert.ok(html[`${anchor}.html`].includes(`id="${anchor}"`), `${anchor} section exists in the guide`);
-    assert.ok(readFileSync(join(root, "docs/.vitepress/theme/custom.css"), "utf8").includes(`[href$="#${anchor}"]`), `${anchor} retains its hero icon selector`);
-    assert.ok(!html["index.html"].includes(`id="${anchor}"`), "quick-start content is not on the homepage");
+    assert.ok(html["index.html"].includes(`href="/${anchor}"`), `home action links to ${anchor}`);
+    assert.match(html[`${anchor}.html`], /<h1\b/, `${anchor} guide has a heading`);
+    assert.ok(readFileSync(join(root, "docs/.vitepress/theme/custom.css"), "utf8").includes(`[href$="${anchor}"]`), `${anchor} retains its hero icon selector`);
   }
   assert.ok(html["index.html"].includes('href="/llms.txt"'));
   assert.ok(html["index.html"].includes('class="brand-main">automatic</span>'));
@@ -91,6 +89,7 @@ test("each page has canonical, social, and application metadata", () => {
     assert.match(text, /<link rel="icon" type="image\/svg\+xml" href="\/favicon\.svg">/);
     const match = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(text);
     assert.ok(match, `${page.route} has JSON-LD`);
+    /** @type {{ "@graph": Record<string, unknown>[] }} */
     const data = JSON.parse(match[1]);
     const application = data["@graph"].find((item) => item["@type"] === "SoftwareApplication");
     const webpage = data["@graph"].find((item) => item["@type"] === "WebPage");
@@ -130,8 +129,8 @@ test("skill pages stay synchronized with their canonical sources", () => {
   assert.doesNotMatch(html["agent-steps.html"], /compatibility: Needs Node/);
   const fixtures = readFileSync(join(root, "skills/automatica11y-runner/references/fixtures.md"), "utf8");
   assert.ok(fixtures.startsWith("# Writing fixtures"));
-  assert.ok(html["fixtures.html"].includes("<h1 id=\"writing-fixtures\""));
-  assert.ok(html["agent-steps.html"].includes('href="/fixtures"'));
+  assert.ok(html["writing-fixtures.html"].includes("<h1 id=\"writing-fixtures\""));
+  assert.ok(html["agent-steps.html"].includes('href="/writing-fixtures"'));
 });
 
 test("scrollable tables have keyboard-focusable, uniquely labelled regions", () => {

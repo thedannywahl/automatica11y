@@ -8,22 +8,63 @@ import { contrastOver, formatRatio, ringIsEnough, textThreshold } from "../compu
 import { num, plural } from "../../text.js";
 import { criterionRef } from "../../wcag/index.js";
 
+/**
+ * @typedef {import("../../types.js").Check} Check
+ * @typedef {import("../../types.js").CheckContext} CheckContext
+ * @typedef {import("../../types.js").CheckOutcome} CheckOutcome
+ * @typedef {ReturnType<Window["__a11yConditions"]["animations"]>[number]} AnimationFact
+ * @typedef {ReturnType<Window["__a11yConditions"]["clipping"]>[number]} ClipFact
+ * @typedef {{ text: string, ratio: number, required: number }} TextRow
+ */
+
+/**
+ * @param {string} detail
+ * @param {Partial<CheckOutcome>} [extra]
+ * @returns {CheckOutcome}
+ */
 const pass = (detail, extra = {}) => ({ result: "pass", detail, ...extra });
+/**
+ * @param {string} detail
+ * @param {Partial<CheckOutcome>} [extra]
+ * @returns {CheckOutcome}
+ */
 const fail = (detail, extra = {}) => ({ result: "fail", detail, ...extra });
+/**
+ * @param {string} detail
+ * @returns {CheckOutcome}
+ */
 const na = (detail) => ({ result: "not-applicable", detail });
+/**
+ * @param {string} detail
+ * @param {Partial<CheckOutcome>} [extra]
+ * @returns {CheckOutcome}
+ */
 const undetermined = (detail, extra = {}) => ({ result: "undetermined", detail, ...extra });
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+/** @param {number} n */
 const floor2 = (n) => Math.floor(n * 100) / 100;
+/**
+ * @param {string[]} items
+ * @param {number} [max]
+ */
 const list = (items, max = 3) => `${items.slice(0, max).join("; ")}${items.length > max ? `; and ${items.length - max} more` : ""}`;
 
 /** Archetypes whose trigger shouldn't be pressed to reach their resting state: a link would navigate, and a chart has nothing to press. */
 const NO_ACTIVATION = new Set(["link", "chart"]);
 
-/** Does this page have a trigger hook (a fixture), or is it a whole page? */
+/**
+ * Does this page have a trigger hook (a fixture), or is it a whole page?
+ * @param {CheckContext} ctx
+ */
 const hasTrigger = async (ctx) => (await ctx.trigger.count()) > 0;
 
-/** Press Enter on the trigger of a fixture, so a dialog, menu, or message is showing. Whole pages are left as they are. */
+/**
+ * Press Enter on the trigger of a fixture, so a dialog, menu, or message is showing. Whole pages are left as they are.
+ * @param {CheckContext} ctx
+ * @param {string} archetype
+ */
 async function reachState(ctx, archetype) {
   if (!(await hasTrigger(ctx)) || NO_ACTIVATION.has(archetype)) return false;
   await ctx.focus();
@@ -34,8 +75,13 @@ async function reachState(ctx, archetype) {
 
 // ---- reduced motion ----
 
-/** Every animation seen at load and just after the trigger is pressed. Each is recorded once. */
+/**
+ * Every animation seen at load and just after the trigger is pressed. Each is recorded once.
+ * @param {CheckContext} ctx
+ * @param {string} archetype
+ */
 async function collectAnimations(ctx, archetype) {
+  /** @type {Map<string, AnimationFact>} */
   const seen = new Map();
   const take = async () => {
     for (const a of await ctx.page.evaluate(() => window.__a11yConditions.animations())) seen.set(`${a.kind}|${a.name}|${a.target}|${a.props.join()}|${a.duration}|${a.iterations}`, a);
@@ -55,10 +101,18 @@ async function collectAnimations(ctx, archetype) {
   return [...seen.values()];
 }
 
-/** An animation worth reducing: anything that repeats forever, or moves for longer than a blink. */
+/**
+ * An animation worth reducing: anything that repeats forever, or moves for longer than a blink.
+ * @param {AnimationFact} a
+ */
 const concerning = (a) => a.iterations === "infinite" || (a.moving && (a.duration ?? 0) > 100);
+/** @param {AnimationFact} a */
 const describeAnimation = (a) => `${a.name || a.kind} on ${a.target} (${a.moving ? `moves ${a.props.filter((p) => /^(transform|translate|rotate|scale|top|left|right|bottom|inset|margin|height|width|offset|background|clip|max|min)/.test(p)).join(", ")}` : a.props.join(", ") || "no keyframes"}; ${a.duration ?? "?"}ms${a.iterations === "infinite" ? ", repeats forever" : ""})`;
 
+/**
+ * @param {string} archetype
+ * @returns {Check}
+ */
 const reducedMotion = (archetype) => ({
   name: "reduced-motion-respected",
   criteria: ["2.3.3", "2.2.2"],
@@ -81,6 +135,7 @@ const reducedMotion = (archetype) => ({
 
 // ---- color scheme ----
 
+/** @returns {Check} */
 const colorScheme = () => ({
   name: "dark-mode-contrast",
   criteria: ["1.4.3"],
@@ -94,7 +149,9 @@ const colorScheme = () => ({
     if (light.equals(shot)) return na("The page looks the same under prefers-color-scheme: dark, so it doesn't adapt to it. A page isn't required to. Nothing was checked.");
     const parts = (await dark.page.evaluate(() => window.__a11yMeasure.text("all"))) ?? [];
     if (parts.length === 0) return undetermined("The page changes under prefers-color-scheme: dark, but no visible text was found to measure.");
+    /** @type {TextRow[]} */
     const rows = [];
+    /** @type {string[]} */
     const unknown = [];
     for (const part of parts) {
       if (part.undetermined || !part.backdrop) unknown.push(`"${part.text}" can't be measured because ${part.undetermined ?? "its background couldn't be read"}.`);
@@ -110,10 +167,15 @@ const colorScheme = () => ({
 
 // ---- prefers-contrast ----
 
-/** Measure the contrast of every piece of text on a page. */
+/**
+ * Measure the contrast of every piece of text on a page.
+ * @param {CheckContext} ctx
+ */
 async function measureAllText(ctx) {
   const parts = (await ctx.page.evaluate(() => window.__a11yMeasure.text("all"))) ?? [];
+  /** @type {TextRow[]} */
   const rows = [];
+  /** @type {string[]} */
   const unknown = [];
   for (const part of parts) {
     if (part.undetermined || !part.backdrop) unknown.push(`"${part.text}" can't be measured because ${part.undetermined ?? "its background couldn't be read"}.`);
@@ -122,18 +184,25 @@ async function measureAllText(ctx) {
   return { rows, unknown };
 }
 
-/** The piece of text with the least room above its threshold, and how many fall below it. */
+/**
+ * The piece of text with the least room above its threshold, and how many fall below it.
+ * @param {TextRow[]} rows
+ */
 function tightest(rows) {
   const sorted = [...rows].sort((a, b) => a.ratio / a.required - b.ratio / b.required);
   return { worst: sorted[0], below: sorted.filter((r) => r.ratio < r.required) };
 }
 
-/** Screenshots with animations frozen, so a running spinner can't make a page look different. */
+/**
+ * Screenshots with animations frozen, so a running spinner can't make a page look different.
+ * @param {CheckContext} ctx
+ */
 async function lookOf(ctx) {
   await ctx.settle(300);
   return ctx.page.screenshot({ animations: "disabled" });
 }
 
+/** @returns {Check} */
 const moreContrast = () => ({
   name: "more-contrast-respected",
   criteria: ["1.4.3", "1.4.6"],
@@ -156,6 +225,7 @@ const moreContrast = () => ({
   },
 });
 
+/** @returns {Check} */
 const lessContrast = () => ({
   name: "less-contrast-stays-readable",
   criteria: ["1.4.3"],
@@ -175,6 +245,7 @@ const lessContrast = () => ({
 
 // ---- prefers-reduced-transparency ----
 
+/** @returns {Check} */
 const reducedTransparency = () => ({
   name: "reduced-transparency-respected",
   // The preference isn't a success criterion. See-through backgrounds make text contrast unpredictable, which 1.4.3 and 1.4.11 care about.
@@ -187,6 +258,7 @@ const reducedTransparency = () => ({
     const still = await reduced.page.evaluate(() => window.__a11yConditions.translucentSurfaces());
     const measurements = [{ translucentWithoutPreference: normal.length, translucentWithReduce: still.length }];
     if (normal.length === 0 && still.length === 0) return na("No surface that holds text is see-through (no translucent background and no backdrop filter), so there's nothing to reduce. Empty overlays aren't counted.");
+    /** @param {{ element: string, background: string, backdropFilter: string }} s */
     const name = (s) => `${s.element} (${[s.background, s.backdropFilter && `backdrop-filter ${s.backdropFilter}`].filter(Boolean).join(", ")})`;
     if (still.length) return fail(`With prefers-reduced-transparency: reduce, ${plural(still.length, "surface")} holding text stay${still.length === 1 ? "s" : ""} see-through: ${list(still.map(name))}. Without the preference there were ${num(normal.length)}. This preference isn't a WCAG requirement. It matters because see-through backgrounds make text contrast unpredictable.`, { measurements });
     return pass(`${plural(normal.length, "see-through surface")} holding text (${list(normal.map(name), 2)}) become opaque when transparency is reduced.`, { measurements });
@@ -195,6 +267,10 @@ const reducedTransparency = () => ({
 
 // ---- forced colors ----
 
+/**
+ * @param {string} archetype
+ * @returns {Check}
+ */
 const forcedColors = (archetype) => ({
   name: "forced-colors-focus-visible",
   criteria: ["1.4.11", "2.4.7"],
@@ -217,8 +293,9 @@ const forcedColors = (archetype) => ({
     await forced.page.mouse.move(0, 0);
     await forced.settle(300);
     const shotBlurred = await forced.page.screenshot({ clip, animations: "disabled" });
+    /** @param {Buffer} buffer */
     const url = (buffer) => `data:image/png;base64,${buffer.toString("base64")}`;
-    const px = await forced.page.evaluate(([a, b]) => window.__a11yMeasure.compareShots(a, b), [url(shotBlurred), url(shotFocused)]);
+    const px = await forced.page.evaluate(([a, b]) => window.__a11yMeasure.compareShots(a, b), /** @type {[string, string]} */ ([url(shotBlurred), url(shotFocused)]));
     const optOuts = await forced.page.evaluate(() => window.__a11yConditions.forcedColorOptOuts());
     const note = optOuts.length ? ` ${plural(optOuts.length, "element")} opt${optOuts.length === 1 ? "s" : ""} out of forced colors with forced-color-adjust: none (${list(optOuts, 3)}), so a person should check them.` : "";
     const perimeter = 2 * (focused.box.width + focused.box.height);
@@ -232,6 +309,10 @@ const forcedColors = (archetype) => ({
 
 // ---- reflow ----
 
+/**
+ * @param {string} archetype
+ * @returns {Check}
+ */
 const reflow = (archetype) => ({
   name: "reflow-at-320px",
   criteria: ["1.4.10"],
@@ -252,6 +333,10 @@ const reflow = (archetype) => ({
 
 // ---- text spacing ----
 
+/**
+ * @param {string} archetype
+ * @returns {Check}
+ */
 const textSpacing = (archetype) => ({
   name: "text-spacing-no-clipping",
   criteria: ["1.4.12"],
@@ -263,7 +348,9 @@ const textSpacing = (archetype) => ({
     await ctx.settle(200);
     const after = await ctx.page.evaluate(() => window.__a11yConditions.clipping());
     if (before.length !== after.length) return undetermined("The page's elements changed while the spacing was applied, so the before and after can't be compared.");
+    /** @param {ClipFact} e */
     const clipped = (e) => (e.hidesX && e.overX > 1) || (e.hidesY && e.overY > 1);
+    /** @type {string[]} */
     const cut = [];
     after.forEach((now, index) => {
       const was = before[index];
@@ -277,7 +364,10 @@ const textSpacing = (archetype) => ({
   },
 });
 
-/** The conditions checks for an archetype. Whole pages use the name "page". */
+/**
+ * The conditions checks for an archetype. Whole pages use the name "page".
+ * @param {string} archetype
+ */
 export function conditionChecksFor(archetype) {
   return [reducedMotion(archetype), colorScheme(), moreContrast(), lessContrast(), reducedTransparency(), forcedColors(archetype), reflow(archetype), textSpacing(archetype)];
 }

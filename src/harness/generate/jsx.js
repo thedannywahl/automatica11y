@@ -4,12 +4,18 @@ import { buildKit } from "./kit.js";
 import { buildRecipes } from "./jsx-recipes.js";
 import { ATTEMPT_LIMIT, GENERATABLE, nameSaysSo } from "./shared.js";
 
+/** @typedef {import("../../types.js").Candidate} Candidate */
+/** @typedef {import("../../types.js").ExportSummary} ExportSummary */
+
 /** The names a part of a compound component ends with. A name that ends in one belongs to a family that shares the rest. */
 const PART_SUFFIX = /(Root|Trigger|Portal|Overlay|Backdrop|Positioner|Content|Popup|Panel|Title|Description|Close|Header|Item|List|Input|Label|Control|Provider)$/;
 
 /**
  * The prefix a family of flat exports shares. `DialogClose` and `DialogRoot` belong to `Dialog`, even when no export is
  * named `Dialog`. It counts only when at least two exports start with it.
+ * @param {string | null | undefined} name
+ * @param {ExportSummary[]} exports
+ * @returns {string | null}
  */
 export function inferBase(name, exports) {
   if (!name) return null;
@@ -18,13 +24,15 @@ export function inferBase(name, exports) {
   return exports.filter((e) => e.name.startsWith(base) && e.name !== base).length >= 2 ? base : null;
 }
 
-const words = (name) => name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[-_]/g, " ");
+const words = (/** @type {string} */ name) => name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[-_]/g, " ");
 
 /**
  * The component families in a package that look like this archetype, best first. A family is a base name and the parts that share
  * it (`DropdownMenuRoot`, `DropdownMenuItem`), a namespaced export with parts, or a single export. A family ranks by how well its
  * base fits the archetype's own name, then by how many parts it has. At most three are tried, so a library with a context menu,
  * a dropdown menu, and a menubar gets the plainest ones first.
+ * @param {string} archetype
+ * @param {ExportSummary[]} exports
  */
 export function familyBases(archetype, exports) {
   const families = new Map();
@@ -42,9 +50,9 @@ export function familyBases(archetype, exports) {
  * Candidate fixtures for a JSX framework: the recipes, run over the parts of the component the mapping found,
  * then over the package itself when its own name says it is this archetype.
  * @param {import("./dialects.js").Dialect} dialect
- * @param {{ archetype: string, pkg: string, entry: { export?: string }, exports: Array<{ name: string, type: string, parts?: string[] }>, explicit?: boolean }} input
+ * @param {{ archetype: string, pkg: string, entry: { export?: string }, exports: ExportSummary[], explicit?: boolean }} input
  *   `explicit` means a person named the export in a mapping, so only that component is tried.
- * @returns {{ candidates: Array<{ id: string, summary: string, source: string, used: string[] }>, reason: string | null }}
+ * @returns {{ candidates: Candidate[], reason: string | null }}
  */
 export function generateJsx(dialect, { archetype, pkg, entry, exports, explicit = false }) {
   if (!GENERATABLE.has(archetype)) return { candidates: [], reason: `Nothing is generated for the ${archetype} archetype.` };

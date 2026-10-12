@@ -3,7 +3,10 @@ import { resolve } from "node:path";
 import { ARCHETYPE_PATTERNS } from "../harness/storybook.js";
 import { ARCHETYPES, parseMappingFile } from "../schema.js";
 
-/** Names that mean the archetype itself, best first. */
+/**
+ * Names that mean the archetype itself, best first.
+ * @type {Record<string, string[]>}
+ */
 const BASE_NAMES = {
   button: ["button"],
   link: ["link", "anchor"],
@@ -21,10 +24,17 @@ const BASE_NAMES = {
 /** Archetypes a template can fill in. Everything else needs a fixture someone writes. */
 export const TEMPLATED = new Set(["button", "link"]);
 
-/** `DialogTrigger` becomes `Dialog Trigger`. `sl-button` becomes `sl button`. */
+/**
+ * `DialogTrigger` becomes `Dialog Trigger`. `sl-button` becomes `sl button`.
+ * @param {string} name
+ */
 const words = (name) => name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[-_]/g, " ");
 
-/** How well a name fits an archetype. 0 means it doesn't. */
+/**
+ * How well a name fits an archetype. 0 means it doesn't.
+ * @param {string} archetype
+ * @param {string} name
+ */
 export function score(archetype, name) {
   if (!ARCHETYPE_PATTERNS[archetype].test(words(name))) return 0;
   const compact = name.replace(/[-_\s]/g, "").toLowerCase();
@@ -80,7 +90,11 @@ export function candidateMapping({ flavor, exports = [], tags = [] }) {
   return mapping;
 }
 
-/** Read and validate a `--mapping` file. Throws an Error with a plain message. */
+/**
+ * Read and validate a `--mapping` file. Throws an Error with a plain message.
+ * @param {string} path
+ * @param {string} cwd
+ */
 export function loadMappingFile(path, cwd) {
   const file = resolve(cwd, path);
   if (!existsSync(file)) throw new Error(`The mapping file doesn't exist: ${file}`);
@@ -93,7 +107,10 @@ export function loadMappingFile(path, cwd) {
   return parseMappingFile(json);
 }
 
-/** Where an authored fixture can sit when the mapping doesn't name one. */
+/**
+ * Where an authored fixture can sit when the mapping doesn't name one.
+ * @param {{ cwd: string, targetId: string, archetype: string, mapped?: { fixture?: string | null } }} input
+ */
 export function findAuthoredFixture({ cwd, targetId, archetype, mapped }) {
   if (mapped?.fixture) {
     const file = resolve(cwd, mapped.fixture);

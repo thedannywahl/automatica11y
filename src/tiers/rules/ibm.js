@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { readPackageVersion } from "../../env/versions.js";
 
 const require = createRequire(import.meta.url);
+/** @type {string | null} */
 let aceSource = null;
 
 /** Read ace.js once. The engine runs inside the page, so we only need its source text. */
@@ -11,8 +12,15 @@ function loadAce() {
   return aceSource;
 }
 
+/** @type {Record<string, number>} */
 const LEVEL_ORDER = { A: 1, AA: 2 };
 
+/**
+ * What this file uses of the IBM engine's checker, which runs inside the page.
+ * @typedef {{ rulesets: Array<{ id: string, checkpoints: Array<{ num: string, wcagLevel: string, rules: Array<{ id: string, toolkitLevel: number }> }> }>, check(root: Node, ids: string[]): Promise<{ results: Array<{ ruleId: string, value: string[], message: string, snippet?: string, path?: { dom?: string } }> }> }} AceChecker
+ */
+
+/** @param {string} ruleId */
 export const helpUrl = (ruleId) => `https://able.ibm.com/rules/archives/latest/doc/en-US/${ruleId}.html`;
 
 /**
@@ -21,8 +29,10 @@ export const helpUrl = (ruleId) => `https://able.ibm.com/rules/archives/latest/d
  * @param {Map<string, { wcag: string[], toolkitLevel: number | null }>} ruleInfo
  * @param {(item: { value: string[] }) => string} kindOf
  * @param {number} maxNodes
+ * @param {boolean} withKind
  */
 function group(items, ruleInfo, kindOf, maxNodes, withKind) {
+  /** @type {Map<string, { ruleId: string, impact: null, toolkitLevel: number | null, wcag: string[], kind?: import("../../types.js").Finding["kind"], help: string, helpUrl: string, nodeCount: number, nodes: Array<{ selector: string, html: string }> }>} */
   const groups = new Map();
   for (const item of items) {
     const kind = kindOf(item);
@@ -35,7 +45,7 @@ function group(items, ruleInfo, kindOf, maxNodes, withKind) {
         impact: null,
         toolkitLevel: info?.toolkitLevel ?? null,
         wcag: info?.wcag ?? [],
-        ...(withKind ? { kind } : {}),
+        ...(withKind ? { kind: /** @type {import("../../types.js").Finding["kind"]} */ (kind) } : {}),
         help: item.message,
         helpUrl: helpUrl(item.ruleId),
         nodeCount: 0,
@@ -64,13 +74,15 @@ export async function runIbm(page, { wcag, level, maxNodes = 5, scope = null }) 
   const scopes = [scope ?? []].flat();
   const raw = await page.evaluate(async ({ id, scopes }) => {
     // @ts-ignore ace.js defines window.ace in the page.
-    const checker = new window.ace.Checker();
+    const checker = /** @type {AceChecker} */ (new window.ace.Checker());
     const set = checker.rulesets.find((r) => r.id === id);
     if (!set) throw new Error(`The IBM engine has no ruleset ${id}.`);
     const roots = scopes.length ? scopes.flatMap((selector) => [...document.querySelectorAll(selector)]) : [document];
     if (roots.length === 0) throw new Error(`Nothing matches the scope ${scopes.join(", ")}.`);
+    /** @type {Set<string>} */
     const passed = new Set();
     const found = [];
+    /** @type {Set<string>} */
     const seen = new Set();
     for (const root of roots) {
       const report = await checker.check(root, [id]);
@@ -85,7 +97,7 @@ export async function runIbm(page, { wcag, level, maxNodes = 5, scope = null }) 
       }
     }
     return {
-      checkpoints: set.checkpoints.map((cp) => ({ num: cp.num, level: cp.wcagLevel, rules: cp.rules.map((x) => [x.id, x.toolkitLevel]) })),
+      checkpoints: set.checkpoints.map((cp) => ({ num: cp.num, level: cp.wcagLevel, rules: cp.rules.map((x) => /** @type {[string, number]} */ ([x.id, x.toolkitLevel])) })),
       found,
       passedRules: [...passed],
     };
@@ -107,6 +119,7 @@ export async function runIbm(page, { wcag, level, maxNodes = 5, scope = null }) 
   const inScope = raw.found.filter((item) => ruleInfo.has(item.ruleId));
   const violations = inScope.filter((item) => item.value[0] === "VIOLATION" && item.value[1] === "FAIL");
   const review = inScope.filter((item) => !(item.value[0] === "VIOLATION" && item.value[1] === "FAIL"));
+  /** @param {{ value: string[] }} item */
   const reviewKind = (item) => (item.value[1] === "MANUAL" ? "manual" : item.value[1] === "POTENTIAL" ? "potential" : "recommendation");
   const notes = level === "AAA" ? ["IBM's WCAG rulesets cover levels A and AA. This run used the AA rules."] : [];
   return {

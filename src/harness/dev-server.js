@@ -3,8 +3,13 @@ import { resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { validateServer } from "../commands/config.js";
 
+/**
+ * @param {{ command: string, url: string, timeoutSeconds?: number, cwd?: string }} server
+ * @param {import("../commands/common.js").Io} io
+ */
 export async function startDevServer(server, io) {
   validateServer(server);
+  /** @param {number} timeout */
   const probe = async (timeout) => {
     try {
       return await fetch(server.url, { signal: AbortSignal.timeout(timeout), redirect: "manual" });
@@ -20,12 +25,14 @@ export async function startDevServer(server, io) {
   const child = spawn(server.command, { shell: true, detached: process.platform !== "win32", cwd: resolve(io.cwd, server.cwd ?? "."), env: io.env, stdio: ["ignore", "pipe", "pipe"] });
   child.stdout.on("data", (data) => io.stdout.write(data.toString()));
   child.stderr.on("data", (data) => io.stderr.write(data.toString()));
+  /** @type {Error | null} */
   let failure = null;
   let exited = false;
   child.on("error", (error) => { failure = error; });
   child.on("exit", (code, signal) => { exited = true; failure ??= new Error(`Server exited before the audit finished (${signal ?? code}).`); });
   let stopping;
   const stop = () => stopping ??= (async () => {
+    /** @param {NodeJS.Signals} signal */
     const kill = (signal) => {
       try {
         if (process.platform === "win32") {

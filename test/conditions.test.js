@@ -72,6 +72,10 @@ for (const [page, [archetype, expected]] of Object.entries(PAGES)) {
 }
 
 test("a failure says what moved, which element overflowed, or what got clipped", { skip, timeout: 400_000 }, async () => {
+  /**
+   * @param {string} page
+   * @param {string} name
+   */
   const detail = async (page, name) => (await runConditions(session.browser, `${server.origin}/${page}.html`, "button")).checks.find((c) => c.name === name).detail;
   assert.match(await detail("motion-bad", "reduced-motion-respected"), /still moves or repeats: slide on div\.spin \(moves transform; 1000ms, repeats forever\)/);
   assert.match(await detail("motion-transition-bad", "reduced-motion-respected"), /transform on div#panel/);
@@ -90,10 +94,13 @@ test("the checks record the numbers they measured", { skip, timeout: 200_000 }, 
   assert.deepEqual(motion.measurements.map((m) => [m.setting, m.moveOrRepeat]), [["no preference", 1], ["reduce", 1]]);
   const reflow = (await runConditions(session.browser, `${server.origin}/reflow-bad.html`, "button")).checks.find((c) => c.name === "reflow-at-320px");
   assert.equal(reflow.measurements[0].viewportWidth, 320);
-  assert.ok(reflow.measurements[0].scrollWidth > 320);
+  assert.ok(/** @type {number} */ (reflow.measurements[0].scrollWidth) > 320);
 });
 
-/** Run the CLI on pages from this folder and read back what it wrote. */
+/**
+ * Run the CLI on pages from this folder and read back what it wrote.
+ * @param {string[]} args
+ */
 async function audit(args) {
   const cwd = makeTree();
   const { io, out } = makeIo({ cwd, env: process.env });

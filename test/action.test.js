@@ -22,6 +22,7 @@ test("Action output uses delimiter-safe multiline records", () => {
 
 test("Action keeps reports and original failing exit for artifact upload", async () => {
   const cwd = makeTree({ "page.html": "<h1>Test</h1>", ".automatica11y.yml": "version: 1\ntargets: [./page.html]\nartifacts:\n  name: custom-report\n  retentionDays: 3\nsummary: false\n" });
+  /** @type {{ file: string, args: string[], options: import("node:child_process").SpawnOptions }[]} */
   const commands = [];
   const outputs = await runAudit({ "upload-artifact": "true" }, { GITHUB_WORKSPACE: cwd }, { installBrowser: false, run: async (file, args, options) => {
     commands.push({ file, args, options });
@@ -53,6 +54,7 @@ test("Action rejects stale output instead of uploading existing reports", async 
 test("Action metadata pins dependencies and uploads before propagating failure", () => {
   const action = parse(readFileSync(new URL("../action.yml", import.meta.url), "utf8"));
   assert.equal(action.runs.using, "composite");
+  /** @type {{ id?: string, name?: string, uses?: string }[]} */
   const steps = action.runs.steps;
   for (const step of steps.filter((step) => step.uses)) assert.match(step.uses, /@[a-f0-9]{40}$/);
   assert.ok(steps.findIndex((step) => step.id === "artifact") < steps.findIndex((step) => step.name === "Propagate CI outcome"));

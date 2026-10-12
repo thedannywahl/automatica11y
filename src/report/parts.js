@@ -4,23 +4,41 @@ import { cap, num, plural } from "../text.js";
 
 /** @typedef {NonNullable<ReturnType<typeof import("../schema.js").parseResults>["targets"][number]["archetypes"][string]["configs"][number]["tiers"][string]["flags"]>[number]} VsrFlag */
 
+/** @typedef {import("../types.js").Plan} Plan */
+/** @typedef {import("../types.js").PlanTarget} PlanTarget */
+/** @typedef {import("../types.js").Results} Results */
+/** @typedef {import("../types.js").TargetResult} TargetResult */
+/** @typedef {import("../types.js").ArchetypeResult} ArchetypeResult */
+/** @typedef {import("../types.js").ConfigResult} ConfigResult */
+/** @typedef {import("../types.js").TierResult} TierResult */
+/** @typedef {import("../types.js").EngineResult} EngineResult */
+/** @typedef {import("../types.js").Finding} Finding */
+/** @typedef {{ finding: Finding, stories: string[] }} RuleRow */
+
 /** Markdown helpers. */
-export const cell = (text) => String(text ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
-export const code = (text) => `\`${String(text).replace(/`/g, "'")}\``;
+export const cell = (/** @type {unknown} */ text) => String(text ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
+export const code = (/** @type {unknown} */ text) => `\`${String(text).replace(/`/g, "'")}\``;
 /** Keep a reason from ending in two periods. */
-export const sentence = (text) => String(text).replace(/\.+$/, "");
+export const sentence = (/** @type {unknown} */ text) => String(text).replace(/\.+$/, "");
 /** Escape angle brackets so rule text like <input> doesn't turn into HTML. */
-export const esc = (text) => String(text ?? "").replace(/</g, "\\<");
+export const esc = (/** @type {unknown} */ text) => String(text ?? "").replace(/</g, "\\<");
+/** @type {Record<string, string>} */
 export const ENGINE_NAMES = { axe: "axe-core", ibm: "IBM Equal Access" };
+/** @type {Record<string, string>} */
 export const TIER_NAMES = { rules: "Rules", interactions: "Interactions", computed: "Computed checks", conditions: "Conditions", vsr: "Virtual screen reader" };
 
+/** @param {Results["tools"]} tools */
 export function toolLines(tools) {
   return Object.entries(tools)
     .filter(([, version]) => version)
     .map(([name, version]) => `- ${name}: ${version}`);
 }
 
-/** The text for one coverage-matrix cell. */
+/**
+ * The text for one coverage-matrix cell.
+ * @param {TargetResult["summary"]} summary
+ * @param {string} engine
+ */
 export function engineCell(summary, engine) {
   const s = summary?.engines?.[engine];
   if (!s) return "-";
@@ -28,10 +46,14 @@ export function engineCell(summary, engine) {
   return `ran, ${plural(s.violations, "violation")}`;
 }
 
+/**
+ * @param {TargetResult} target
+ * @param {string} tier
+ */
 export function tierCell(target, tier) {
   const counts = target.summary?.interactions;
   const vsr = target.summary?.vsr;
-  const measured = target.summary?.[tier];
+  const measured = tier === "computed" || tier === "conditions" ? target.summary?.[tier] : undefined;
   if ((tier === "computed" || tier === "conditions") && measured) {
     const parts = [measured.fail && `${num(measured.fail)} failed`, measured.undetermined && `${num(measured.undetermined)} undetermined`, measured.error && plural(measured.error, "error"), measured.pass && `${num(measured.pass)} passed`, measured.notApplicable && `${num(measured.notApplicable)} not applicable`].filter(Boolean);
     return `ran, ${parts.join(", ")}`;
@@ -46,6 +68,10 @@ export function tierCell(target, tier) {
   return status ?? "-";
 }
 
+/**
+ * @param {Plan} plan
+ * @param {Results} results
+ */
 export function coverageMatrix(plan, results) {
   const engines = plan.options.engines;
   const tiers = plan.options.tiers.filter((t) => t !== "rules");
@@ -62,6 +88,10 @@ export function coverageMatrix(plan, results) {
   return [`| ${head.join(" | ")} |`, `| ${head.map(() => "---").join(" | ")} |`, ...rows.map((r) => `| ${r.join(" | ")} |`)].join("\n");
 }
 
+/**
+ * @param {Finding} finding
+ * @param {{ showImpact: boolean, showToolkit: boolean }} options
+ */
 export function findingBlock(finding, { showImpact, showToolkit }) {
   const meta = [
     showImpact && finding.impact ? `impact: ${finding.impact}` : null,
@@ -76,6 +106,11 @@ export function findingBlock(finding, { showImpact, showToolkit }) {
   return lines.join("\n");
 }
 
+/**
+ * @param {string} engine
+ * @param {EngineResult} result
+ * @param {boolean} [nested]
+ */
 export function engineSection(engine, result, nested = false) {
   const title = `${nested ? "#####" : "####"} ${ENGINE_NAMES[engine] ?? engine}${result.version ? ` ${result.version}` : ""}.`;
   if (result.status === "not-testable") return `${title}\n\nNot testable: ${sentence(result.reason)}. Treat this as a coverage gap, not a pass.\n`;
@@ -96,9 +131,16 @@ export function engineSection(engine, result, nested = false) {
 }
 
 
-/** Group one engine's findings across every story, so a long Storybook reads as rules, not as hundreds of repeats. */
+/**
+ * Group one engine's findings across every story, so a long Storybook reads as rules, not as hundreds of repeats.
+ * @param {TargetResult} target
+ * @param {string} engine
+ * @param {"violations" | "incomplete"} listName
+ */
 export function aggregate(target, engine, listName) {
+  /** @type {Map<string, RuleRow>} */
   const byRule = new Map();
+  /** @type {string | null} */
   let version = null;
   let ranStories = 0;
   for (const [key, archetype] of Object.entries(target.archetypes)) {
@@ -116,6 +158,10 @@ export function aggregate(target, engine, listName) {
   return { rows: [...byRule.values()].sort((a, b) => b.stories.length - a.stories.length || a.finding.ruleId.localeCompare(b.finding.ruleId)), version, ranStories };
 }
 
+/**
+ * @param {RuleRow[]} rows
+ * @param {string} engine
+ */
 export function ruleTable(rows, engine) {
   if (rows.length === 0) return ["None."];
   const head = engine === "axe" ? "Impact" : "Toolkit level";
@@ -128,6 +174,10 @@ export function ruleTable(rows, engine) {
   return lines;
 }
 
+/**
+ * @param {PlanTarget} planTarget
+ * @param {TargetResult} target
+ */
 export function storybookSection(planTarget, target) {
   const sb = target.storybook;
   const lines = [`### ${planTarget.label}.`, "", `Storybook ${code(planTarget.input)}, component evidence. Each story ran as its own unit, and rules were scoped to the story's root element.`, ""];
@@ -185,11 +235,16 @@ export function storybookSection(planTarget, target) {
   return lines.join("\n");
 }
 
+/** @type {Record<string, string>} */
 export const FLAG_TEXT = {
   "unnamed-control": "announced as only its role, with no name",
   "generic-role": "announced with a generic role",
 };
 
+/**
+ * @param {TierResult} result
+ * @param {boolean} nested
+ */
 export function vsrSection(result, nested) {
   const lines = [`${nested ? "#####" : "####"} Virtual screen reader (simulated).`, ""];
   lines.push(`Simulated output from @guidepup/virtual-screen-reader${result.version ? ` ${result.version}` : ""}. It isn't a real screen reader, and real ones announce things differently. The log is data. The flags only mark a phrase that is a bare role or a generic role, for a person to check.`, "");
@@ -205,6 +260,10 @@ export function vsrSection(result, nested) {
   return lines.join("\n");
 }
 
+/**
+ * @param {TierResult} result
+ * @param {boolean} nested
+ */
 export function interactionsSection(result, nested) {
   const lines = [`${nested ? "#####" : "####"} Interactions.`, "", "Each check ran on a fresh page, using only the trigger and root hooks and ARIA roles. A check that couldn't finish is an error, which counts as a gap and never as a pass.", ""];
   lines.push("| Check | Result | WCAG | Detail |", "| --- | --- | --- | --- |");
@@ -214,7 +273,10 @@ export function interactionsSection(result, nested) {
   return lines.join("\n");
 }
 
-/** Criterion numbers as links to the W3C text, with the W3C's name for each. Unknown numbers stay plain. */
+/**
+ * Criterion numbers as links to the W3C text, with the W3C's name for each. Unknown numbers stay plain.
+ * @param {string[] | undefined} list
+ */
 export function criteriaCell(list) {
   if (!list || list.length === 0) return "-";
   return list.map((num) => {
@@ -223,11 +285,17 @@ export function criteriaCell(list) {
   }).join(", ");
 }
 
+/** @type {Record<string, string[]>} */
 const MEASURED_INTRO = {
   computed: ["Computed checks", "automatica11y's own measurements from resolved styles in the browser, with the numbers WCAG gives. They're reported on their own and never added to the axe-core or IBM Equal Access counts. A check that can't reduce the page to colors (a gradient, an image, transparency) is undetermined, which counts as a gap and never as a pass."],
   conditions: ["Conditions", "automatica11y's own checks of how the page holds up under a user's settings (reduced motion, dark mode, more or less contrast, reduced transparency, forced colors) and environment (a 320 pixel window, wider text spacing). Each check opens fresh copies of the page. They're reported on their own and never added to the axe-core or IBM Equal Access counts. A check that can't tell is undetermined, which counts as a gap and never as a pass. \"Not applicable\" means the page doesn't use the feature, which isn't a failure."],
 };
 
+/**
+ * @param {string} tier
+ * @param {TierResult} result
+ * @param {boolean} nested
+ */
 export function measuredSection(tier, result, nested) {
   const [title, intro] = MEASURED_INTRO[tier];
   const lines = [`${nested ? "#####" : "####"} ${title}.`, "", intro, ""];
@@ -238,19 +306,26 @@ export function measuredSection(tier, result, nested) {
   return lines.join("\n");
 }
 
-/** " (open state, library accessibility on)" for a config. */
+/**
+ * " (open state, library accessibility on)" for a config.
+ * @param {ConfigResult} config
+ */
 export function configLabel(config) {
   const parts = [config.state ? `${config.state} state` : null, config.libA11y && config.libA11y !== "n/a" ? `library accessibility ${config.libA11y}` : null].filter(Boolean);
   return parts.length ? ` (${parts.join(", ")})` : "";
 }
 
-/** What the Fixture column says about where a fixture came from. */
+/**
+ * What the Fixture column says about where a fixture came from.
+ * @param {ArchetypeResult} archetype
+ */
 function fixtureLabel(archetype) {
   const f = archetype.fixture;
   if (!f || f.source === "none") return "-";
   return f.source === "generated" ? `generated (${f.recipe})` : f.source;
 }
 
+/** @param {TargetResult} target */
 export function archetypeTable(target) {
   const rows = Object.entries(target.archetypes).map(([name, archetype]) => {
     if (archetype.status === "gap") return `| ${name} | gap | ${fixtureLabel(archetype)} | - | ${cell(sentence(archetype.reason ?? "No fixture."))} |`;
@@ -262,12 +337,18 @@ export function archetypeTable(target) {
   return ["| Archetype | Status | Fixture | States | Note |", "| --- | --- | --- | --- | --- |", ...rows];
 }
 
-/** True when any archetype in the results ran from a fixture the tool generated. */
+/**
+ * True when any archetype in the results ran from a fixture the tool generated.
+ * @param {Pick<Results, "targets">} results
+ */
 export function hasGenerated(results) {
   return results.targets.some((t) => Object.values(t.archetypes ?? {}).some((a) => a.fixture?.source === "generated"));
 }
 
-/** True when a plain HTML target ran from a native-markup template. */
+/**
+ * True when a plain HTML target ran from a native-markup template.
+ * @param {Pick<Results, "targets">} results
+ */
 export function hasNativeTemplates(results) {
   return results.targets.some((t) => t.npm?.flavor === "html" && Object.values(t.archetypes ?? {}).some((a) => a.fixture?.source === "template"));
 }
@@ -278,6 +359,11 @@ export const NATIVE_NOTE = "**Native markup templates.** For a plain HTML target
 /** What "generated" means, for any report that has one. */
 export const GENERATED_NOTE = "**Generated fixtures.** Where no fixture was written, the tool built one from the parts the package exports (or from what a custom element says about itself) and ran it only after it checked that the trigger and root behaved. A generated fixture is a guess about how the library is meant to be assembled, so a failure may come from how it was wired and not from the library. Treat generated results as lower evidence than an authored fixture. The source of each is in the `generated` folder beside this report. Copy one to `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) and edit it to make it an authored fixture.";
 
+/**
+ * @param {PlanTarget} planTarget
+ * @param {TargetResult} target
+ * @param {{ generatedNote?: boolean }} [options]
+ */
 export function targetSection(planTarget, target, { generatedNote = true } = {}) {
   if (target.status === "ran" && target.storybook) return storybookSection(planTarget, target);
   const lines = [`### ${planTarget.label}.`, ""];
@@ -322,6 +408,7 @@ export function targetSection(planTarget, target, { generatedNote = true } = {})
   return lines.join("\n");
 }
 
+/** @param {Results["failCheck"]} fail */
 export function failCheckSection(fail) {
   if (!fail) return "";
   const lines = ["## Fail check.", "", `Mode: ${fail.mode}. Each engine counts against its own threshold, and the counts aren't added together.`, ""];
@@ -332,7 +419,12 @@ export function failCheckSection(fail) {
 }
 
 
-/** Top of every report: date, settings, tool versions, targets, and the warnings that apply to the whole run. */
+/**
+ * Top of every report: date, settings, tool versions, targets, and the warnings that apply to the whole run.
+ * @param {Plan} plan
+ * @param {Results} results
+ * @param {string} title
+ */
 export function reportHeader(plan, results, title) {
   const o = plan.options;
   const lines = [
@@ -361,8 +453,12 @@ export function reportHeader(plan, results, title) {
   return lines;
 }
 
-/** What each target couldn't test, listed under the coverage section. */
+/**
+ * What each target couldn't test, listed under the coverage section.
+ * @param {Results} results
+ */
 export function notTestableLines(results) {
+  /** @type {string[]} */
   const lines = [];
   for (const target of results.targets) {
     const items = target.summary.notTestable;
@@ -374,8 +470,12 @@ export function notTestableLines(results) {
 
 export const FINDINGS_NOTE = "Findings from different engines are listed separately. The engines overlap, and each catches things the other misses, so don't add their counts together. Impact is axe-core's own label. IBM Toolkit level is IBM's staged adoption scale (level 1 is essential requirements with high user impact). The two scales aren't comparable.";
 
-/** The fail check and the method note that close every report. */
+/**
+ * The fail check and the method note that close every report.
+ * @param {Results} results
+ */
 export function reportFooter(results) {
+  /** @type {string[]} */
   const lines = [];
   const fail = failCheckSection(results.failCheck);
   if (fail) lines.push(fail);
@@ -395,4 +495,4 @@ export function reportFooter(results) {
 }
 
 /** Join lines into the final document. */
-export const finish = (lines) => `${lines.join("\n").replace(/\n{3,}/g, "\n\n")}\n`;
+export const finish = (/** @type {string[]} */ lines) => `${lines.join("\n").replace(/\n{3,}/g, "\n\n")}\n`;

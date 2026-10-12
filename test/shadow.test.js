@@ -14,6 +14,7 @@ import { join } from "node:path";
 const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
 
+/** @param {string} mode */
 const page = (mode) => `<!doctype html><html lang="en"><head><title>Shadow</title></head><body><main><h1>Shadow test</h1><div id="root"></div></main>
 <script>
 class XThing extends HTMLElement {

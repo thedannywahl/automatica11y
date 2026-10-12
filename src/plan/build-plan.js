@@ -37,7 +37,7 @@ export async function buildPlan({ command, targets, options, browserVersion = nu
       evidenceLevel: target.evidenceLevel,
       resolved: target.resolved,
       ...(target.companions?.length ? { companions: target.companions } : {}),
-      mapping: null,
+      mapping: /** @type {Record<string, import("../types.js").MappingEntry> | null} */ (null),
     };
   });
   return {
@@ -50,7 +50,10 @@ export async function buildPlan({ command, targets, options, browserVersion = nu
   };
 }
 
-/** Labels the user typed must be unique. Returns the first duplicate, or null. */
+/**
+ * Labels the user typed must be unique. Returns the first duplicate, or null.
+ * @param {string[]} rawTargets
+ */
 export function findDuplicateLabel(rawTargets) {
   const seen = new Set();
   for (const raw of rawTargets) {

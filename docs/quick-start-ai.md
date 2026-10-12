@@ -11,7 +11,7 @@ Once the skill is installed in your agent you can prompt it with the same comman
 You can audit web pages, static html files, Storybooks, and npm packages. To audit a live web page, simply provide the URL.
 
 ```prompt
-/automatica11y audit "https://instructure.design/"
+/automatica11y audit "https://iywahl.com/"
 ```
 
 ## Compare two packages

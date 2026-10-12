@@ -14,12 +14,17 @@ import { installPackage, npmView } from "./helpers/npm-fakes.js";
 const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
 
+/**
+ * @param {string[]} args
+ * @param {Record<string, string>} [files]
+ */
 async function run(args, files = {}) {
   const cwd = makeTree(files);
   const { io, out } = makeIo({ cwd, env: process.env });
   io.npmView = npmView;
   io.installPackage = installPackage;
   const code = await main(args, io);
+  /** @param {string} file */
   const read = (file) => {
     try {
       return readFileSync(join(cwd, "a11y-report", file), "utf8");
@@ -39,7 +44,7 @@ test("every adapter has the same shape, and the schema knows each framework and 
     assert.equal(adapter.id, id);
     assert.ok(TARGET_KINDS.includes(adapter.kind), `${adapter.kind} is a target kind`);
     for (const member of ["label", "noun", "extension", "runtime", "detect", "bundle", "entry", "discoverEntry", "template", "generate", "describe"]) {
-      assert.ok(adapter[member] !== undefined, `${id} has ${member}`);
+      assert.ok(/** @type {Record<string, unknown>} */ (adapter)[member] !== undefined, `${id} has ${member}`);
     }
     assert.equal(adapterForKind(adapter.kind), adapter);
     assert.equal(adapterFor(id), adapter);
@@ -72,7 +77,7 @@ test("Vue fixtures bundle with JSX turned into h() calls and one copy of Vue", (
 });
 
 test("a family of flat parts with no export of its own name still has a base", () => {
-  const exports = ["DialogRoot", "DialogTrigger", "DialogContent", "Other"].map((name) => ({ name, type: "object", parts: [] }));
+  const exports = ["DialogRoot", "DialogTrigger", "DialogContent", "Other"].map((name) => ({ name, type: "object", parts: /** @type {string[]} */ ([]) }));
   assert.equal(inferBase("DialogClose", exports), "Dialog");
   assert.equal(inferBase("DialogRoot", exports), "Dialog");
   assert.equal(inferBase("Other", exports), null);

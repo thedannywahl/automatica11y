@@ -10,32 +10,65 @@ import { criterionRef } from "../../wcag/index.js";
 import { contrastOver, contrastRatio, formatRatio, ringIsEnough, textThreshold } from "./color.js";
 
 /** @typedef {{ key: number, text: string, color: number[] | null, size: number, weight: string, backdrop: number[] | null, undetermined: string | null }} TextPart */
+/** @typedef {import("../../types.js").CheckOutcome} CheckOutcome */
+/** @typedef {import("../../types.js").CheckContext} CheckContext */
+/** @typedef {import("../../types.js").Check} Check */
 
+/**
+ * @param {string} detail
+ * @param {Partial<CheckOutcome>} [extra]
+ * @returns {CheckOutcome}
+ */
 const pass = (detail, extra = {}) => ({ result: "pass", detail, ...extra });
+/**
+ * @param {string} detail
+ * @param {Partial<CheckOutcome>} [extra]
+ * @returns {CheckOutcome}
+ */
 const fail = (detail, extra = {}) => ({ result: "fail", detail, ...extra });
+/**
+ * @param {string} detail
+ * @returns {CheckOutcome}
+ */
 const na = (detail) => ({ result: "not-applicable", detail });
+/**
+ * @param {string} detail
+ * @param {Partial<CheckOutcome>} [extra]
+ * @returns {CheckOutcome}
+ */
 const undetermined = (detail, extra = {}) => ({ result: "undetermined", detail, ...extra });
 
 /** Time for CSS transitions to finish before a state is measured. */
 const SETTLE_MS = 400;
 
+/**
+ * @param {unknown} a
+ * @param {unknown} b
+ */
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+/** @param {number} n */
 const floor2 = (n) => Math.floor(n * 100) / 100;
 
-/** Move the pointer away and let any hover styles end. */
+/**
+ * Move the pointer away and let any hover styles end.
+ * @param {CheckContext} ctx
+ */
 async function parkPointer(ctx) {
   await ctx.page.mouse.move(0, 0);
   await ctx.settle(SETTLE_MS);
 }
 
-/** Text contrast in each state a person can put the control in. */
+/**
+ * Text contrast in each state a person can put the control in.
+ * @type {Check}
+ */
 const TEXT_CONTRAST = {
   name: "text-contrast-by-state",
   criteria: ["1.4.3"],
   async run(ctx) {
     /** @type {Array<{ state: string, parts: TextPart[] }>} */
     const states = [];
-    const measure = async (state) => states.push({ state, parts: (await ctx.page.evaluate(() => window.__a11yMeasure.text())) ?? [] });
+    const measure = async (/** @type {string} */ state) => states.push({ state, parts: (await ctx.page.evaluate(() => window.__a11yMeasure.text())) ?? [] });
     await parkPointer(ctx);
     await measure("rest");
     if (states[0].parts.length === 0) return na("The trigger has no visible text, so its text contrast wasn't measured.");
@@ -53,7 +86,9 @@ const TEXT_CONTRAST = {
     await measure("pressed");
     await ctx.page.mouse.up().catch(() => {});
 
+    /** @type {Array<{ state: string, text: string, ratio: number, required: number }>} */
     const rows = [];
+    /** @type {string[]} */
     const unknown = [];
     for (const { state, parts } of states) {
       for (const part of parts) {
@@ -82,7 +117,10 @@ const TEXT_CONTRAST = {
   },
 };
 
-/** The edge, fill, or icon that tells a person where a control is. */
+/**
+ * The edge, fill, or icon that tells a person where a control is.
+ * @type {Check}
+ */
 const BOUNDARY_CONTRAST = {
   name: "boundary-contrast",
   criteria: ["1.4.11"],
@@ -110,7 +148,10 @@ const BOUNDARY_CONTRAST = {
   },
 };
 
-/** Does the focus indicator stand out from what's around it? */
+/**
+ * Does the focus indicator stand out from what's around it?
+ * @type {Check}
+ */
 const FOCUS_CONTRAST = {
   name: "focus-indicator-contrast",
   criteria: ["1.4.11", "2.4.13"],
@@ -126,6 +167,7 @@ const FOCUS_CONTRAST = {
 
     // First choice: an outline, ring, or border on the control itself. Its colors and thickness are exact.
     if (now && !now.undetermined && now.outside && now.inside) {
+      /** @type {Array<{ label: string, ratio: number, width: number }>} */
       const found = [];
       if (now.outline && !same(now.outline, rest.outline)) {
         const against = now.outline.offset >= 0 ? now.outside : now.inside;
@@ -148,8 +190,9 @@ const FOCUS_CONTRAST = {
 
     // Otherwise the indicator is something styles can't summarize (a ripple, a background change, a blurred glow), so compare pixels.
     const shotNow = await ctx.page.screenshot({ clip });
+    /** @param {Buffer} buffer */
     const url = (buffer) => `data:image/png;base64,${buffer.toString("base64")}`;
-    const px = await ctx.page.evaluate(([a, b]) => window.__a11yMeasure.compareShots(a, b), [url(shotRest), url(shotNow)]);
+    const px = await ctx.page.evaluate(([a, b]) => window.__a11yMeasure.compareShots(a, b), /** @type {[string, string]} */ ([url(shotRest), url(shotNow)]));
     if (px.changed === 0) return na("Nothing visible changed on focus, so there's no indicator to measure. The interactions tier reports that as a failure.");
     const perimeter = 2 * (rest.box.width + rest.box.height);
     const measurements = [{ changedPixels: px.changed, pixelsAtLeast3to1: px.strong, strongestChange: floor2(px.max), perimeterPixels: Math.round(perimeter) }];
@@ -161,6 +204,7 @@ const FOCUS_CONTRAST = {
 /**
  * For a live region, the trigger is only a button that makes the message appear, so the message is what gets measured:
  * the text that appears after the trigger is activated, in its resting state.
+ * @type {Check}
  */
 const MESSAGE_TEXT_CONTRAST = {
   name: "message-text-contrast",
@@ -175,7 +219,9 @@ const MESSAGE_TEXT_CONTRAST = {
     const known = new Set(before.map((p) => p.key));
     const fresh = after.filter((p) => !known.has(p.key));
     if (fresh.length === 0) return na("No new visible text appeared when the trigger was activated, so there's no message text to measure.");
+    /** @type {Array<{ text: string, ratio: number, required: number }>} */
     const rows = [];
+    /** @type {string[]} */
     const unknown = [];
     for (const part of fresh) {
       if (part.undetermined || !part.backdrop) unknown.push(`"${part.text}" can't be measured because ${part.undetermined ?? "its background couldn't be read"}.`);
@@ -190,7 +236,10 @@ const MESSAGE_TEXT_CONTRAST = {
   },
 };
 
-/** The checks that apply to an archetype. */
+/**
+ * The checks that apply to an archetype.
+ * @param {string} archetype
+ */
 export function computedChecksFor(archetype) {
   return archetype === "live-region" ? [MESSAGE_TEXT_CONTRAST] : [TEXT_CONTRAST, BOUNDARY_CONTRAST, FOCUS_CONTRAST];
 }

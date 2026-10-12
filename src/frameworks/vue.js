@@ -9,7 +9,11 @@ import { join } from "node:path";
 import { vueDialect } from "../harness/generate/dialects.js";
 import { generateJsx } from "../harness/generate/jsx.js";
 
-/** Mounts a fixture's default export as the root component, after its optional setup(app) has installed what it needs. */
+/**
+ * Mounts a fixture's default export as the root component, after its optional setup(app) has installed what it needs.
+ * @param {string} fixturePath
+ * @param {string} _pkg
+ */
 export const entry = (fixturePath, _pkg) => `import { createApp } from "vue";
 import * as fixture from ${JSON.stringify(fixturePath)};
 const libA11y = new URLSearchParams(location.search).get("libA11y") === "on";
@@ -18,7 +22,10 @@ if (typeof fixture.setup === "function") await fixture.setup(app);
 app.mount(document.getElementById("root"));
 `;
 
-/** Loads the whole package, lists its exports, and records compound parts such as Dialog.Trigger. Same as for React. */
+/**
+ * Loads the whole package, lists its exports, and records compound parts such as Dialog.Trigger. Same as for React.
+ * @param {string} pkg
+ */
 export const discoverEntry = (pkg) => `import * as lib from ${JSON.stringify(pkg)};
 const out = [];
 for (const name of Object.keys(lib)) {
@@ -31,7 +38,12 @@ for (const name of Object.keys(lib)) {
 window.__a11yExports = out;
 `;
 
-/** A fixture for the simple archetypes, from the export name alone. A function default export is a functional component. */
+/**
+ * A fixture for the simple archetypes, from the export name alone. A function default export is a functional component.
+ * @param {string} archetype
+ * @param {string} pkg
+ * @param {string} exportName
+ */
 export function template(archetype, pkg, exportName) {
   const body = {
     button: `<Component data-a11y-trigger data-a11y-root type="button">Save</Component>`,
@@ -45,7 +57,10 @@ export default function Fixture() {
 `;
 }
 
-/** Vue 3 or later? A range like "^3.2.0 || ^2.7" counts when any part allows 3. A bare "*" counts too. */
+/**
+ * Vue 3 or later? A range like "^3.2.0 || ^2.7" counts when any part allows 3. A bare "*" counts too.
+ * @param {string} range
+ */
 function allowsVue3(range) {
   return String(range)
     .split("||")
@@ -62,7 +77,10 @@ export default {
   noun: "export",
   extension: "jsx",
   runtime: ["vue"],
-  /** @returns {import("./index.js").AdapterDetection | null} */
+  /**
+   * @param {import("./index.js").PackageMeta} meta
+   * @returns {import("./index.js").AdapterDetection | null}
+   */
   detect(meta) {
     const peers = meta.peerDependencies ?? {};
     const deps = meta.dependencies ?? {};
@@ -71,7 +89,10 @@ export default {
     if (!allowsVue3(range)) return { kind: "npm-unsupported", framework: "Vue 2", reason: `The package needs Vue ${range}. Only Vue 3 is supported.` };
     return { kind: "npm-vue", framework: "Vue", reason: `The package lists vue as a ${"vue" in peers ? "peer dependency" : "dependency"}.` };
   },
-  /** Writes the shim that supplies `h` and `Fragment`, then returns the settings. */
+  /**
+   * Writes the shim that supplies `h` and `Fragment`, then returns the settings.
+   * @param {string} workDir
+   */
   bundle(workDir) {
     const shim = join(workDir, "a11y-vue-jsx-shim.js");
     writeFileSync(shim, 'export { h, Fragment } from "vue";\n');
@@ -86,6 +107,6 @@ export default {
   entry,
   discoverEntry,
   template,
-  generate: (input) => generateJsx(vueDialect, input),
-  describe: (npm) => `Vue${npm.vue ? ` (vue ${npm.vue})` : ""}`,
+  generate: (/** @type {import("./index.js").GenerateInput} */ input) => generateJsx(vueDialect, input),
+  describe: (/** @type {{ vue?: string }} */ npm) => `Vue${npm.vue ? ` (vue ${npm.vue})` : ""}`,
 };

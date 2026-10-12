@@ -7,7 +7,7 @@
  * by role, every 50 milliseconds, reaching into open shadow roots. The probe that follows checks the result.
  */
 
-/** What to look for, per archetype. `root` is a selector, or "trigger", "parent", or "controls". */
+/** What to look for, per archetype. `root` is a selector, or "trigger", "parent", or "controls". @type {Record<string, { root: string, trigger: string }>} */
 export const MARKING = {
   dialog: { root: "dialog, [role=dialog], [role=alertdialog]", trigger: "[aria-haspopup], [aria-expanded], button, [role=button]" },
   menu: { root: "[role=menu]", trigger: "[aria-haspopup], [aria-expanded], button, [role=button]" },
@@ -19,7 +19,7 @@ export const MARKING = {
   "live-region": { root: "[role=alert], [role=status], [role=log], [aria-live=polite], [aria-live=assertive]", trigger: "button, [role=button]" },
 };
 
-/** The roles each archetype's root may carry, so the probe can tell a right mark from a wrong one. */
+/** The roles each archetype's root may carry, so the probe can tell a right mark from a wrong one. @type {Record<string, string[]>} */
 export const ROOT_ROLES = {
   dialog: ["dialog", "alertdialog"],
   menu: ["menu", "menubar"],
@@ -29,7 +29,10 @@ export const ROOT_ROLES = {
   "live-region": ["alert", "status", "log"],
 };
 
-/** The source that goes at the top of a generated fixture. It defines `startMarking()`, which returns a function that stops it. */
+/**
+ * The source that goes at the top of a generated fixture. It defines `startMarking()`, which returns a function that stops it.
+ * @param {string} archetype
+ */
 export function markingSource(archetype) {
   const config = MARKING[archetype];
   return `function a11yDeepAll(selector, root) {

@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { readPackageVersion } from "../env/versions.js";
 
 const require = createRequire(import.meta.url);
+/** @type {string | null} */
 let injected = null;
 
 /**
@@ -58,7 +59,9 @@ export async function runVsr(page, { scope = "body", state = null, maxSteps = 15
     const container = document.querySelector(scope);
     if (!container) throw new Error(`Nothing matches the scope ${scope}.`);
     /** Hosts of open shadow roots inside the container, with counts. */
+    /** @type {Record<string, number>} */
     const found = {};
+    /** @param {Document | ShadowRoot | Element} root */
     const visit = (root) => {
       for (const el of root.querySelectorAll("*")) {
         if (el.shadowRoot) {
@@ -71,6 +74,7 @@ export async function runVsr(page, { scope = "body", state = null, maxSteps = 15
     await window.__vsr.virtual.start({ container });
     return found;
   }, scope);
+  /** @type {string[]} */
   let phrases = [];
   let reachedEnd = false;
   try {
@@ -130,5 +134,8 @@ export function repeatLength(log) {
   return 0;
 }
 
-/** What the tier reports when it can't run. */
+/**
+ * What the tier reports when it can't run.
+ * @param {unknown} error
+ */
 export const failedVsr = (error) => ({ status: /** @type {const} */ ("failed"), simulated: true, reason: (error instanceof Error ? error.message : String(error)).split("\n")[0] });

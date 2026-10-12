@@ -5,7 +5,10 @@
  * This function is serialized and sent to the browser, so it can't use anything from outside itself.
  */
 export function installConditions() {
-  /** A short, readable name for an element: `button#save`, `div.alert`, or `span`. */
+  /**
+   * A short, readable name for an element: `button#save`, `div.alert`, or `span`.
+   * @param {Element | null} el
+   */
   const describe = (el) => {
     if (!el || el.nodeType !== 1) return "(document)";
     const tag = el.localName;
@@ -20,7 +23,10 @@ export function installConditions() {
 
   const allElements = () => [...document.body.querySelectorAll("*")];
 
-  /** The scroll container an element sits in, if one hides its overflow sideways (so it doesn't push the page wider). */
+  /**
+   * The scroll container an element sits in, if one hides its overflow sideways (so it doesn't push the page wider).
+   * @param {Element} el
+   */
   const scrollsSideways = (el) => {
     for (let node = el.parentElement; node && node !== document.documentElement; node = node.parentElement) {
       const x = getComputedStyle(node).overflowX;

@@ -10,26 +10,42 @@ import { ARCHETYPE_PATTERNS } from "../storybook.js";
 import { markingSource } from "./marking.js";
 import { ATTEMPT_LIMIT, GENERATABLE } from "./shared.js";
 
+/** @param {unknown} text */
 const words = (text) => String(text).replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Z])([A-Z][a-z])/g, "$1 $2").replace(/[-_[\]]/g, " ");
 
 /** The shape of one record discovery wrote for a class. */
-/** @typedef {{ name: string, angular: { kind: string, selectors?: unknown[][], inputs?: string[], outputs?: string[], exportAs?: string[], standalone?: boolean, moduleName?: string | null, methods?: string[] } }} Part */
+/** @typedef {{ name: string, angular?: { kind: string, selectors?: unknown[][], inputs?: string[], outputs?: string[], exportAs?: string[], standalone?: boolean, moduleName?: string | null, methods?: string[] } }} Part */
+/** @typedef {import("../../types.js").Candidate} Candidate */
 
+/** @param {Part} part */
 const selectorText = (part) => (part.angular.selectors ?? []).flat().filter((x) => typeof x === "string").join(" ");
 
-/** Does the class's name or selector say it belongs to this archetype? */
+/**
+ * Does the class's name or selector say it belongs to this archetype?
+ * @param {string} archetype
+ * @param {Part} part
+ */
 const fits = (archetype, part) => ARCHETYPE_PATTERNS[archetype].test(words(`${part.name} ${selectorText(part)}`));
 
-/** The classes of a package that look like this archetype, plain Angular classes only, best fit first. */
+/**
+ * The classes of a package that look like this archetype, plain Angular classes only, best fit first.
+ * @param {string} archetype
+ * @param {Part[]} exports
+ * @returns {Part[]}
+ */
 function pool(archetype, exports) {
   return exports
     .filter((e) => e.angular && ["component", "directive", "service"].includes(e.angular.kind) && fits(archetype, e))
     .sort((a, b) => score(archetype, b.name) - score(archetype, a.name) || a.name.localeCompare(b.name));
 }
 
-/** Can a template use this class? A standalone one is imported by name, and another is imported through the module that declares it. */
+/**
+ * Can a template use this class? A standalone one is imported by name, and another is imported through the module that declares it.
+ * @param {Part} part
+ */
 const importName = (part) => (part.angular.kind === "service" || part.angular.standalone ? part.name : part.angular.moduleName ?? null);
 
+/** @param {...Part} parts */
 const usable = (...parts) => parts.every((part) => part && importName(part));
 
 /**
@@ -56,13 +72,20 @@ function element(part, { prefer, fallback = "div", extra = [], bind = {}, values
 
 const VOID = new Set(["input", "img", "br", "hr", "area", "base", "col", "embed", "link", "meta", "source", "track", "wbr"]);
 
+/** @param {Part} part */
 const exportRef = (part) => part.angular.exportAs?.[0] ?? null;
 
-/** The classes that can point at another (`[matMenuTriggerFor]`), with the input that does it, matched to classes that have an `exportAs`. */
+/**
+ * The classes that can point at another (`[matMenuTriggerFor]`), with the input that does it, matched to classes that have an `exportAs`.
+ * @param {string} archetype
+ * @param {Part[]} exports
+ * @param {RegExp} targetPattern
+ */
 function linked(archetype, exports, targetPattern) {
   const all = pool(archetype, exports);
   // The class that is pointed at needn't have the archetype's own name (a listbox for a combobox), so a name pattern widens it.
   const targets = [...new Set([...all, ...exports.filter((e) => e.angular && targetPattern.test(e.name))])].filter((e) => e.angular?.kind !== "service");
+  /** @type {Array<{ pointer: Part, target: Part, input: string }>} */
   const pairs = [];
   for (const pointer of all) {
     const inputs = pointer.angular.inputs ?? [];
@@ -80,11 +103,17 @@ function linked(archetype, exports, targetPattern) {
   return pairs;
 }
 
+/**
+ * @param {Part[]} parts
+ * @param {RegExp} pattern
+ */
 const nameMatches = (parts, pattern) => parts.filter((part) => pattern.test(part.name));
 
 /**
  * The first text-like input of a class, such as `label` or `title`, so a recipe can fill it in. A directive that carries its
  * value on its own attribute (`brnTabsTrigger="one"`) counts too.
+ * @param {Part} part
+ * @param {RegExp} [pattern]
  */
 const textInput = (part, pattern = /^(label|title|header|heading|summary|text|value|name)$/) => {
   const inputs = part.angular.inputs ?? [];
@@ -115,13 +144,18 @@ export default Fixture;
 `;
 }
 
-const candidate = (id, summary, parts, source) => ({ id, summary, source, used: [...new Set(parts.map((part) => part.name))] });
+const candidate = (/** @type {string} */ id, /** @type {string} */ summary, /** @type {Part[]} */ parts, /** @type {string} */ source) => ({ id, summary, source, used: [...new Set(parts.map((part) => part.name))] });
 
 const ITEMS = "[{ label: 'One', value: 'one', title: 'One', header: 'One', text: 'One', id: 'one', key: 'one', content: 'First panel.' }, { label: 'Two', value: 'two', title: 'Two', header: 'Two', text: 'Two', id: 'two', key: 'two', content: 'Second panel.' }]";
-const itemsInput = (part) => (part.angular.inputs ?? []).find((name) => /^(items|tabs|options|panels|model|data|links)$/.test(name)) ?? null;
+const itemsInput = (/** @type {Part} */ part) => (part.angular.inputs ?? []).find((name) => /^(items|tabs|options|panels|model|data|links)$/.test(name)) ?? null;
 
 // ---- tooltip ----
 
+/**
+ * @param {string} pkg
+ * @param {Part[]} exports
+ * @returns {Candidate[]}
+ */
 function tooltips(pkg, exports) {
   const out = [];
   for (const part of pool("tooltip", exports).filter((p) => p.angular.kind !== "service" && usable(p))) {
@@ -136,6 +170,11 @@ function tooltips(pkg, exports) {
 
 // ---- live region ----
 
+/**
+ * @param {string} pkg
+ * @param {Part[]} exports
+ * @returns {Candidate[]}
+ */
 function messages(pkg, exports) {
   const out = [];
   const all = pool("live-region", exports);
@@ -168,6 +207,11 @@ function messages(pkg, exports) {
 
 // ---- form field ----
 
+/**
+ * @param {string} pkg
+ * @param {Part[]} exports
+ * @returns {Candidate[]}
+ */
 function fields(pkg, exports) {
   const out = [];
   const all = pool("form-field", exports).filter((p) => p.angular.kind !== "service" && usable(p));
@@ -196,24 +240,43 @@ function fields(pkg, exports) {
 
 // ---- tabs and accordion: a group with child parts, or a data-driven component ----
 
+/**
+ * @param {string} archetype
+ * @param {string} pkg
+ * @param {Part[]} exports
+ * @param {{ groupPattern: RegExp, childPattern: RegExp, childTag: string }} patterns
+ * @returns {Candidate[]}
+ */
 function groups(archetype, pkg, exports, { groupPattern, childPattern, childTag }) {
   const out = [];
   const all = pool(archetype, exports).filter((p) => p.angular.kind !== "service" && usable(p));
   const containers = all.filter((p) => groupPattern.test(p.name));
+  /** @param {Part} p */
   const plain = (p) => p.angular && p.angular.kind !== "service" && usable(p) && childPattern.test(p.name) && !groupPattern.test(p.name);
   // A child needn't have the archetype's own name (`MatExpansionPanel`), so a part named like its container (`Mat…`) counts too.
-  const near = (container) => exports.filter((p) => plain(p) && p.name.startsWith(container.name.match(/^[A-Z][a-z0-9]*/)?.[0] ?? "\0"));
+  const near = (/** @type {Part} */ container) => exports.filter((p) => plain(p) && p.name.startsWith(container.name.match(/^[A-Z][a-z0-9]*/)?.[0] ?? "\0"));
   // The plainest child comes first: `MatTab` before `MatTabLabel`, which only works inside the other.
-  const byLength = (a, b) => a.name.length - b.name.length;
-  const stemOf = (name) => name.replace(/(Group|s)$/, "");
-  /** A part that sits beside the children (`AccordionHeader`, `TabList`): named like the child or like the container. */
+  const byLength = (/** @type {Part} */ a, /** @type {Part} */ b) => a.name.length - b.name.length;
+  const stemOf = (/** @type {string} */ name) => name.replace(/(Group|s)$/, "");
+  /**
+   * A part that sits beside the children (`AccordionHeader`, `TabList`): named like the child or like the container.
+   * @param {RegExp} pattern
+   * @param {Part} child
+   * @param {Part | null} container
+   */
   const partOf = (pattern, child, container) => exports.find((p) => p.angular && p.angular.kind !== "service" && usable(p) && pattern.test(p.name) && (p.name.startsWith(child.name) || (container && p.name.startsWith(stemOf(container.name)))));
   const isAccordion = archetype === "accordion";
-  const headerFor = (child, container) => (isAccordion ? partOf(/Header$/, child, container) : null);
-  const triggerFor = (child, container) => (isAccordion ? partOf(/Trigger$/, child, container) : null);
-  const contentFor = (child, container) => (archetype === "tabs" || isAccordion ? partOf(/Content$/, child, container) : null);
-  const listFor = (child, container) => (archetype === "tabs" ? partOf(/List$/, child, container) : null);
-  /** One child with its header, trigger, and content parts, when the library has them. */
+  /** @typedef {{ header?: Part | null, trigger?: Part | null, content?: Part | null }} Panels */
+  const headerFor = (/** @type {Part} */ child, /** @type {Part | null} */ container) => (isAccordion ? partOf(/Header$/, child, container) : null);
+  const triggerFor = (/** @type {Part} */ child, /** @type {Part | null} */ container) => (isAccordion ? partOf(/Trigger$/, child, container) : null);
+  const contentFor = (/** @type {Part} */ child, /** @type {Part | null} */ container) => (archetype === "tabs" || isAccordion ? partOf(/Content$/, child, container) : null);
+  const listFor = (/** @type {Part} */ child, /** @type {Part | null} */ container) => (archetype === "tabs" ? partOf(/List$/, child, container) : null);
+  /**
+   * One child with its header, trigger, and content parts, when the library has them.
+   * @param {Part} child
+   * @param {string} text
+   * @param {Panels} parts
+   */
   const panel = (child, text, parts) => {
     const labelInput = textInput(child);
     const trigger = parts.trigger ? element(parts.trigger, { prefer: "button", extra: ['type="button"'], values: textInput(parts.trigger) ? { [textInput(parts.trigger)]: text } : {}, inner: text }) : null;
@@ -226,7 +289,11 @@ function groups(archetype, pkg, exports, { groupPattern, childPattern, childTag 
     const markup = element(child, { prefer: childTag, extra: [], values: labelInput ? { [labelInput]: text } : {}, inner: header ? `${header}${content ?? body}` : named ? body : text });
     return markup && childTag === "button" && markup.startsWith("<button ") ? markup.replace("<button ", '<button type="button" ') : markup;
   };
-  /** A tab's content panel sits outside the list, tied to its tab by the same value. */
+  /**
+   * A tab's content panel sits outside the list, tied to its tab by the same value.
+   * @param {Part | null | undefined} content
+   * @param {string[]} labels
+   */
   const contents = (content, labels) => (content ? labels.map((text) => element(content, { prefer: "div", values: textInput(content) ? { [textInput(content)]: text } : {}, inner: `${text} content.` })).join("") : "");
   for (const container of containers.slice(0, 2)) {
     const children = [...new Set([...all.filter(plain), ...near(container)])].sort(byLength);
@@ -265,8 +332,13 @@ function groups(archetype, pkg, exports, { groupPattern, childPattern, childTag 
   return out;
 }
 
-const tabs = (pkg, exports) => groups("tabs", pkg, exports, { groupPattern: /(Tabs|TabGroup|TabList|TabNav|TabNavBar|TabBar|TabView)$|^Tab(s|List|Group|Nav|Bar)$/, childPattern: /Tabs?(Link|Item|Label|Panel|Trigger)?$/, childTag: "button" });
+const tabs = (/** @type {string} */ pkg, /** @type {Part[]} */ exports) => groups("tabs", pkg, exports, { groupPattern: /(Tabs|TabGroup|TabList|TabNav|TabNavBar|TabBar|TabView)$|^Tab(s|List|Group|Nav|Bar)$/, childPattern: /Tabs?(Link|Item|Label|Panel|Trigger)?$/, childTag: "button" });
 
+/**
+ * @param {string} pkg
+ * @param {Part[]} exports
+ * @returns {Candidate[]}
+ */
 function accordions(pkg, exports) {
   const out = groups("accordion", pkg, exports, { groupPattern: /(Accordion|Expansion|Collapse|Collapsible)s?$/, childPattern: /(Panel|Item|Section|Tab|Disclosure)$/, childTag: "div" });
   for (const { pointer, target, input } of linked("accordion", exports, /Panel|Content|Collaps/)) {
@@ -280,6 +352,11 @@ function accordions(pkg, exports) {
 
 // ---- menu and combobox: a pointer directive and a panel it points at, with item parts ----
 
+/**
+ * @param {string} pkg
+ * @param {Part[]} exports
+ * @returns {Candidate[]}
+ */
 function menus(pkg, exports) {
   const out = [];
   const items = exports.filter((p) => p.angular && /Menu.*Item|Item/.test(p.name) && fits("menu", p) && p.angular.kind !== "service" && usable(p));
@@ -299,6 +376,11 @@ function menus(pkg, exports) {
   return out;
 }
 
+/**
+ * @param {string} pkg
+ * @param {Part[]} exports
+ * @returns {Candidate[]}
+ */
 function comboboxes(pkg, exports) {
   const out = [];
   const options = exports.filter((p) => p.angular && /Option/.test(p.name) && p.angular.kind !== "service" && usable(p));
@@ -321,6 +403,11 @@ function comboboxes(pkg, exports) {
 
 const CONTENT = `Component({ selector: "app-dialog-content", template: '<h2>Edit profile</h2><p>Update your details.</p><button type="button">Close</button>' })(DialogContent);\n`;
 
+/**
+ * @param {string} pkg
+ * @param {Part[]} exports
+ * @returns {Candidate[]}
+ */
 function dialogs(pkg, exports) {
   const out = [];
   const all = pool("dialog", exports);
@@ -342,12 +429,13 @@ function dialogs(pkg, exports) {
   return out;
 }
 
+/** @type {Record<string, (pkg: string, exports: Part[]) => Candidate[]>} */
 const BUILDERS = { dialog: dialogs, menu: menus, tooltip: tooltips, tabs, accordion: accordions, combobox: comboboxes, "form-field": fields, "live-region": messages };
 
 /**
  * Candidates for an Angular package, from what discovery read off its classes.
- * @param {{ archetype: string, pkg: string, exports: Array<{ name: string, angular?: AngularExportInfo }> }} input
- * @returns {{ candidates: Array<{ id: string, summary: string, source: string, used: string[] }>, reason: string | null }}
+ * @param {{ archetype: string, pkg: string, exports: Part[] }} input
+ * @returns {{ candidates: Candidate[], reason: string | null }}
  */
 export function generateAngular({ archetype, pkg, exports }) {
   if (!GENERATABLE.has(archetype)) return { candidates: [], reason: `Nothing is generated for the ${archetype} archetype.` };

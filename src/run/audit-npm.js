@@ -24,13 +24,18 @@ import { failedVsr, runVsr } from "../tiers/vsr.js";
 import { num } from "../text.js";
 import { summarize } from "./summary.js";
 
+/** @typedef {import("../types.js").Browser} Browser */
+/** @typedef {import("../types.js").Page} Page */
 /** @typedef {ReturnType<typeof import("../schema.js").parsePlan>} Plan */
 /** @typedef {ReturnType<typeof import("../schema.js").parseResults>["targets"][number]} TargetResult */
 /** @typedef {ReturnType<typeof import("../schema.js").parseMappingFile>[string]} TargetMapping */
 /** @typedef {NonNullable<TargetResult["archetypes"][string]["fixture"]>} FixtureInfo */
 /** @typedef {TargetResult["archetypes"][string]["configs"][number]} FixtureConfig */
 
-/** The states worth checking for each archetype. The first is where a page starts. */
+/**
+ * The states worth checking for each archetype. The first is where a page starts.
+ * @type {Record<string, string[]>}
+ */
 const STATES = {
   dialog: ["closed", "open"],
   menu: ["closed", "open"],
@@ -40,9 +45,13 @@ const STATES = {
   "live-region": ["before message", "message shown"],
 };
 
-const firstLine = (error) => explainFrameworkError((error instanceof Error ? error.message : String(error)).split("\n").find((l) => l.trim()) ?? "unknown error");
+const firstLine = (/** @type {unknown} */ error) => explainFrameworkError((error instanceof Error ? error.message : String(error)).split("\n").find((l) => l.trim()) ?? "unknown error");
 
-/** Page and console errors that mean a fixture didn't mount cleanly. A missing favicon doesn't count. */
+/**
+ * Page and console errors that mean a fixture didn't mount cleanly. A missing favicon doesn't count.
+ * @param {string[]} errors
+ * @returns {(page: Page) => void}
+ */
 function watchErrors(errors) {
   return (page) => {
     page.on("pageerror", (error) => errors.push(explainFrameworkError(error.message.split("\n")[0])));
@@ -71,7 +80,12 @@ async function bundleWithPeers(options, warnings) {
   }
 }
 
-/** The installed package's own package.json, or an empty object. */
+/**
+ * The installed package's own package.json, or an empty object.
+ * @param {string} workDir
+ * @param {string} name
+ * @returns {Record<string, unknown>}
+ */
 function readInstalledMeta(workDir, name) {
   try {
     return JSON.parse(readFileSync(join(workDir, "node_modules", name, "package.json"), "utf8"));
@@ -80,13 +94,17 @@ function readInstalledMeta(workDir, name) {
   }
 }
 
-/** Load the whole package in a page to list its exports and the custom elements it defines. */
+/**
+ * Load the whole package in a page to list its exports and the custom elements it defines.
+ * @param {{ browser: Browser, workDir: string, flavor: string, pkg: string, buildDir: string, warnings: string[] }} options
+ */
 async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
   const adapter = adapterFor(flavor);
   const entryFile = join(workDir, "discover.js");
   writeFileSync(entryFile, adapter.discoverEntry(pkg));
   await bundleWithPeers({ entries: { discover: entryFile }, outdir: buildDir, workDir, framework: adapter }, warnings);
   const server = await serveStatic(buildDir);
+  /** @type {string[]} */
   const errors = [];
   try {
     const opened = await openPage(browser, `${server.origin}/discover.html`, { beforeGoto: watchErrors(errors) });
@@ -108,6 +126,7 @@ async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
         for (let proto = Element.prototype; proto && proto !== HTMLElement.prototype && proto !== Object.prototype; proto = Object.getPrototypeOf(proto)) {
           for (const key of Object.getOwnPropertyNames(proto)) if (!key.startsWith("_") && key !== "constructor") members.add(key);
         }
+        /** @type {string[]} */
         let slots = [];
         try {
           const el = document.createElement(name);
@@ -129,8 +148,13 @@ async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
   }
 }
 
-/** Open one fixture page, check it follows the contract, and run the tiers in each state. `libA11y` is `on`, `off`, or `n/a`. */
+/**
+ * Open one fixture page, check it follows the contract, and run the tiers in each state. `libA11y` is `on`, `off`, or `n/a`.
+ * @param {{ browser: Browser, url: string, archetype: string, plan: Plan, libA11y: string }} options
+ * @returns {Promise<{ gap: string } | { configs: FixtureConfig[], hidden: string[] }>}
+ */
 async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
+  /** @type {string[]} */
   const errors = [];
   const opened = await openPage(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, { beforeGoto: watchErrors(errors) });
   try {
@@ -148,6 +172,7 @@ async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
       return { gap: "The fixture marks the same element as the trigger and the message. A live-region fixture needs a control that makes the message appear (data-a11y-trigger) and the message itself (data-a11y-root)." };
     }
     const states = STATES[archetype] ?? ["initial"];
+    /** @type {FixtureConfig[]} */
     const configs = [];
     for (const [index, state] of states.entries()) {
       let failure = null;
@@ -181,7 +206,7 @@ async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
           tiers.rules = await runRules(opened.page, { engines: plan.options.engines, wcag: plan.options.wcag, level: plan.options.level, scope: index === 0 ? "#root" : ["#root", "[data-a11y-root]"] });
         }
       }
-      configs.push({ libA11y, state, tiers });
+      configs.push({ libA11y: /** @type {FixtureConfig["libA11y"]} */ (libA11y), state, tiers });
       if (errors.length) return { gap: `The fixture logged errors in the ${state} state: ${errors[0]}` };
     }
     const hidden = notTestableEntries(await closedShadowHosts(opened.page));
@@ -202,7 +227,9 @@ async function auditFixturePage({ browser, url, archetype, plan, libA11y }) {
  */
 async function auditFixture({ browser, url, archetype, plan, toggle }) {
   const values = toggle ? plan.options.libA11y : ["n/a"];
+  /** @type {FixtureConfig[]} */
   const configs = [];
+  /** @type {string[]} */
   const hidden = [];
   for (const libA11y of values) {
     const outcome = await auditFixturePage({ browser, url, archetype, plan, libA11y });
@@ -221,6 +248,7 @@ async function auditFixture({ browser, url, archetype, plan, toggle }) {
  */
 export async function auditNpm({ browser, planTarget, plan, cwd, install = installPackage }) {
   install ??= installPackage;
+  /** @type {Omit<TargetResult, "status">} */
   const base = { id: planTarget.id, reason: null, archetypes: {}, summary: { engines: {}, gaps: [], notTestable: [] }, warnings: [] };
   const resolved = planTarget.resolved ?? {};
   if (planTarget.kind === "npm-unsupported") {
@@ -231,6 +259,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
   const buildDir = join(tmp, "build");
   const fixtureDir = join(tmp, "fixtures");
   mkdirSync(fixtureDir, { recursive: true });
+  /** @type {Array<Awaited<ReturnType<typeof serveStatic>>>} */
   const servers = [];
   try {
     /** The framework's id (react, vue, or wc), or "unknown" when the metadata couldn't say. */
@@ -238,7 +267,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     /** @type {"react" | "vue" | "angular" | "svelte" | "html" | "wc" | "unknown"} */
     let flavor = adapterId === "react" || adapterId === "vue" || adapterId === "angular" || adapterId === "svelte" || adapterId === "html" || adapterId === "wc" ? adapterId : "unknown";
     const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor });
-    const warnings = [...installed.warnings];
+    const warnings = /** @type {string[]} */ ([...installed.warnings]);
     // What fixtures and templates import: the package, or the sub-path of it that was asked for.
     let importSpec = resolved.subpath ? `${resolved.name}/${resolved.subpath}` : resolved.name;
     if (resolved.subpath) {
@@ -253,7 +282,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     const alreadyInstalled = new Set([resolved.name]);
     for (const companion of planTarget.companions ?? []) {
       // A second entry for a package that's already in the folder (a stylesheet and a script from one package) needs no second install.
-      const added = alreadyInstalled.has(companion.name) ? { warnings: [], version: installedVersion(workDir, companion.name) } : await install({ dir: workDir, name: companion.name, version: companion.version, flavor: "unknown" });
+      const added = alreadyInstalled.has(companion.name) ? { warnings: /** @type {string[]} */ ([]), version: installedVersion(workDir, companion.name) } : await install({ dir: workDir, name: companion.name, version: companion.version, flavor: "unknown" });
       warnings.push(...added.warnings);
       if (companion.subpath) {
         const problem = subpathProblem(workDir, companion.name, companion.subpath, added.version ?? companion.version);
@@ -316,9 +345,12 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
      * @type {Record<string, string>}
      */
     const files = {};
-    /** Where each archetype's fixture came from, for the results. */
+    /** Where each archetype's fixture came from, for the results.
+     * @type {Record<string, FixtureInfo | null>}
+     */
     const sources = {};
     /** One server for the probes, started when the first one is needed. */
+    /** @type {Awaited<ReturnType<typeof serveStatic>> | null} */
     let probeServer = null;
     const getServer = async () => {
       if (!probeServer) {
@@ -330,6 +362,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     };
 
     // Decide where each archetype's fixture comes from, then bundle each one on its own so one bad fixture can't break the rest.
+    /** @type {Record<string, string>} */
     const runnable = {};
     for (const archetype of wanted) {
       const user = planTarget.mapping?.[archetype] ?? {};
@@ -355,6 +388,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
       }
       /** @type {FixtureInfo | null} */
       let source = fixture ? { source: entry.status === "authored" ? "authored" : "template" } : null;
+      /** @type {NonNullable<FixtureInfo["attempts"]>} */
       let attempts = [];
       let generationTried = false;
       // Nothing authored and no template: build candidates from what the package exports, and keep one only if it works.

@@ -9,7 +9,11 @@ const HEAVY = /playwright|esbuild|axe-core|accessibility-checker|guidepup/;
 const bin = new URL("../bin/automatica11y.js", import.meta.url).pathname;
 const register = new URL("./helpers/trace-register.mjs", import.meta.url).href;
 
-/** Run the CLI in a child process and return every specifier it resolved. */
+/**
+ * Run the CLI in a child process and return every specifier it resolved.
+ * @param {string[]} args
+ * @param {Record<string, string>} [extraEnv]
+ */
 function trace(args, extraEnv = {}) {
   const dir = makeTree({ "page.html": "<h1>Hi</h1>" });
   const traceFile = join(dir, "trace.txt");

@@ -11,14 +11,32 @@
  * and spells a prop, so a dialect carries those three things (see dialects.js) and the recipes are shared.
  */
 
+/** @typedef {import("./dialects.js").Dialect} Dialect */
+/** @typedef {ReturnType<typeof import("./kit.js").buildKit>} Kit */
+/** @typedef {import("../../types.js").Candidate} Candidate */
+/** @typedef {(makeKit: () => Kit, pkg: string, d: Dialect) => Candidate | null} Recipe */
+
+/**
+ * @param {string} text
+ * @param {number} spaces
+ */
 const indent = (text, spaces) => text.split("\n").map((line) => (line ? " ".repeat(spaces) + line : line)).join("\n");
-/** A JSX element. Short text stays on one line, and anything longer goes on its own lines. */
+/**
+ * A JSX element. Short text stays on one line, and anything longer goes on its own lines.
+ * @param {string} ref
+ * @param {string} props
+ * @param {string} children
+ */
 const tag = (ref, props, children) => {
   if (!children) return `<${ref}${props} />`;
   return !children.includes("\n") && children.length < 40 && !children.startsWith("<") ? `<${ref}${props}>${children}</${ref}>` : `<${ref}${props}>\n${indent(children, 2)}\n</${ref}>`;
 };
 
-/** Wrap a layer in a portal and a positioner when the package has them. */
+/**
+ * Wrap a layer in a portal and a positioner when the package has them.
+ * @param {Kit} kit
+ * @param {string} content
+ */
 function layered(kit, content) {
   const positioner = kit.pick("positioner");
   const positioned = positioner ? tag(positioner, "", content) : content;
@@ -28,6 +46,7 @@ function layered(kit, content) {
 
 // ---- dialog ----
 
+/** @param {Kit} kit */
 function dialogContent(kit) {
   const title = kit.pick("title", "heading");
   const description = kit.pick("description", "desc", "contenttext");
@@ -39,6 +58,7 @@ function dialogContent(kit) {
   ].join("\n");
 }
 
+/** @type {Recipe} */
 function dialogCompound(makeKit, pkg, d) {
   const kit = makeKit();
   const root = kit.pick("root") ?? kit.self;
@@ -51,6 +71,10 @@ function dialogCompound(makeKit, pkg, d) {
   return { id: "dialog-compound", summary: "a root, a trigger, and a content part that opens on its own", source: d.frame("dialog", pkg, body), used: kit.used() };
 }
 
+/**
+ * @param {string[]} props The open prop and the close prop.
+ * @returns {Recipe}
+ */
 function dialogControlled([openProp, closeProp]) {
   return (makeKit, pkg, d) => {
     const kit = makeKit();
@@ -68,13 +92,20 @@ ${tag(root, controls, `${overlay ? `<${overlay} />\n` : ""}${inner}`)}`);
 
 // ---- menu ----
 
-/** How a menu item is written: bare, with a value, or rendered as a div (some libraries render items as a template by default). */
+/**
+ * How a menu item is written: bare, with a value, or rendered as a div (some libraries render items as a template by default).
+ * @type {Array<{ id: string, summary: string, props: (name: string) => string }>}
+ */
 const MENU_ITEMS = [
   { id: "", summary: "", props: () => "" },
   { id: "-values", summary: " that have values", props: (name) => ` value="${name}"` },
   { id: "-as-div", summary: " rendered as divs", props: () => ' as="div"' },
 ];
 
+/**
+ * @param {(typeof MENU_ITEMS)[number]} variant
+ * @returns {Recipe}
+ */
 function menu(variant) {
   return (makeKit, pkg, d) => {
     const kit = makeKit();
@@ -91,6 +122,7 @@ function menu(variant) {
 
 // ---- tooltip ----
 
+/** @type {Recipe} */
 function tooltipCompound(makeKit, pkg, d) {
   const kit = makeKit();
   const root = kit.pick("root") ?? kit.self;
@@ -103,6 +135,10 @@ function tooltipCompound(makeKit, pkg, d) {
   return { id: "tooltip-compound", summary: "a root, a trigger, and a content part", source: d.frame("tooltip", pkg, body), used: kit.used() };
 }
 
+/**
+ * @param {string} prop
+ * @returns {Recipe}
+ */
 const tooltipSingle = (prop) => (makeKit, pkg, d) => {
   const kit = makeKit();
   if (!kit.self) return null;
@@ -112,12 +148,17 @@ const tooltipSingle = (prop) => (makeKit, pkg, d) => {
 
 // ---- tabs ----
 
+/** @type {Array<{ id: string, rootProps: string, item: (value: string) => string, summary: string }>} */
 const TAB_VARIANTS = [
   { id: "value", rootProps: ' defaultValue="one"', item: (v) => ` value="${v}"`, summary: "tabs matched to panels by value" },
   { id: "index", rootProps: "", item: () => "", summary: "tabs matched to panels by position" },
   { id: "default-index", rootProps: " defaultIndex={0}", item: () => "", summary: "tabs matched by position, starting at index 0" },
 ];
 
+/**
+ * @param {(typeof TAB_VARIANTS)[number]} variant
+ * @returns {Recipe}
+ */
 const tabs = (variant) => (makeKit, pkg, d) => {
   const kit = makeKit();
   const root = kit.pick("root") ?? kit.self;
@@ -134,6 +175,10 @@ const tabs = (variant) => (makeKit, pkg, d) => {
 
 const ACCORDION_ROOTS = [["", "no root props"], [' type="single" collapsible', "single, collapsible"], [" collapsible", "collapsible"], [" multiple", "multiple"]];
 
+/**
+ * @param {string[]} root The root's props and a label for the summary.
+ * @returns {Recipe}
+ */
 const accordion = ([rootProps, label]) => (makeKit, pkg, d) => {
   const kit = makeKit();
   const root = kit.pick("root") ?? kit.self;
@@ -142,7 +187,7 @@ const accordion = ([rootProps, label]) => (makeKit, pkg, d) => {
   const content = kit.pick("content", "panel", "itempanel", "body");
   if (!root || !trigger || !content) return null;
   const header = kit.pick("header", "itemheader", "heading");
-  const section = (name) => {
+  const section = (/** @type {string} */ name) => {
     const button = tag(trigger, name === "one" ? " data-a11y-trigger" : "", `Section ${name}`);
     return `${header ? tag(header, "", button) : button}\n${tag(content, "", "More information.")}`;
   };
@@ -151,13 +196,17 @@ const accordion = ([rootProps, label]) => (makeKit, pkg, d) => {
     if (rootProps) return null;
     return { id: "accordion-disclosure", summary: "a root with a button and a panel", source: d.frame("accordion", pkg, tag(root, "", section("one"))), used: kit.used() };
   }
-  const one = (name, value) => tag(item, ` value="${value}"`, section(name));
+  const one = (/** @type {string} */ name, /** @type {string} */ value) => tag(item, ` value="${value}"`, section(name));
   const body = tag(root, rootProps, `${one("one", "one")}\n${one("two", "two")}`);
   return { id: `accordion-${label.replace(/[^a-z]+/g, "-")}`, summary: `an accordion with ${label}`, source: d.frame("accordion", pkg, body), used: kit.used() };
 };
 
 // ---- combobox ----
 
+/**
+ * @param {boolean} itemProps
+ * @returns {Recipe}
+ */
 const combobox = (itemProps) => (makeKit, pkg, d) => {
   const kit = makeKit();
   const root = kit.pick("root") ?? kit.self;
@@ -172,6 +221,7 @@ const combobox = (itemProps) => (makeKit, pkg, d) => {
 
 // ---- form field ----
 
+/** @type {Recipe} */
 function fieldCompound(makeKit, pkg, d) {
   const kit = makeKit();
   const root = kit.pick("root", "field");
@@ -182,6 +232,12 @@ function fieldCompound(makeKit, pkg, d) {
   return { id: "field-compound", summary: "a root, a label, and an input part", source: d.frame("form-field", pkg, body), used: kit.used() };
 }
 
+/**
+ * @param {string} id
+ * @param {string} summary
+ * @param {(self: string, d: Dialect) => string} markup
+ * @returns {Recipe}
+ */
 const fieldSingle = (id, summary, markup) => (makeKit, pkg, d) => {
   const kit = makeKit();
   if (!kit.self) return null;
@@ -190,6 +246,7 @@ const fieldSingle = (id, summary, markup) => (makeKit, pkg, d) => {
 
 // ---- live region ----
 
+/** @type {Recipe} */
 const messageConditional = (makeKit, pkg, d) => {
   const kit = makeKit();
   if (!kit.self) return null;
@@ -197,6 +254,10 @@ const messageConditional = (makeKit, pkg, d) => {
   return { id: "message-mounted", summary: "a message that is mounted when the trigger is pressed", source: d.frame("live-region", pkg, body, `  ${d.declare("on", "false")}`), used: [kit.base] };
 };
 
+/**
+ * @param {string} prop
+ * @returns {Recipe}
+ */
 const messageControlled = (prop) => (makeKit, pkg, d) => {
   const kit = makeKit();
   if (!kit.self) return null;
@@ -204,7 +265,11 @@ const messageControlled = (prop) => (makeKit, pkg, d) => {
   return { id: `message-${prop}`, summary: `a message shown with its ${prop} prop`, source: d.frame("live-region", pkg, body, `  ${d.declare("on", "false")}`), used: [kit.base] };
 };
 
-/** The builders for each archetype, most likely first. */
+/**
+ * The builders for each archetype, most likely first.
+ * @param {Dialect} d
+ * @returns {Record<string, Recipe[]>}
+ */
 export const buildRecipes = (d) => ({
   dialog: [dialogCompound, ...d.openProps.map(dialogControlled)],
   menu: MENU_ITEMS.map(menu),

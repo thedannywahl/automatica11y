@@ -6,7 +6,11 @@ import { join } from "node:path";
 import { reactDialect } from "../harness/generate/dialects.js";
 import { generateJsx } from "../harness/generate/jsx.js";
 
-/** Mounts a fixture's default export. */
+/**
+ * Mounts a fixture's default export.
+ * @param {string} fixturePath
+ * @param {string} _pkg
+ */
 export const entry = (fixturePath, _pkg) => `import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 import Fixture from ${JSON.stringify(fixturePath)};
@@ -14,7 +18,10 @@ const libA11y = new URLSearchParams(location.search).get("libA11y") === "on";
 createRoot(document.getElementById("root")).render(createElement(Fixture, { libA11y }));
 `;
 
-/** Loads the whole package, lists its exports, and records compound parts such as Dialog.Trigger. */
+/**
+ * Loads the whole package, lists its exports, and records compound parts such as Dialog.Trigger.
+ * @param {string} pkg
+ */
 export const discoverEntry = (pkg) => `import * as lib from ${JSON.stringify(pkg)};
 const out = [];
 for (const name of Object.keys(lib)) {
@@ -30,10 +37,14 @@ window.__a11yExports = out;
 /**
  * A fixture for the simple archetypes, from the export name alone.
  * Compound components (dialog, tabs, menu) can't be guessed, so they come from generation or from a fixture someone writes.
+ * @param {string} archetype
+ * @param {string} pkg
+ * @param {string} exportName
+ * @param {{ parts?: string[] }} [info]
  */
 export function template(archetype, pkg, exportName, info) {
   // A namespace with a root part (`Button.Root`) is used through its root.
-  const root = /** @type {any} */ (info)?.parts?.find((part) => /^root$/i.test(part));
+  const root = info?.parts?.find((part) => /^root$/i.test(part));
   const tag = root ? `Component.${root}` : "Component";
   const body = {
     button: `<${tag} data-a11y-trigger data-a11y-root type="button">Save</${tag}>`,
@@ -58,7 +69,10 @@ export default {
   /** Packages the fixture and the library must share one copy of, and that the install makes sure are there. */
   runtime: ["react", "react-dom"],
   /** Is this package React, from its registry metadata alone? */
-  /** @returns {import("./index.js").AdapterDetection | null} */
+  /**
+   * @param {import("./index.js").PackageMeta} meta
+   * @returns {import("./index.js").AdapterDetection | null}
+   */
   detect(meta) {
     const peers = meta.peerDependencies ?? {};
     const deps = meta.dependencies ?? {};
@@ -67,7 +81,7 @@ export default {
     return { kind: "npm-react", framework: "React", reason: `The package lists react as a ${how}.` };
   },
   /** esbuild settings for this framework. */
-  bundle: (workDir) => ({
+  bundle: (/** @type {string} */ workDir) => ({
     // One copy of React for the library and the fixture, or hooks break.
     alias: { react: join(workDir, "node_modules", "react"), "react-dom": join(workDir, "node_modules", "react-dom") },
     esbuild: { jsx: /** @type {"automatic"} */ ("automatic") },
@@ -75,7 +89,7 @@ export default {
   entry,
   discoverEntry,
   template,
-  generate: (input) => generateJsx(reactDialect, input),
+  generate: (/** @type {import("./index.js").GenerateInput} */ input) => generateJsx(reactDialect, input),
   /** One phrase for the report: what the package was run as. */
-  describe: (npm) => `React${npm.react ? ` (react ${npm.react})` : ""}`,
+  describe: (/** @type {{ react?: string }} */ npm) => `React${npm.react ? ` (react ${npm.react})` : ""}`,
 };

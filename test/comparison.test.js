@@ -23,18 +23,27 @@ export default function Fixture() {
 }
 `;
 
+/**
+ * @param {string[]} args
+ * @param {{ files?: Record<string, string> }} [options]
+ */
 async function compare(args, { files = {} } = {}) {
   const cwd = makeTree(files);
   const { io, out } = makeIo({ cwd, env: process.env });
   io.npmView = npmView;
   io.installPackage = installPackage;
   const code = await main(["compare", ...args], io);
+  /** @param {string} file */
   const read = (file) => readFileSync(join(cwd, "a11y-report", file), "utf8");
   const has = existsSync(join(cwd, "a11y-report", "results.json"));
   return { code, report: has ? read("report.md") : null, results: has ? parseResults(JSON.parse(read("results.json"))) : null, ...out };
 }
 
-/** The lines of one markdown table that follows a heading. */
+/**
+ * The lines of one markdown table that follows a heading.
+ * @param {string} report
+ * @param {string} heading
+ */
 function table(report, heading) {
   const start = report.indexOf(heading);
   assert.ok(start >= 0, `report has "${heading}"`);
@@ -129,6 +138,7 @@ test("a Storybook and a page compare by archetype, using the stories each archet
   const run = await compare([`sb=${fixtures}storybook-static`, `site=${fixtures}clean.html`, "--tiers", "rules,vsr"]);
   assert.equal(run.code, 0, run.stderr);
   const rules = table(run.report, "### Rules.");
+  /** @param {string} name */
   const row = (name) => rules.find((r) => r.startsWith(`| ${name} |`));
   assert.equal(row("button"), "| button | ran (two stories of two) | not-applicable |");
   assert.equal(row("dialog"), "| dialog | ran (one story of one) | not-applicable |");

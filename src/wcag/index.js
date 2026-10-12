@@ -38,12 +38,18 @@ function load() {
   return index;
 }
 
-/** The criterion with this number, such as `1.4.3`, or null when WCAG 2.2 has no such criterion. */
+/**
+ * The criterion with this number, such as `1.4.3`, or null when WCAG 2.2 has no such criterion.
+ * @param {string} num
+ */
 export function criterion(num) {
   return load().get(num) ?? null;
 }
 
-/** The criterion for a number written without dots, the way axe-core tags it: `1410` is 1.4.10. Null when none matches. */
+/**
+ * The criterion for a number written without dots, the way axe-core tags it: `1410` is 1.4.10. Null when none matches.
+ * @param {string} digits
+ */
 export function criterionFromDigits(digits) {
   for (const c of load().values()) if (c.num.replaceAll(".", "") === digits) return c;
   return null;
@@ -54,18 +60,28 @@ export function allCriteria() {
   return [...load().values()];
 }
 
-/** True when the criterion is part of this WCAG version (`2.0`, `2.1`, or `2.2`). */
+/**
+ * True when the criterion is part of this WCAG version (`2.0`, `2.1`, or `2.2`).
+ * @param {string} num
+ * @param {string} version
+ */
 export function inVersion(num, version) {
   return criterion(num)?.versions.includes(version) ?? false;
 }
 
-/** "1.4.3 Contrast (Minimum)", or just the number when the W3C data doesn't know it. */
+/**
+ * "1.4.3 Contrast (Minimum)", or just the number when the W3C data doesn't know it.
+ * @param {string} num
+ */
 export function criterionName(num) {
   const c = criterion(num);
   return c ? `${c.num} ${c.handle}` : num;
 }
 
-/** "WCAG 2.4.13 Focus Appearance (level AAA)" for use in a sentence. */
+/**
+ * "WCAG 2.4.13 Focus Appearance (level AAA)" for use in a sentence.
+ * @param {string} num
+ */
 export function criterionRef(num) {
   const c = criterion(num);
   return c ? `WCAG ${c.num} ${c.handle} (level ${c.level})` : `WCAG ${num}`;

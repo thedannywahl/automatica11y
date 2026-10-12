@@ -5,7 +5,11 @@
  * `:not()` parts, and other forms that a template can't write from a name alone, so those alternatives are skipped.
  */
 
-/** Is this alternative plain: an element name and attributes, nothing else? */
+/**
+ * Is this alternative plain: an element name and attributes, nothing else?
+ * @param {unknown} alternative
+ * @returns {alternative is string[]}
+ */
 const isPlain = (alternative) => Array.isArray(alternative) && alternative.length % 2 === 1 && alternative.every((part) => typeof part === "string");
 
 /**
@@ -17,20 +21,28 @@ const isPlain = (alternative) => Array.isArray(alternative) && alternative.lengt
  */
 export function markupFor(selectors, { prefer, fallback } = {}) {
   const plain = (selectors ?? []).filter(isPlain).map((alt) => ({ tag: alt[0], attrs: pairs(alt) }));
-  const choose = (list) => list.sort((a, b) => a.attrs.length - b.attrs.length)[0] ?? null;
+  const choose = (/** @type {Array<{ tag: string, attrs: Array<[string, string]> }>} */ list) => list.sort((a, b) => a.attrs.length - b.attrs.length)[0] ?? null;
   const match = prefer ? choose(plain.filter((alt) => alt.tag === prefer)) ?? choose(plain.filter((alt) => alt.tag === "")) : choose(plain.filter((alt) => alt.tag !== "")) ?? choose(plain);
   if (!match) return null;
   const tag = match.tag || prefer || fallback;
   return tag ? { tag, attrs: match.attrs } : null;
 }
 
+/**
+ * @param {string[]} alternative
+ * @returns {Array<[string, string]>}
+ */
 function pairs(alternative) {
+  /** @type {Array<[string, string]>} */
   const out = [];
   for (let i = 1; i < alternative.length; i += 2) out.push([alternative[i], alternative[i + 1]]);
   return out;
 }
 
-/** The attributes as they're written in a template: `matButton`, or `kind="primary"`. */
+/**
+ * The attributes as they're written in a template: `matButton`, or `kind="primary"`.
+ * @param {Array<[string, string]>} attrs
+ */
 export function attributeText(attrs) {
   return attrs.map(([name, value]) => (value ? `${name}="${String(value).replace(/"/g, "&quot;")}"` : name)).join(" ");
 }

@@ -12,7 +12,12 @@ export const MIN_NODE_MAJOR = 20;
  * @typedef {{ id: string, message: string, fix: string }} Problem
  */
 
-/** Known install locations for Chrome and Chromium, by platform. */
+/**
+ * Known install locations for Chrome and Chromium, by platform.
+ * @param {NodeJS.Platform} platform
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {{ kind: string, path: string }[]}
+ */
 function candidatePaths(platform, env) {
   if (platform === "darwin") {
     return [
@@ -34,7 +39,11 @@ function candidatePaths(platform, env) {
   return names.flatMap(([kind, name]) => dirs.map((dir) => ({ kind, path: join(dir, name) })));
 }
 
-/** Where Playwright keeps the browsers `playwright-core install` downloads. */
+/**
+ * Where Playwright keeps the browsers `playwright-core install` downloads.
+ * @param {NodeJS.Platform} platform
+ * @param {NodeJS.ProcessEnv} env
+ */
 function playwrightCacheDir(platform, env) {
   if (env.PLAYWRIGHT_BROWSERS_PATH && env.PLAYWRIGHT_BROWSERS_PATH !== "0") return env.PLAYWRIGHT_BROWSERS_PATH;
   if (platform === "darwin") return join(homedir(), "Library", "Caches", "ms-playwright");
@@ -42,7 +51,12 @@ function playwrightCacheDir(platform, env) {
   return join(homedir(), ".cache", "ms-playwright");
 }
 
-/** Find a headless shell that `playwright-core install --only-shell chromium` downloaded. */
+/**
+ * Find a headless shell that `playwright-core install --only-shell chromium` downloaded.
+ * @param {NodeJS.Platform} platform
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {string | null}
+ */
 function findHeadlessShell(platform, env) {
   const root = playwrightCacheDir(platform, env);
   const names = new Set(["chrome-headless-shell", "chrome-headless-shell.exe", "headless_shell"]);

@@ -14,12 +14,14 @@ import { installPackage, npmView } from "./helpers/npm-fakes.js";
 const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
 
+/** @param {string[]} args */
 async function run(args) {
   const cwd = makeTree();
   const { io, out } = makeIo({ cwd, env: process.env });
   io.npmView = npmView;
   io.installPackage = installPackage;
   const code = await main(args, io);
+  /** @param {string} file */
   const read = (file) => {
     try {
       return readFileSync(join(cwd, "a11y-report", file), "utf8");
@@ -29,13 +31,18 @@ async function run(args) {
   };
   const results = read("results.json");
   const mapping = read("mapping.json");
-  return { code, ...out, cwd, results: results && parseResults(JSON.parse(results)), mapping: mapping && JSON.parse(mapping), report: read("report.md"), file: (path) => read(path) };
+  return { code, ...out, cwd, results: results && parseResults(JSON.parse(results)), mapping: mapping && JSON.parse(mapping), report: read("report.md"), file: /** @param {string} path */ (path) => read(path) };
 }
 
+/**
+ * @param {Awaited<ReturnType<typeof run>>} result
+ * @param {string} archetype
+ */
 const fixtureOf = (result, archetype, index = 0) => result.results.targets[index].archetypes[archetype];
 
 // ---- the kit and the candidate builders need no browser ----
 
+/** @param {...[string, string[]?]} entries */
 const exportsOf = (...entries) => entries.map(([name, parts = []]) => ({ name, type: "object", parts }));
 
 test("kit: parts are found on a namespaced export, on flat exports that share a prefix, and on a package that is the component", () => {
@@ -72,7 +79,11 @@ test("candidates: the recipes need the parts they use, and a package named for t
 });
 
 test("families: the one named like the archetype comes first, and a family needs two or more exports", () => {
-  const names = (list) => list.map((name) => ({ name, type: "object", parts: [] }));
+  /**
+   * @param {string[]} list
+   * @returns {{ name: string, type: string, parts: string[] }[]}
+   */
+  const names = (list) => list.map((name) => ({ name, type: "object", parts: /** @type {string[]} */ ([]) }));
   const menus = names(["ContextMenuRoot", "ContextMenuItem", "DropdownMenuRoot", "DropdownMenuTrigger", "DropdownMenuItem", "DropdownMenuContent", "MenubarMenu", "MenubarRoot", "Other"]);
   assert.ok(familyBases("menu", menus).includes("DropdownMenu"), "a dropdown menu is among the families tried");
   const tooltips = names(["PopoverRoot", "PopoverTrigger", "PopoverContent", "PopoverArrow", "TooltipRoot", "TooltipTrigger", "TooltipContent", "TooltipProvider"]);
@@ -81,6 +92,7 @@ test("families: the one named like the archetype comes first, and a family needs
 });
 
 test("candidates: a web component recipe needs evidence on the element", () => {
+  /** @param {import("../src/types.js").WcFacts} facts */
   const input = (facts) => generateCandidates({ flavor: "wc", archetype: "dialog", pkg: "x", entry: { tag: "x-modal" }, exports: [], facts: { "x-modal": facts } });
   assert.deepEqual(input({ attributes: [], members: ["render"], slots: [] }).candidates, []);
   assert.match(input({ attributes: [], members: ["render"], slots: [] }).reason, /doesn't show a way to wire a dialog/);

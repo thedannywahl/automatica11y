@@ -70,7 +70,7 @@ export async function selfTest(browser, engines, run = runRules) {
         problems.push(`${engine}: ${engineResult.reason}`);
         continue;
       }
-      const found = new Set(engineResult.violations.map((v) => v.ruleId));
+      const found = new Set(engineResult.violations.map((/** @type {{ ruleId: string }} */ v) => v.ruleId));
       const missing = EXPECTED[/** @type {keyof typeof EXPECTED} */ (engine)].filter((id) => !found.has(id));
       if (missing.length) problems.push(`${engine} missed ${missing.join(", ")}`);
     }

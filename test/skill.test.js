@@ -6,6 +6,7 @@ import { TOPICS } from "../src/commands/guide.js";
 
 const root = new URL("../", import.meta.url).pathname;
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+/** @param {...string} parts */
 const read = (...parts) => readFileSync(join(root, ...parts), "utf8");
 
 const bootstrapDir = join(root, "skills", "automatica11y");
@@ -20,12 +21,16 @@ const docPages = readdirSync(join(root, "docs")).filter((name) => name.endsWith(
 const docsText = docPages.map((page) => page.text).join("\n");
 const agentDocs = [{ name: "AGENTS.md", text: agents }, { name: "skills/automatica11y/SKILL.md", text: bootstrap }, { name: "skills/automatica11y-runner/SKILL.md", text: runner }, ...referenceFiles];
 
-/** The version series a skill expects. In 0.x a minor version can change behavior, so it counts. From 1.0, the major version is enough. */
+/**
+ * The version series a skill expects. In 0.x a minor version can change behavior, so it counts. From 1.0, the major version is enough.
+ * @param {string} version
+ */
 function series(version) {
   const [major, minor] = version.split(".");
   return major === "0" ? `${major}.${minor}` : major;
 }
 
+/** @param {string} text */
 function frontmatter(text) {
   const match = /^---\nname: (.+)\ncompatibility: (.+)\ndescription: (.+)\n---\n/.exec(text);
   assert.ok(match, "frontmatter with name, compatibility, and description");
@@ -180,7 +185,7 @@ test("the docs write npm packages with the npm: prefix, as the tool requires", (
     assert.doesNotMatch(text, /(^|[\s=`])@[a-z][\w-]*\/[\w.-]+/m, `${name} has no bare scoped package as a target`);
     assert.doesNotMatch(text, /=(react-aria-components|@radix-ui)/, `${name} labels no bare package`);
   }
-  assert.match(docsText, /compare radix=npm:@radix-ui\/react-dialog aria=npm:react-aria-components/);
+  assert.match(docsText, /compare next-gen=npm:@instructure\/ui-button\/Button\/v2 canvas=npm:@instructure\/ui-buttons\/Button\/v1/);
   assert.match(runner, /\| An npm package \| `npm:name`, `npm:@scope\/name`, or `npm:name@version`\. To test one entry of a package, add a sub-path after the version: `npm:@scope\/pkg\/button` or `npm:@scope\/pkg@1\.2\.3\/button\/v2`/);
   assert.match(runner, /A bare word such as `button` is a path: the folder or file `\.\/button`\. Always write an npm package with the `npm:` prefix/);
   assert.match(docsText, /Write `npm:button` to pick the package/);
@@ -195,8 +200,9 @@ test("the archetypes the runner lists match the tool's", async () => {
 test("every document tells a global install how to skip npx, without dropping the version check", () => {
   const readme = read("docs", "quick-start-cli.md");
   assert.match(readme, /npm i -g automatica11y/);
-  assert.match(readme, /`automatica11y` is on your `PATH`, with the short name `a11y` too/);
-  assert.match(readme, /A global install doesn't update itself, so run `npm i -g automatica11y@latest` to upgrade/);
+  assert.match(readme, /Make sure that `automatica11y` is on your `\$PATH` and then run/);
+  assert.match(readme, /provides an alias `a11y` with the exact same functionality/);
+  assert.match(readme, /A global install doesn't update itself, so run `npm i -g automatica11y@latest` \(or whichever package manager you use\) to upgrade and `automatica11y --version` to see what you have/);
   assert.match(agents, /If `automatica11y` is already on the `PATH`[\s\S]*The version check in the steps still applies/);
   assert.match(bootstrap, /If `automatica11y` is already installed \(`automatica11y --version` prints a version\), you can run `automatica11y guide skill` instead\. The steps check that the installed version matches them/);
   assert.match(runner, /replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above/);

@@ -48,7 +48,7 @@ export async function bundleEntries({ entries, outdir, workDir, framework = null
       logLevel: "silent",
     });
   } catch (error) {
-    const messages = (error.errors ?? []).slice(0, 3).map((e) => `${e.text}${e.location ? ` (${e.location.file}:${e.location.line})` : ""}`);
+    const messages = (error.errors ?? []).slice(0, 3).map((/** @type {import("esbuild").Message} */ e) => `${e.text}${e.location ? ` (${e.location.file}:${e.location.line})` : ""}`);
     throw Object.assign(new Error(`Bundling failed: ${messages.join("; ") || error.message}`), { unresolved: unresolvedPackages(error.errors ?? []) });
   }
   /** @type {Record<string, string>} */

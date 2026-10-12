@@ -42,7 +42,12 @@ function failed(reason, base) {
   return { ...base, status: "failed", reason, kind: null, evidenceLevel: null, resolved: null };
 }
 
-/** Expand `~` and `file:` into an absolute path. */
+/**
+ * Expand `~` and `file:` into an absolute path.
+ * @param {string} spec
+ * @param {string} cwd
+ * @param {string} home
+ */
 function toAbsolutePath(spec, cwd, home) {
   if (spec.startsWith("file://")) return fileURLToPath(spec);
   if (spec.startsWith("file:")) return resolve(cwd, spec.slice("file:".length));
@@ -50,7 +55,10 @@ function toAbsolutePath(spec, cwd, home) {
   return resolve(cwd, spec);
 }
 
-/** A Storybook build has `index.json` (`entries`) or the older `stories.json` (`stories`) at its root. */
+/**
+ * A Storybook build has `index.json` (`entries`) or the older `stories.json` (`stories`) at its root.
+ * @param {string} text
+ */
 function readStorybookIndex(text) {
   try {
     const json = JSON.parse(text);
@@ -83,7 +91,10 @@ function classifyLocal(abs, base, hint = "") {
   return failed(`Unsupported file type "${ext || "(none)"}". Use an .html file, a directory, or a URL.`, base);
 }
 
-/** Directory that would hold a Storybook's `index.json` for this URL. */
+/**
+ * Directory that would hold a Storybook's `index.json` for this URL.
+ * @param {string} url
+ */
 function storybookBase(url) {
   const base = new URL(url);
   base.search = "";
@@ -174,12 +185,16 @@ function classifyNpm(spec, base) {
     kind: "npm",
     evidenceLevel: "component",
     resolved: { name: primary.name, requested: primary.requested, version: null, subpath: primary.subpath },
-    ...(companions.length ? { companions: companions.map((c) => ({ name: c.name, requested: c.requested, version: null, subpath: c.subpath })) } : {}),
+    ...(companions.length ? { companions: companions.map((c) => ({ name: c.name, requested: c.requested, version: /** @type {string | null} */ (null), subpath: c.subpath })) } : {}),
   };
 }
 
-/** What to say when a bare word isn't a path on disk: it might have been a package or a web address. */
+/**
+ * What to say when a bare word isn't a path on disk: it might have been a package or a web address.
+ * @param {string} spec
+ */
 function notFoundHint(spec) {
+  /** @type {string[]} */
   const hints = [];
   if (NPM_NAME.test(spec)) hints.push(`If you meant the npm package, write npm:${spec}.`);
   if (/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/.*)?$/i.test(spec)) hints.push(`If you meant a web page, write https://${spec}.`);

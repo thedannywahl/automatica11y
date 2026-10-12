@@ -18,12 +18,17 @@ const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
 const svelte = adapterFor("svelte");
 
+/**
+ * @param {string[]} args
+ * @param {Record<string, string>} [files]
+ */
 async function run(args, files = {}) {
   const cwd = makeTree(files);
   const { io, out } = makeIo({ cwd, env: process.env });
   io.npmView = npmView;
   io.installPackage = installPackage;
   const code = await main(args, io);
+  /** @param {string} file */
   const read = (file) => {
     try {
       return readFileSync(join(cwd, "a11y-report", file), "utf8");

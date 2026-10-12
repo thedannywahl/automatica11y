@@ -8,6 +8,9 @@
  *
  * @typedef {"npm-react" | "npm-vue" | "npm-angular" | "npm-svelte" | "npm-html" | "npm-wc" | "npm-unsupported"} AdapterKind
  * @typedef {{ kind: AdapterKind, framework: string, reason: string }} AdapterDetection
+ * @typedef {{ peerDependencies?: Record<string, string>, dependencies?: Record<string, string>, main?: string, module?: string, style?: string, unpkg?: string, jsdelivr?: string, exports?: string | Record<string, unknown> }} PackageMeta
+ * @typedef {{ archetype: string, pkg: string, entry: { export?: string, tag?: string }, exports: import("../types.js").ExportSummary[], facts: Record<string, import("../types.js").WcFacts>, explicit?: boolean }} GenerateInput
+ * @typedef {{ candidates: import("../types.js").Candidate[], reason: string | null }} GenerateResult
  * @typedef {{
  *   id: string,
  *   label: string,
@@ -21,7 +24,7 @@
  *   entry: (fixturePath: string, pkg: string, context?: Record<string, unknown>) => string,
  *   discoverEntry: (pkg: string) => string,
  *   template: (archetype: string, pkg: string, name?: string, info?: unknown) => string | null,
- *   generate: (input: unknown) => { candidates: Array<{ id: string, summary: string, source: string, used: string[] }>, reason: string | null },
+ *   generate: (input: GenerateInput) => GenerateResult,
  *   describe: (npm: unknown) => string,
  * }} Adapter
  */
@@ -35,14 +38,20 @@ import wc from "./wc.js";
 /** @type {Record<string, Adapter>} */
 export const ADAPTERS = { react, vue, angular, svelte, html, wc };
 
-/** The adapter for a flavor (`react`, `vue`, or `wc`). */
+/**
+ * The adapter for a flavor (`react`, `vue`, or `wc`).
+ * @param {string} id
+ */
 export function adapterFor(id) {
   const adapter = ADAPTERS[id];
   if (!adapter) throw new Error(`There's no adapter for "${id}".`);
   return adapter;
 }
 
-/** The adapter for a plan target's kind, such as `npm-vue`, or null for a kind no adapter owns. */
+/**
+ * The adapter for a plan target's kind, such as `npm-vue`, or null for a kind no adapter owns.
+ * @param {string} kind
+ */
 export function adapterForKind(kind) {
   return Object.values(ADAPTERS).find((adapter) => adapter.kind === kind) ?? null;
 }

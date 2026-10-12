@@ -22,9 +22,11 @@ export function focusIndicatorChanges(focused, unfocused) {
       continue;
     }
     const found = [];
+    /** @param {FocusPart} s */
     const drawnOutline = (s) => s.outlineStyle !== "none" && parseFloat(s.outlineWidth) > 0 && !transparent(s.outlineColor);
     if (drawnOutline(now) && (!drawnOutline(before) || now.outlineWidth !== before.outlineWidth || now.outlineColor !== before.outlineColor || now.outlineStyle !== before.outlineStyle)) found.push("outline");
     if (now.boxShadow !== before.boxShadow) found.push("box-shadow");
+    /** @param {FocusPart} s */
     const drawnBorder = (s) => s.borderTopStyle !== "none" && parseFloat(s.borderTopWidth) > 0;
     if (drawnBorder(now) && (now.borderTopColor !== before.borderTopColor || now.borderTopWidth !== before.borderTopWidth || !drawnBorder(before))) found.push("border");
     if (now.backgroundColor !== before.backgroundColor) found.push("background color");
@@ -36,6 +38,7 @@ export function focusIndicatorChanges(focused, unfocused) {
   return changes;
 }
 
+/** @param {string} color */
 function transparent(color) {
   return color === "transparent" || /^rgba\(.*,\s*0\)$/.test(color) || /\/\s*0\)$/.test(color);
 }

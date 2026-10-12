@@ -49,6 +49,10 @@ after(async () => {
   await server?.close();
 });
 
+/**
+ * @param {string} path
+ * @param {Parameters<typeof runVsr>[1]} [options]
+ */
 async function walk(path, options) {
   const opened = await openPage(session.browser, `${server.origin}/${path}`, { waitUntil: "load" });
   try {
@@ -131,9 +135,14 @@ test("content inside an open shadow root isn't read, and the result says so", { 
   }
 });
 
+/**
+ * @param {string[]} args
+ * @param {string} [cwd]
+ */
 async function audit(args, cwd = makeTree()) {
   const { io, out } = makeIo({ cwd, env: process.env });
   const code = await main(args, io);
+  /** @param {string} file */
   const read = (file) => parseResults(JSON.parse(readFileSync(join(cwd, "a11y-report", file), "utf8")));
   return { code, results: read("results.json"), report: readFileSync(join(cwd, "a11y-report", "report.md"), "utf8"), ...out };
 }
@@ -154,6 +163,7 @@ test("audit: the tier shows in the results, the matrix, and the report", { skip 
 test("audit: a Storybook walks each story inside its root, and the report groups the flags", { skip }, async () => {
   const run = await audit(["audit", `${fixtures}storybook-static`]);
   const target = run.results.targets[0];
+  /** @param {string} id */
   const phrases = (id) => target.archetypes[`story:${id}`].configs[0].tiers.vsr.log[0].announcements;
   assert.deepEqual(phrases("button--primary"), ["button, Save"]);
   assert.deepEqual(phrases("button--icon-only"), ["button"]);

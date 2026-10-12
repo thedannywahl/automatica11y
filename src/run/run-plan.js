@@ -23,13 +23,31 @@ import { adapterFor } from "../frameworks/index.js";
 import { failedTarget, summarize } from "./summary.js";
 import { EXIT } from "../exit.js";
 
+/** @typedef {import("../types.js").Browser} Browser */
+/** @typedef {import("../types.js").Plan} Plan */
+/** @typedef {import("../types.js").PlanTarget} PlanTarget */
+/** @typedef {import("../types.js").TargetResult} TargetResult */
+/** @typedef {import("../types.js").ArchetypeResult} ArchetypeResult */
+/** @typedef {import("../types.js").MappingEntry} MappingEntry */
+/** @typedef {Awaited<ReturnType<typeof serveStatic>>} Server */
+/** @typedef {{ id: string, ok: boolean, archetype?: ArchetypeResult, hidden?: string[], reason?: string }} StoryOutcome */
+/** @typedef {{ result: TargetResult, mapping: Record<string, MappingEntry> | null, files?: Record<string, string> }} TargetRun */
+
 /** How many stories to audit at once. */
 const STORY_CONCURRENCY = 4;
 
 const NPM_KINDS = new Set(["npm", "npm-react", "npm-vue", "npm-angular", "npm-svelte", "npm-html", "npm-wc", "npm-unsupported"]);
-const UNSUPPORTED_KIND = (kind) => `${kind} targets aren't supported.`;
+const UNSUPPORTED_KIND = (/** @type {string} */ kind) => `${kind} targets aren't supported.`;
 
-/** Audit one page and return its target result. */
+/**
+ * Audit one page and return its target result.
+ * @param {Browser} browser
+ * @param {string} url
+ * @param {PlanTarget} planTarget
+ * @param {Plan} plan
+ * @param {string[]} extraWarnings
+ * @returns {Promise<TargetResult>}
+ */
 async function auditPage(browser, url, planTarget, plan, extraWarnings) {
   const opened = await openPage(browser, url);
   try {
@@ -49,6 +67,7 @@ async function auditPage(browser, url, planTarget, plan, extraWarnings) {
         tiers.vsr = await runVsr(opened.page, { scope: "body" }).catch(failedVsr);
       }
     }
+    /** @type {Record<string, ArchetypeResult>} */
     const archetypes = { page: { status: "ran", configs: [{ libA11y: "n/a", tiers }] } };
     const hidden = notTestableEntries(await closedShadowHosts(opened.page));
     const summary = summarize(archetypes, plan.options.engines);
@@ -66,7 +85,14 @@ async function auditPage(browser, url, planTarget, plan, extraWarnings) {
   }
 }
 
-/** Audit one story in its own page. The story's root element is the scope, so page-level rules don't fire. */
+/**
+ * Audit one story in its own page. The story's root element is the scope, so page-level rules don't fire.
+ * @param {Browser} browser
+ * @param {string} base
+ * @param {ReturnType<typeof listStories>[number]} story
+ * @param {Plan} plan
+ * @returns {Promise<StoryOutcome>}
+ */
 async function auditStory(browser, base, story, plan) {
   const opened = await openPage(browser, storyUrl(base, story.id));
   try {
@@ -94,9 +120,16 @@ async function auditStory(browser, base, story, plan) {
   }
 }
 
-/** Audit a Storybook: list the stories, pick the ones to run, and audit each as its own unit. */
+/**
+ * Audit a Storybook: list the stories, pick the ones to run, and audit each as its own unit.
+ * @param {Browser} browser
+ * @param {PlanTarget} planTarget
+ * @param {Plan} plan
+ * @param {Server[]} servers
+ * @returns {Promise<TargetResult>}
+ */
 async function auditStorybook(browser, planTarget, plan, servers) {
-  const resolved = planTarget.resolved;
+  const resolved = /** @type {{ index: string, url: string, path?: string }} */ (planTarget.resolved);
   const index = await readIndex(resolved);
   const stories = listStories(index);
   if (stories.length === 0) return failedTarget(planTarget.id, "The Storybook index lists no stories.");
@@ -112,7 +145,9 @@ async function auditStorybook(browser, planTarget, plan, servers) {
   }
   const audited = await mapPool(picked.selected, STORY_CONCURRENCY, (story) => auditStory(browser, base, story, plan));
 
+  /** @type {Record<string, ArchetypeResult>} */
   const archetypes = {};
+  /** @type {Array<{ id: string, reason: string }>} */
   const failedStories = [];
   for (const item of audited) {
     if (item.ok) archetypes[`story:${item.id}`] = item.archetype;
@@ -121,6 +156,7 @@ async function auditStorybook(browser, planTarget, plan, servers) {
       failedStories.push({ id: item.id, reason: item.reason });
     }
   }
+  /** @type {string[]} */
   const warnings = [];
   if (picked.truncated) {
     warnings.push(`The story cap cut the list short. ${num(picked.selected.length)} of ${num(picked.matched)} ${plan.options.archetypes ? "matching " : ""}stories ${picked.selected.length === 1 ? "was" : "were"} audited, spread across components. Raise --max-stories to audit more.`);
@@ -158,9 +194,17 @@ async function auditStorybook(browser, planTarget, plan, servers) {
   };
 }
 
-/** Run one target. Anything that goes wrong becomes a failed result, so one target can't stop the rest. */
+/**
+ * Run one target. Anything that goes wrong becomes a failed result, so one target can't stop the rest.
+ * @param {Browser} browser
+ * @param {PlanTarget} planTarget
+ * @param {Plan} plan
+ * @param {import("../commands/common.js").Io} io
+ * @returns {Promise<TargetRun>}
+ */
 async function runTarget(browser, planTarget, plan, io) {
   if (planTarget.status === "failed") return { result: failedTarget(planTarget.id, planTarget.reason), mapping: null };
+  /** @type {Server[]} */
   const servers = [];
   try {
     const pageNote = plan.options.archetypes ? ["--archetypes only applies to Storybook and npm targets. This page was checked as a whole."] : [];
@@ -188,7 +232,10 @@ async function runTarget(browser, planTarget, plan, io) {
   }
 }
 
-/** A short line per target for the terminal. */
+/**
+ * A short line per target for the terminal.
+ * @param {TargetResult} target
+ */
 function describeResult(target) {
   if (target.status !== "ran") return `${target.id}: ${target.status} (${target.reason})`;
   const parts = Object.entries(target.summary.engines).map(([engine, s]) => {
@@ -227,9 +274,13 @@ export async function runPlan(plan, io) {
         return EXIT.ENVIRONMENT;
       }
     }
+    /** @type {TargetResult[]} */
     const targets = [];
+    /** @type {Record<string, Record<string, MappingEntry>>} */
     const mappings = {};
-    /** Fixtures the tool generated, by path under the output folder. */
+    /** Fixtures the tool generated, by path under the output folder.
+     * @type {Record<string, string>}
+     */
     const generatedFiles = {};
     for (const planTarget of plan.targets) {
       const targetRun = await runTarget(browser, planTarget, plan, io);

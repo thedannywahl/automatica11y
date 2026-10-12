@@ -6,7 +6,11 @@ export const GENERATABLE = new Set(["dialog", "menu", "tooltip", "tabs", "accord
 /** The most candidates probed for one archetype, so a package that matches nothing doesn't cost minutes. */
 export const ATTEMPT_LIMIT = 8;
 
-/** Does the package's own name say it is this archetype? `@scope/react-dialog` is a dialog. */
+/**
+ * Does the package's own name say it is this archetype? `@scope/react-dialog` is a dialog.
+ * @param {string} archetype
+ * @param {string} pkg
+ */
 export function nameSaysSo(archetype, pkg) {
   return ARCHETYPE_PATTERNS[archetype].test(pkg.replace(/[^a-z0-9]+/gi, " "));
 }
