@@ -2,7 +2,7 @@
 
 Automatica11y provides an evergreen bootstrap skill you can add to your agent of choice. Automatica11y cli bundles the latest version of the runner skill and its references, so every invocation is always compatible.
 
-<<< ../skills/automatica11y/SKILL.md{ai}
+<<< ../skills/automatica11y/SKILL.md{skill}
 
 Once the skill is installed in your agent you can prompt it with the same commands and flags that are available to the cli.
 

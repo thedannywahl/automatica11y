@@ -349,7 +349,7 @@ button:focus-visible,
   height: 4px;
 }
 
-.vp-doc div:is(.language-prompt, .language-ai) {
+.vp-doc div:is(.language-prompt, .language-ai, .language-skill) {
   border-width: 0;
   background:
     linear-gradient(

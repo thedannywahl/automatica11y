@@ -137,7 +137,15 @@ export default defineConfig({
       )
       .replace('<aside class="VPSidebar"', '<aside class="VPSidebar" aria-label="Documentation navigation"');
   },
-  markdown: { config: installAccessibleTables },
+  markdown: {
+    languageAlias: {
+      ai: "txt",
+      AI: "txt",
+      prompt: "bash",
+      skill: "markdown"
+    },
+    config: installAccessibleTables,
+  },
   vite: {
     plugins: [docsContentPlugin, pantokenRootPlugin],
     build: { cssTarget: "chrome130" },
