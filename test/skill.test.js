@@ -45,7 +45,7 @@ for (const [label, dir, text] of [["the bootstrap skill", bootstrapDir, bootstra
     assert.equal(dir.split("/").pop(), name, "the folder is named for the skill");
     assert.ok(description.length <= 1024, "description fits in 1,024 characters");
     assert.ok(compatibility.length <= 500);
-    assert.match(compatibility, /Node 20/);
+    assert.match(compatibility, /Node 22/);
     assert.ok(text.split("\n").length < 500, "the body stays under 500 lines");
   });
 }
@@ -67,7 +67,7 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   assert.ok(bootstrap.indexOf("guide skill\n   ```") < bootstrap.indexOf("After reading the steps"), "the unsupported-setting check comes after the command that prints the steps");
   assert.doesNotMatch(bootstrap.slice(0, bootstrap.indexOf("npx --yes")), /supported/, "nothing before the guide asks the agent to know the supported values");
   assert.doesNotMatch(bootstrap, /(^|\s)--(?!yes\b|version\b|prefer-online\b)[a-z]/m, "the bootstrap lists no tool flags (--yes and --prefer-online belong to npx, --version to node), so it can't fall out of step with the tool");
-  assert.match(bootstrap, /fails or prints no version number, tell the user that Node\.js 20 or newer couldn't be verified, include the error text, and stop/);
+  assert.match(bootstrap, /fails or prints no version number, tell the user that Node\.js 22 or newer couldn't be verified, include the error text, and stop/);
   assert.match(bootstrap, /Don't guess at results/);
   assert.match(bootstrap, /exits with an error or prints no usable output, including after that retry, tell the user it failed, include the error text, and stop/);
   assert.match(bootstrap, /Don't continue with partial instructions/);

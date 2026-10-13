@@ -1,3 +1,4 @@
-import { register } from "node:module";
+import { registerHooks } from "node:module";
+import * as hooks from "./trace-hooks.mjs";
 
-register("./trace-hooks.mjs", import.meta.url);
+registerHooks(hooks);

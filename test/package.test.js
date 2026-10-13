@@ -22,12 +22,12 @@ function packed() {
   return JSON.parse(out)[0];
 }
 
-test("the package is ready to publish: public, MIT, ESM, Node 20 or newer", () => {
+test("the package is ready to publish: public, MIT, ESM, Node 22 or newer", () => {
   assert.equal(pkg.name, "automatica11y");
   assert.equal(pkg.private, undefined, "private is gone, so npm will publish it");
   assert.equal(pkg.license, "MIT");
   assert.equal(pkg.type, "module");
-  assert.equal(pkg.engines.node, ">=20");
+  assert.equal(pkg.engines.node, ">=22");
   assert.equal(pkg.publishConfig.access, "public");
   assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
   assert.equal(lock.version, pkg.version, "package-lock root version matches package.json");
@@ -92,7 +92,7 @@ test("validation has one reusable matrix and a fail-closed aggregate gate", () =
   assert.equal(workflow.on.push, undefined);
   assert.ok(Object.hasOwn(workflow.on, "workflow_call"));
   assert.deepEqual(workflow.on.pull_request.branches, ["main"]);
-  assert.deepEqual(workflow.jobs.test.strategy.matrix.node, [20, 22, 24, 26]);
+  assert.deepEqual(workflow.jobs.test.strategy.matrix.node, [22, 24, 26]);
   assert.equal(workflow.jobs.test.strategy["fail-fast"], false);
   assert.equal(workflow.jobs.smoke.uses, "./.github/workflows/action-test.yml");
   assert.deepEqual(workflow.jobs["ci-gate"].needs, ["test", "smoke", "release-policy"]);

@@ -91,7 +91,7 @@ automatica11y/
     *.test.js
 ```
 
-Language: plain ESM JavaScript with JSDoc types, Node 20 or newer. No build step. Valibot validates the plan, mapping, and results files at runtime. CI runs `tsc --noEmit --checkJs` as a lint step only.
+Language: plain ESM JavaScript with JSDoc types, Node 22 or newer. No build step. Valibot validates the plan, mapping, and results files at runtime. CI runs `tsc --noEmit --checkJs` as a lint step only.
 
 ## 4. CLI contract.
 
@@ -448,7 +448,7 @@ There are two skills and one bridge file. All three ship in the package, and `au
 **The bootstrap, `skills/automatica11y/SKILL.md`.** One small file a user can copy anywhere.
 
 1. **Frontmatter.** Name `automatica11y`, a `compatibility` line, and a description with the triggers: accessibility audit, WCAG check, compare accessibility, "how accessible is." It's the advertisement.
-2. **Body, under 40 lines.** Check `node --version` is 20 or newer. Run `npx --yes automatica11y@latest guide`, read all of it, and follow it. Stop and tell the user if commands can't run. Say "no automated violations found," never "accessible."
+2. **Body, under 40 lines.** Check `node --version` is 22 or newer. Run `npx --yes automatica11y@latest guide`, read all of it, and follow it. Stop and tell the user if commands can't run. Say "no automated violations found," never "accessible."
 3. **No version.** It names no version series, so it never goes stale.
 
 **`AGENTS.md`.** For agents that read it but don't load skills, and for the bootstrap's `guide` call. It tells an agent to run `guide skill`, and `guide fixtures` when it needs to write a fixture. A second section tells contributors in a checkout what to run.

@@ -5,7 +5,7 @@ The [automatica11y](https://www.npmjs.com/package/automatica11y) npm package pro
 ## Requirements
 
 <ul style="list-style-type: none;">
-  <li><span class="instui-icon -icon-nodedotjs" aria-hidden="true"></span> Node 20 or newer</li>
+  <li><span class="instui-icon -icon-nodedotjs" aria-hidden="true"></span> Node 22 or newer</li>
   <li><span class="instui-icon -icon-googlechrome" aria-hidden="true"></span> A recent Chrome or Chromium (within two major versions of the one Playwright ships)</li>
 </ul>
 

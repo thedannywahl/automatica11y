@@ -15,7 +15,7 @@ Complete these settings before enabling the workflow on main:
 
 | Event/state | Validation | Result |
 | --- | --- | --- |
-| Feature PR | Four-Node matrix, five Action smoke scenarios, release policy | Required `ci-gate`; no publication |
+| Feature PR | Three-Node matrix, five Action smoke scenarios, release policy | Required `ci-gate`; no publication |
 | Generated version PR | Same validation; authenticated identity and bookkeeping-only diff | Auto-merge waits for required checks and any required approvals |
 | Main with pending Changesets | Same reusable validation once | Update version PR; no publication |
 | Main without pending Changesets | Same reusable validation once | Publish unpublished version; existing versions are a registry no-op |
@@ -25,7 +25,7 @@ Complete these settings before enabling the workflow on main:
 | Manual Docs dispatch on main | Validate selected main or existing stable release tag | Deploy docs only; never publish npm |
 | Weekly latest-dependencies run | Separate unfiltered upgrade diagnostics | Log artifacts and issue reporting; never publishes |
 
-One validation workflow owns the Node 20/22/24/26 matrix and calls the reusable Action smoke workflow. There is no independent main matrix, duplicate release-candidate test, or tag-triggered release creator. Failed, cancelled, or skipped required jobs prevent publication. Releases and docs deploys are serialized without cancelling running work; superseded PR validation is cancelled.
+One validation workflow owns the Node 22/24/26 matrix and calls the reusable Action smoke workflow. There is no independent main matrix, duplicate release-candidate test, or tag-triggered release creator. Failed, cancelled, or skipped required jobs prevent publication. Releases and docs deploys are serialized without cancelling running work; superseded PR validation is cancelled.
 
 ## Changesets and version PRs
 

@@ -28,7 +28,7 @@ Both print files that live in `skills/automatica11y-runner/` in the repository a
 - `test:release` explicitly opts out of the one known upstream VitePress accessibility assertion (`input_checkboxes_grouped`). Report this one skipped test as an exception, never as an accessibility pass. All other tests must pass. CI validates the skip count and reason.
 - If the tests can't run because Chrome or Chromium is missing, or if either command fails, stop. Report the exact error and the command that failed, and don't report the change as complete. The browser tests skip themselves when no browser is found; any additional skipped tests block completion. Report the skipped count.
 - The release setup and recovery procedures are in `.github/RELEASING.md`. PRs run one shared matrix and Action smoke suite; main runs the same validation once before Changesets versioning or publication. Never bypass these gates or pass release credentials to PR jobs.
-- The code is plain ESM JavaScript with JSDoc types and no build step. It needs Node 20 or newer.
+- The code is plain ESM JavaScript with JSDoc types and no build step. It needs Node 22 or newer.
 - `src/` holds the tool. `test/` holds the tests. `test/fixtures/` holds test pages and fake packages, which are not the fixtures a user writes for an npm package.
 - Heavy dependencies (Playwright, esbuild, the rule engines) load only when a command needs them. A test checks that `--version`, `doctor`, `guide`, and `--plan` never import them.
 - Keep findings from axe-core and IBM Equal Access separate. Never add their counts together or convert one engine's scale into the other's.

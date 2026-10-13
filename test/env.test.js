@@ -16,11 +16,11 @@ test("checkNode: reports a problem only below the minimum major", () => {
   assert.deepEqual(checkNode(), checkNode(process.versions.node));
 });
 
-test("Node 19 fails the environment check; Node 20 passes that part", async () => {
+test("Node 21 fails the environment check; Node 22 passes that part", async () => {
   const env = { PATH: "", AUTOMATICA11Y_CHROME: "/does/not/exist" };
-  const old = await checkEnvironment({ env, nodeVersion: "19.9.0" });
+  const old = await checkEnvironment({ env, nodeVersion: "21.9.0" });
   assert.ok(old.problems.some((p) => p.id === "node"));
-  const fine = await checkEnvironment({ env, nodeVersion: "20.0.0" });
+  const fine = await checkEnvironment({ env, nodeVersion: "22.0.0" });
   assert.ok(!fine.problems.some((p) => p.id === "node"));
 });
 
