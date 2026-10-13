@@ -63,7 +63,7 @@ export const TargetSchema = v.object({
   evidenceLevel: v.nullable(v.picklist(["component", "page"])),
   resolved: v.nullable(v.record(v.string(), nullableString)),
   /** The other packages of an npm list target (`npm:a,b`), which install beside the primary one. */
-  companions: v.optional(v.array(v.object({ name: v.string(), requested: nullableString, version: nullableString, subpath: nullableString }))),
+  companions: v.optional(v.array(v.object({ name: v.string(), requested: nullableString, version: nullableString, subpath: nullableString, sourceType: v.optional(v.picklist(["directory", "tarball"])), sourcePath: v.optional(nullableString) }))),
   mapping: v.nullable(v.record(v.string(), MappingEntrySchema)),
 });
 
@@ -85,6 +85,7 @@ export const PlanSchema = v.object({
     libA11y: v.array(v.picklist(LIB_A11Y)),
     archetypes: v.nullable(v.array(v.picklist(ARCHETYPES))),
     mapping: nullableString,
+    localPackages: v.optional(v.record(v.string(), v.string())),
     maxStories: v.pipe(v.number(), v.integer(), v.minValue(1)),
     /** Build fixtures from a package's parts when none is authored. A plan saved before this existed generates. */
     generate: v.optional(v.boolean(), true),

@@ -8,8 +8,8 @@ import { findBrowser } from "../src/env/browser.js";
 import { makeTree } from "./helpers/fixtures.js";
 
 test("Action inputs preserve argument boundaries without shell evaluation", () => {
-  const args = inputArgs({ targets: "label=./path with spaces\n--dangerous\nnpm:one,two", out: "$(touch nope)", generate: "false" });
-  assert.deepEqual(args, ["--out", "$(touch nope)", "--no-generate", "--", "label=./path with spaces", "--dangerous", "npm:one,two"]);
+  const args = inputArgs({ targets: "label=./path with spaces\n--dangerous\nnpm:one,two", out: "$(touch nope)", "local-packages": "@scope/components=./packages/components/dist\n@scope/interactions=./packages/interactions/dist\n", generate: "false" });
+  assert.deepEqual(args, ["--out", "$(touch nope)", "--local-package", "@scope/components=./packages/components/dist", "--local-package", "@scope/interactions=./packages/interactions/dist", "--no-generate", "--", "label=./path with spaces", "--dangerous", "npm:one,two"]);
   assert.throws(() => inputArgs({ generate: "maybe" }), /true or false/);
 });
 
@@ -60,6 +60,7 @@ test("Action metadata pins dependencies and uploads before propagating failure",
   assert.ok(steps.findIndex((step) => step.id === "artifact") < steps.findIndex((step) => step.name === "Propagate CI outcome"));
   assert.equal(action.inputs["fail-on-axe"].default, undefined);
   assert.equal(action.inputs["fail-on-incomplete"].default, undefined);
+  assert.match(action.inputs["local-packages"].description, /one package-name=path mapping per line/);
 });
 
 test("Action wrapper runs the real CLI and preserves failing browser results", async (context) => {

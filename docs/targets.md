@@ -1,5 +1,32 @@
+
 # Targets.
 
+## Auditing local workspace packages.
+
+Build the package first, then map its package name to the directory that contains its built `package.json`, or to a packed `.tgz` file. The mapping applies to primary and companion packages by exact package name. Unmapped packages continue to resolve from npm; a mapped path or package identity error fails instead of falling back to the registry.
+
+```bash
+automatica11y audit ui=npm:@scope/components,@scope/interactions \
+  --local-package @scope/components=./packages/components/dist \
+  --local-package @scope/interactions=./packages/interactions/dist \
+  --plan
+automatica11y audit ui=npm:@scope/components,@scope/interactions \
+  --local-package @scope/components=./packages/components/dist \
+  --local-package @scope/interactions=./packages/interactions/dist
+```
+
+`--plan` reads local package metadata without installing packages or launching a browser. It reports each mapped package's resolved path and version. A requested npm version must exactly match the local package version. Relative paths use the command working directory.
+
+For CI, the same mapping can be checked in as root-level YAML:
+
+```yaml
+version: 1
+targets:
+  - ui=npm:@scope/components,@scope/interactions
+localPackages:
+  "@scope/components": ./packages/components/dist
+  "@scope/interactions": ./packages/interactions/dist
+```
 A target is `[label=]<spec>`. The label is optional, and names the target in the report.
 
 | Target | Spec |

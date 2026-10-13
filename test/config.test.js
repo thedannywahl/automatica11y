@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { join } from "node:path";
 import { test } from "node:test";
 import { configArgs, loadConfig } from "../src/commands/config.js";
 import { parseRunArgs } from "../src/commands/common.js";
@@ -11,6 +12,15 @@ test("YAML config preserves explicit disabling values and arrays", () => {
   const config = loadConfig(undefined, cwd);
   assert.deepEqual(config.targets, ["./dist"]);
   assert.deepEqual(configArgs(config), ["--wcag", "2.2", "--engine", "axe", "--no-generate", "--fail-on-axe", "none", "--fail-on-incomplete", "false"]);
+});
+
+test("local package mappings work in YAML and as repeatable CLI options", () => {
+  const cwd = makeTree({ ".automatica11y.yml": "version: 1\nlocalPackages:\n  fake-ui: ./packages/ui\n" });
+  const config = loadConfig(undefined, cwd);
+  assert.deepEqual(configArgs(config), ["--local-package", "fake-ui=./packages/ui"]);
+  assert.deepEqual(parseRunArgs("audit", ["npm:fake-ui", "--local-package", "fake-ui=./override"], { cwd }).options.localPackages, {
+    "fake-ui": join(cwd, "override"),
+  });
 });
 
 test("missing implicit config is allowed; explicit missing config is an error", () => {

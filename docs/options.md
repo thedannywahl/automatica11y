@@ -12,6 +12,8 @@
 | `--archetypes a,b` | all | Limit npm and Storybook targets to these archetypes. |
 | `--lib-a11y on,off` | both | For libraries with opt-in accessibility features. See [Writing fixtures](writing-fixtures.md). |
 | `--mapping <file>` | none | A mapping file for npm targets. |
+| `--local-package <name=path>` | none | Use a local package directory or `.tgz` for a named npm package. Repeat for companions; unmapped packages still resolve from npm. |
+- `plan.json` records what ran, the resolved tool and package versions, and local package source paths.
 | `--no-generate` | off | Don't build fixtures for npm packages. Only authored fixtures and the `button` and `link` templates run. |
 | `--generate` | on | Enable generated fixtures, overriding YAML `generate: false`. |
 | `--max-stories <n>` | `200` | The Storybook story cap. The cap spreads over components. |

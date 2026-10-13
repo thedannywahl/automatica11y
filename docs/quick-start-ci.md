@@ -36,6 +36,27 @@ yarn dlx automatica11y ci ./dist
 
 :::
 
+To audit packages built from the current workspace, build them first and map each package name to its output directory:
+
+```bash
+automatica11y ci ui=npm:@scope/components,@scope/interactions \
+  --local-package @scope/components=./packages/components/dist \
+  --local-package @scope/interactions=./packages/interactions/dist
+```
+
+For the GitHub Action, pass one mapping per line with `local-packages`:
+
+```yaml
+- uses: thedannywahl/automatica11y
+  with:
+    targets: ui=npm:@scope/components,@scope/interactions
+    local-packages: |
+      @scope/components=./packages/components/dist
+      @scope/interactions=./packages/interactions/dist
+```
+
+Alternatively, set `localPackages` in `.automatica11y.yml` as in [Targets](/targets#auditing-local-workspace-packages).
+
 The CI command fails (non-zero exit code) on serious-or-higher axe violations, IBM Toolkit level 1 violations, and incomplete execution or coverage by default. All policies are configurable. See [Options](/options#exit-codes) for more details.
 
 ## Github Action

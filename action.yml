@@ -25,6 +25,8 @@ inputs:
     description: Comma-separated library accessibility configurations (on, off).
   mapping:
     description: Archetype mapping JSON path.
+  local-packages:
+    description: Local npm package sources, one package-name=path mapping per line.
   max-stories:
     description: Maximum Storybook stories.
   generate:

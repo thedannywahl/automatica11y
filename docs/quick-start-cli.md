@@ -126,6 +126,16 @@ yarn dlx automatica11y audit ./path/to/file.html
 
 You can also use `check` as an alias for `audit`. The audit will generate a `plan.json`, `mappings.json`, and when it's complete it will save `results.json` (machine readable) and `report.md` (human readable) in `./a11y-report`.
 
+To audit built packages in a workspace, build them first and map each npm package to its output directory:
+
+```bash
+automatica11y ci ui=npm:@scope/components,@scope/interactions \
+  --local-package @scope/components=./packages/components/dist \
+  --local-package @scope/interactions=./packages/interactions/dist
+```
+
+Use the same package-name-to-path mapping in root-level `.automatica11y.yml` for repeatable CI runs.
+
 ### `compare` command
 
 deno run automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons

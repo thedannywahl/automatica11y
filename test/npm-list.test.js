@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { main } from "../src/cli.js";
@@ -44,6 +45,70 @@ test("each companion is looked up, so a missing version or a wrong sub-path fail
   const path = await resolveNpmTarget(await classifyTarget("npm:fake-ui,fake-subpaths/nope"), npmView);
   assert.equal(path.status, "failed");
   assert.match(path.reason, /fake-subpaths@2\.0\.0 exports|isn't something/);
+});
+
+test("local package sources resolve primary and companion metadata without registry lookups", async () => {
+
+  test("local tarballs resolve package metadata and preserve their source path", async () => {
+    const cwd = makeTree({ "package/package.json": JSON.stringify({ name: "fake-ui", version: "1.0.0", peerDependencies: { react: "*" } }) });
+    const tarball = join(cwd, "fake-ui.tgz");
+    execFileSync("tar", ["-czf", tarball, "-C", cwd, "package"]);
+    const target = await resolveNpmTarget(await classifyTarget("npm:fake-ui"), async () => {
+      throw new Error("Unexpected registry lookup");
+    }, { "fake-ui": tarball }, cwd);
+    assert.equal(target.status, "ok", target.reason);
+    assert.equal(target.resolved.sourceType, "tarball");
+    assert.equal(target.resolved.sourcePath, realpathSync(tarball));
+    assert.equal(target.resolved.version, "1.0.0");
+  });
+  const cwd = makeTree({
+    "components/package.json": JSON.stringify({ name: "fake-ui", version: "1.2.0", peerDependencies: { react: "*" } }),
+    "interactions/package.json": JSON.stringify({ name: "plain-utils", version: "3.1.0" }),
+  });
+  /** @type {string[]} */
+  const calls = [];
+  const target = await resolveNpmTarget(await classifyTarget("npm:fake-ui,plain-utils"), async (spec) => {
+    calls.push(spec);
+    throw new Error(`Unexpected registry lookup: ${spec}`);
+  }, { "fake-ui": "components", "plain-utils": "interactions" }, cwd);
+  assert.equal(target.status, "ok", target.reason);
+  assert.deepEqual(calls, []);
+  assert.deepEqual([target.resolved.sourceType, target.resolved.sourcePath, target.resolved.version], ["directory", realpathSync(join(cwd, "components")), "1.2.0"]);
+  assert.deepEqual([target.companions[0].sourceType, target.companions[0].sourcePath, target.companions[0].version], ["directory", realpathSync(join(cwd, "interactions")), "3.1.0"]);
+});
+
+test("a mapped local package rejects a name or version mismatch instead of falling back to npm", async () => {
+  const cwd = makeTree({ "local/package.json": JSON.stringify({ name: "not-fake-ui", version: "1.2.0" }) });
+  let registryCalled = false;
+  const target = await resolveNpmTarget(await classifyTarget("npm:fake-ui@1.0.0"), async () => {
+    registryCalled = true;
+    throw new Error("Unexpected registry lookup");
+  }, { "fake-ui": "local" }, cwd);
+  assert.equal(target.status, "failed");
+  assert.match(target.reason, /must declare package name fake-ui/);
+  assert.equal(registryCalled, false);
+
+  const versionCwd = makeTree({ "local/package.json": JSON.stringify({ name: "fake-ui", version: "1.2.0" }) });
+  const versionMismatch = await resolveNpmTarget(await classifyTarget("npm:fake-ui@1.0.0"), async () => {
+    registryCalled = true;
+    throw new Error("Unexpected registry lookup");
+  }, { "fake-ui": "local" }, versionCwd);
+  assert.equal(versionMismatch.status, "failed");
+  assert.match(versionMismatch.reason, /version 1\.2\.0.*requested 1\.0\.0/);
+  assert.equal(registryCalled, false);
+});
+
+test("plan mode reports the resolved local package path and version", async () => {
+  const cwd = makeTree({ "local/package.json": JSON.stringify({ name: "fake-ui", version: "1.0.0", peerDependencies: { react: "*" } }) });
+  const { io, out } = makeIo({ cwd });
+  io.npmView = async () => { throw new Error("Unexpected registry lookup"); };
+  const source = realpathSync(join(cwd, "local"));
+  const code = await main(["audit", "ui=npm:fake-ui", "--plan", "--local-package", `fake-ui=${source}`], io);
+  assert.equal(code, 0, out.stderr);
+  const plan = JSON.parse(readFileSync(join(cwd, "a11y-report", "plan.json"), "utf8"));
+  assert.equal(plan.targets[0].resolved.sourcePath, source);
+  assert.equal(plan.targets[0].resolved.version, "1.0.0");
+  assert.match(out.stdout, new RegExp(`${source.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\)`));
 });
 
 test("a list installs every package into one folder, and the report and results name them", { skip, timeout: 240_000 }, async () => {

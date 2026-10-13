@@ -14,6 +14,7 @@ const FLAGS = ["config", "wcag", "level", "tiers", "engine", "archetypes", "lib-
 export function inputArgs(inputs) {
   const args = [];
   for (const flag of FLAGS) if (inputs[flag]?.trim()) args.push(`--${flag}`, inputs[flag].trim());
+  for (const source of (inputs["local-packages"] ?? "").split(/\r?\n/).map((entry) => entry.trim()).filter(Boolean)) args.push("--local-package", source);
   if (inputs.generate?.trim()) {
     if (!["true", "false"].includes(inputs.generate)) throw new Error("generate must be true or false.");
     args.push(inputs.generate === "true" ? "--generate" : "--no-generate");

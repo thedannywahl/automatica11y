@@ -77,6 +77,6 @@ export async function installPackage({ dir, name, version, flavor }) {
   const svelte = flavor === "svelte" ? JSON.parse(readFileSync(join(repoModules, "svelte", "package.json"), "utf8")).version : null;
   /** @type {string[]} */
   const warnings = [];
-  return { dir, warnings, react, reactDom: react, vue, angular, svelte, version };
+  return { dir, warnings, installedPackages: [name], react, reactDom: react, vue, angular, svelte, version };
 }
 

@@ -15,7 +15,7 @@ import { cleanSubpath } from "./subpath.js";
  *   kind: TargetKind | null,
  *   evidenceLevel: "component" | "page" | null,
  *   resolved: Record<string, string | null> | null,
- *   companions?: Array<{ name: string, requested: string | null, version: string | null, subpath: string | null }>,
+ *   companions?: Array<{ name: string, requested: string | null, version: string | null, subpath: string | null, sourceType?: "directory" | "tarball", sourcePath?: string }>,
  * }} ClassifiedTarget
  * @typedef {(url: string | URL, init?: { signal?: AbortSignal, redirect?: string }) => Promise<{ ok: boolean, status: number, text(): Promise<string> }>} FetchLike
  * @typedef {{ cwd?: string, home?: string, fetch?: FetchLike, timeoutMs?: number, npmView?: (spec: string) => Promise<unknown> }} ClassifyContext

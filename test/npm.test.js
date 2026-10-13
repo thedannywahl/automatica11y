@@ -106,6 +106,31 @@ test("a package that peers on react but not react-dom gets react-dom without los
   assert.equal(result.react, "19.1.0");
 });
 
+test("local package installation packs directories without scripts and installs tarballs by path", async () => {
+  const dir = makeTree();
+  /** @type {string[][]} */
+  const directoryCalls = [];
+  await realInstall({ dir, name: "local-ui", version: "1.0.0", flavor: "html", source: { sourceType: "directory", sourcePath: "/workspace/packages/ui" }, run: async (args) => {
+    directoryCalls.push(args);
+    return args[0] === "pack" ? JSON.stringify([{ filename: "local-ui-1.0.0.tgz" }]) : "";
+  } });
+  assert.equal(directoryCalls[0][0], "pack");
+  assert.ok(directoryCalls[0].includes("--ignore-scripts"));
+  assert.equal(directoryCalls[1][0], "install");
+  assert.equal(directoryCalls[1][1], join(dir, "local-ui-1.0.0.tgz"));
+
+  /** @type {string[][]} */
+  const companionCalls = [];
+  await realInstall({ dir, name: "registry-ui", version: "2.0.0", flavor: "html", companions: [{ name: "local-utils", sourceType: "tarball", sourcePath: "/workspace/local-utils.tgz" }], run: async (args) => void companionCalls.push(args) });
+  assert.deepEqual(companionCalls[0].slice(0, 3), ["install", "registry-ui@2.0.0", "/workspace/local-utils.tgz"]);
+
+  /** @type {string[][]} */
+  const tarballCalls = [];
+  await realInstall({ dir, name: "local-ui", version: "1.0.0", flavor: "html", source: { sourceType: "tarball", sourcePath: "/workspace/packages/local-ui.tgz" }, run: async (args) => void tarballCalls.push(args) });
+  assert.equal(tarballCalls[0][0], "install");
+  assert.equal(tarballCalls[0][1], "/workspace/packages/local-ui.tgz");
+});
+
 test("an install that says a version doesn't exist is retried once with fresh package data", async () => {
   /** @type {string[][]} */
   const calls = [];

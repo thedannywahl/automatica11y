@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 const NPM_FLAGS = ["--ignore-scripts", "--no-audit", "--no-fund", "--prefer-offline", "--loglevel=error"];
 
@@ -45,9 +45,9 @@ export function installedVersion(dir, name) {
  * Install a package into its own directory, never next to another target's install.
  * npm adds the peer dependencies. A React package also needs react-dom, and a Vue package needs vue, so add them when the peers left them out.
  * Install scripts stay off, because the code is untrusted until it runs in the browser sandbox.
- * @param {{ dir: string, name: string, version: string, flavor: "react" | "vue" | "angular" | "svelte" | "html" | "wc" | "unknown", run?: typeof runNpm }} options
+ * @param {{ dir: string, name: string, version: string, flavor: "react" | "vue" | "angular" | "svelte" | "html" | "wc" | "unknown", source?: { sourceType: "directory" | "tarball", sourcePath: string }, companions?: Array<{ name: string, sourceType: "directory" | "tarball", sourcePath: string }>, run?: typeof runNpm }} options
  */
-export async function installPackage({ dir, name, version, flavor, run = runNpm }) {
+export async function installPackage({ dir, name, version, flavor, source, companions = [], run = runNpm }) {
   mkdirSync(dir, { recursive: true });
   if (!existsSync(join(dir, "package.json"))) writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "automatica11y-target", private: true }));
   /** @type {string[]} */
@@ -67,12 +67,35 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
       return run(args.map((arg) => (arg === "--prefer-offline" ? "--prefer-online" : arg)), dir);
     }
   };
+  const sources = [...(source ? [{ name, ...source }] : []), ...companions].filter((item, index, all) => all.findIndex((other) => other.name === item.name) === index);
+  /** @param {{ name: string, sourceType: "directory" | "tarball", sourcePath: string }} local */
+  const sourceSpec = async (local) => {
+    if (local.sourceType === "tarball") return local.sourcePath;
+    let packed;
+    try {
+      packed = await run(["pack", local.sourcePath, "--ignore-scripts", "--json", "--pack-destination", dir], dir);
+    } catch (error) {
+      throw new Error(`npm couldn't pack local ${local.name} from ${local.sourcePath}: ${firstLine(error.message)}`);
+    }
+    let filename;
+    try {
+      filename = JSON.parse(packed)?.[0]?.filename;
+    } catch {
+      throw new Error(`npm returned unreadable pack metadata for local ${local.name}.`);
+    }
+    if (typeof filename !== "string" || basename(filename) !== filename || !filename.endsWith(".tgz")) {
+      throw new Error(`npm returned an invalid tarball name for local ${local.name}.`);
+    }
+    return join(dir, filename);
+  };
+  const localSpecs = await Promise.all(sources.map(sourceSpec));
+  const installSpecs = [source ? localSpecs[0] : `${name}@${version}`, ...localSpecs.slice(source ? 1 : 0)];
   try {
-    await npm(["install", `${name}@${version}`, ...NPM_FLAGS]);
+    await npm(["install", ...installSpecs, ...NPM_FLAGS]);
   } catch (error) {
-    if (!/ERESOLVE|peer dep/i.test(String(error.message))) throw new Error(`npm couldn't install ${name}@${version}: ${firstLine(error.message)}`);
-    await npm(["install", `${name}@${version}`, "--legacy-peer-deps", ...NPM_FLAGS]).catch((retry) => {
-      throw new Error(`npm couldn't install ${name}@${version}: ${firstLine(retry.message)}`);
+    if (!/ERESOLVE|peer dep/i.test(String(error.message))) throw new Error(`npm couldn't install ${source ? `local ${name} from ${source.sourcePath}` : `${name}@${version}`}: ${firstLine(error.message)}`);
+    await npm(["install", ...installSpecs, "--legacy-peer-deps", ...NPM_FLAGS]).catch((retry) => {
+      throw new Error(`npm couldn't install ${source ? `local ${name} from ${source.sourcePath}` : `${name}@${version}`}: ${firstLine(retry.message)}`);
     });
     warnings.push(`npm couldn't satisfy ${name}'s peer dependencies, so it installed them loosely (--legacy-peer-deps). Results may not match a supported setup.`);
   }
@@ -107,7 +130,7 @@ export async function installPackage({ dir, name, version, flavor, run = runNpm 
       await npm(["install", ...adding, ...pinnedRuntime(dir, adding), ...NPM_FLAGS, "--legacy-peer-deps"]);
     }
   }
-  return { dir, warnings, react: installedVersion(dir, "react"), reactDom: installedVersion(dir, "react-dom"), vue: installedVersion(dir, "vue"), angular: installedVersion(dir, "@angular/core"), svelte: installedVersion(dir, "svelte"), version: installedVersion(dir, name) };
+  return { dir, warnings, installedPackages: [name, ...sources.filter((item) => item.name !== name).map((item) => item.name)], react: installedVersion(dir, "react"), reactDom: installedVersion(dir, "react-dom"), vue: installedVersion(dir, "vue"), angular: installedVersion(dir, "@angular/core"), svelte: installedVersion(dir, "svelte"), version: installedVersion(dir, name) };
 }
 
 /** What an Angular fixture needs beside the library: core, the runtime compiler, the platform, and the pieces core uses. */

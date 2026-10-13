@@ -16,6 +16,7 @@ import { parseDocument } from "yaml";
  * @property {string[]} [targets]
  * @property {Record<string, any>} [options]
  * @property {Record<string, any>} [fail]
+ * @property {Record<string, string>} [localPackages]
  * @property {ServerConfig} [server]
  * @property {{ enabled?: boolean, name?: string, retentionDays?: number }} [artifacts]
  * @property {boolean} [summary]
@@ -54,9 +55,16 @@ export function loadConfig(file, cwd) {
   const document = parseDocument(readFileSync(path, "utf8"), { uniqueKeys: true });
   if (document.errors.length || document.warnings.length) throw new Error(`Invalid YAML: ${[...document.errors, ...document.warnings].map((error) => error.message).join("; ")}`);
   /** @type {Config} */
-  const config = object(document.toJS({ maxAliasCount: 20 }), "config", ["version", "targets", "options", "fail", "server", "artifacts", "summary"]);
+  const config = object(document.toJS({ maxAliasCount: 20 }), "config", ["version", "targets", "options", "fail", "localPackages", "server", "artifacts", "summary"]);
   if (config.version !== 1) throw new Error("config.version must be 1.");
   if (config.targets !== undefined && (!Array.isArray(config.targets) || !config.targets.length || config.targets.some((target) => typeof target !== "string" || !target.trim()))) throw new Error("config.targets must be a nonempty array of strings.");
+  if (config.localPackages !== undefined) {
+    if (!config.localPackages || typeof config.localPackages !== "object" || Array.isArray(config.localPackages)) throw new Error("config.localPackages must be an object of package names to paths.");
+    for (const [name, source] of Object.entries(config.localPackages)) {
+      if (!/^(@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/.test(name)) throw new Error(`Invalid localPackages package name: ${name}.`);
+      if (typeof source !== "string" || !source.trim()) throw new Error(`localPackages.${name} must be a nonempty path.`);
+    }
+  }
   if (config.options !== undefined) {
     object(config.options, "options", Object.keys(OPTION_NAMES));
     for (const [key, value] of Object.entries(config.options)) {
@@ -96,6 +104,7 @@ export function configArgs(config) {
     else args.push(`--${OPTION_NAMES[key]}`, Array.isArray(value) ? value.join(",") : String(value));
   }
   for (const [key, value] of Object.entries(config.fail ?? {})) args.push(`--${FAIL_NAMES[key]}`, value === null ? "none" : String(value));
+  for (const [name, source] of Object.entries(config.localPackages ?? {})) args.push("--local-package", `${name}=${source}`);
   return args;
 }
 

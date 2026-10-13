@@ -36,6 +36,7 @@ const OPTION_DEFS = /** @type {const} */ ({
   archetypes: { type: "string" },
   "lib-a11y": { type: "string" },
   mapping: { type: "string" },
+  "local-package": { type: "string", multiple: true },
   plan: { type: "boolean" },
   "no-generate": { type: "boolean" },
   out: { type: "string" },
@@ -46,7 +47,7 @@ const OPTION_DEFS = /** @type {const} */ ({
   help: { type: "boolean", short: "h" },
 });
 
-/** @typedef {{ [K in keyof typeof OPTION_DEFS]?: typeof OPTION_DEFS[K]["type"] extends "boolean" ? boolean : string }} RunValues */
+/** @typedef {{ [K in keyof typeof OPTION_DEFS]?: K extends "local-package" ? string[] : typeof OPTION_DEFS[K]["type"] extends "boolean" ? boolean : string }} RunValues */
 
 /**
  * @typedef {object} ParsedRun
@@ -119,6 +120,17 @@ export function parseRunArgs(command, argv, context = {}) {
   const engines = values.engine ? parseList("engine", values.engine, ENGINES) : [...ENGINES];
   const libA11y = values["lib-a11y"] ? parseList("lib-a11y", values["lib-a11y"], LIB_A11Y) : [...LIB_A11Y];
   const archetypes = values.archetypes ? parseList("archetypes", values.archetypes, ARCHETYPES) : null;
+  /** @type {Record<string, string>} */
+  const localPackages = {};
+  for (const entry of values["local-package"] ?? []) {
+    const separator = entry.indexOf("=");
+    const name = separator < 0 ? "" : entry.slice(0, separator);
+    const source = separator < 0 ? "" : entry.slice(separator + 1);
+    if (!/^(@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/.test(name) || !source.trim()) {
+      throw new UsageError(`--local-package must be <package-name>=<path>. Got "${entry}".`);
+    }
+    localPackages[name] = resolve(context.cwd ?? process.cwd(), source);
+  }
 
   let maxStories = 200;
   if (values["max-stories"] !== undefined) {
@@ -150,6 +162,7 @@ export function parseRunArgs(command, argv, context = {}) {
     libA11y,
     archetypes,
     mapping: values.mapping ?? null,
+    ...(Object.keys(localPackages).length ? { localPackages } : {}),
     maxStories,
     generate: (parsed.tokens?.filter((token) => token.kind === "option" && ["generate", "no-generate"].includes(token.name)).at(-1)?.name ?? (values["no-generate"] ? "no-generate" : "generate")) === "generate",
     out: values.out ?? "./a11y-report",
@@ -181,7 +194,7 @@ export function parseRunArgs(command, argv, context = {}) {
 export function describeTarget(target) {
   if (target.status === "failed") return `failed: ${target.reason}`;
   const r = target.resolved ?? {};
-  if (target.kind?.startsWith("npm")) return `${r.name}@${r.version ?? r.requested ?? "latest"}${r.subpath ? `/${r.subpath}` : ""}${target.companions?.length ? ` with ${target.companions.map((c) => `${c.name}@${c.version ?? c.requested ?? "latest"}${c.subpath ? `/${c.subpath}` : ""}`).join(", ")}` : ""}${r.framework ? ` (${r.framework})` : ""}`;
+  if (target.kind?.startsWith("npm")) return `${r.name}@${r.version ?? r.requested ?? "latest"}${r.subpath ? `/${r.subpath}` : ""}${r.sourcePath ? ` (${r.sourceType}: ${r.sourcePath})` : ""}${target.companions?.length ? ` with ${target.companions.map((c) => `${c.name}@${c.version ?? c.requested ?? "latest"}${c.subpath ? `/${c.subpath}` : ""}${c.sourcePath ? ` (${c.sourceType}: ${c.sourcePath})` : ""}`).join(", ")}` : ""}${r.framework ? ` (${r.framework})` : ""}`;
   return r.url ?? r.path ?? "";
 }
 
@@ -338,6 +351,7 @@ const FLAGS = `Options:
   --archetypes <list>         Limit npm and Storybook targets to these archetypes.
   --lib-a11y <list>           on, off. Default both.
   --mapping <file>            Archetype mapping file.
+  --local-package <name=path> Use a local package directory or .tgz for an npm target (repeatable).
   --max-stories <n>           Storybook story cap. Default 200.
   --no-generate               Don't build fixtures for npm packages. Only authored fixtures and the button and link templates run.
   --plan                      Resolve and print the plan, then stop.
@@ -358,7 +372,7 @@ const FLAGS = `Options:
 /** @param {string} [command] */
 export function usage(command) {
   const header = {
-    ci: "Usage: automatica11y ci [<target>...] [options]\n\nAudit one target or compare multiple targets. Targets may come from YAML. Defaults: axe serious, IBM level 1, fail on incomplete coverage. Manual review and non-rule failures are opt-in. Relative paths use the working directory.\n\n",
+    ci: "Usage: automatica11y ci [<target>...] [options]\n\nAudit one target or compare multiple targets. Targets may come from YAML. Defaults: axe serious, IBM level 1, fail on incomplete coverage. Manual review and non-rule failures are opt-in. Relative paths use the working directory.\n\nFor local workspace packages, build first and map each package to its output:\n  automatica11y ci ui=npm:@scope/components,@scope/interactions --local-package @scope/components=./packages/components/dist --local-package @scope/interactions=./packages/interactions/dist\n\n",
     audit: "Usage: automatica11y audit <target> [options]\n       automatica11y check <target> [options]\n\nCheck how accessible one target is.\n\n",
     check: "Usage: automatica11y audit <target> [options]\n       automatica11y check <target> [options]\n\nCheck how accessible one target is.\n\n",
     compare: "Usage: automatica11y compare <target> <target> [<target>...] [options]\n\nCompare two or more targets.\n\n",

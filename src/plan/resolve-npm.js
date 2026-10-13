@@ -1,4 +1,6 @@
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { isAsset } from "../frameworks/html.js";
 import { ADAPTERS } from "../frameworks/index.js";
 import { checkExports, notExportedMessage } from "./subpath.js";
@@ -77,19 +79,71 @@ export function detectFlavor(meta) {
   return { kind: "npm", framework: null, reason: "The metadata doesn't say. The run decides after it loads the package." };
 }
 
+/** @param {string} name @param {string} source @param {string} cwd */
+function readLocalPackage(name, source, cwd) {
+  const requestedPath = resolve(cwd, source);
+  if (!existsSync(requestedPath)) throw new Error(`Local source for ${name} wasn't found: ${requestedPath}`);
+  const path = realpathSync(requestedPath);
+  const stats = statSync(path);
+  let text;
+  let sourceType;
+  if (stats.isDirectory()) {
+    sourceType = "directory";
+    try {
+      text = readFileSync(resolve(path, "package.json"), "utf8");
+    } catch {
+      throw new Error(`Local source for ${name} has no readable package.json: ${path}`);
+    }
+  } else if (stats.isFile() && /\.t(ar\.)?gz$/i.test(path)) {
+    sourceType = "tarball";
+    try {
+      text = execFileSync("tar", ["-xOf", path, "package/package.json"], { encoding: "utf8", maxBuffer: 1024 * 1024 });
+    } catch {
+      throw new Error(`Local tarball for ${name} has no readable package/package.json: ${path}`);
+    }
+  } else {
+    throw new Error(`Local source for ${name} must be a package directory or .tgz/.tar.gz file: ${path}`);
+  }
+  let metadata;
+  try {
+    metadata = JSON.parse(text);
+  } catch {
+    throw new Error(`Local source for ${name} has invalid package metadata: ${path}`);
+  }
+  if (!isRecord(metadata) || metadata.name !== name || typeof metadata.version !== "string") {
+    throw new Error(`Local source at ${path} must declare package name ${name} and a string version.`);
+  }
+  return { metadata: /** @type {Record<string, unknown>} */ (metadata), path, sourceType };
+}
+
+/** @param {Record<string, unknown>} metadata @param {{ name: string, requested: string | null, subpath: string | null }} entry */
+function validateLocalPackage(metadata, entry) {
+  if (entry.requested && entry.requested !== metadata.version) {
+    throw new Error(`Local ${entry.name} is version ${metadata.version}, but the target requested ${entry.requested}. Local sources require an exact version match.`);
+  }
+  if (entry.subpath) {
+    const result = checkExports(metadata.exports, entry.subpath);
+    if (result.checked && !result.ok) throw new Error(notExportedMessage({ name: entry.name, version: typeof metadata.version === "string" ? metadata.version : null, subpath: entry.subpath, exact: result.exact, patterns: result.patterns }));
+  }
+}
+
 /**
  * Fill in a classified npm target: the concrete version and the framework guess.
  * @param {import("./classify.js").ClassifiedTarget} target
  * @param {(spec: string) => Promise<unknown>} view
+ * @param {Record<string, string>} [localPackages]
+ * @param {string} [cwd]
  * @returns {Promise<import("./classify.js").ClassifiedTarget>}
  */
-export async function resolveNpmTarget(target, view) {
+export async function resolveNpmTarget(target, view, localPackages = {}, cwd = process.cwd()) {
   if (target.status !== "ok" || target.kind !== "npm" || !target.resolved) return target;
-  const { name, requested, subpath } = target.resolved;
+  const { name, requested, subpath } = /** @type {{ name: string, requested: string | null, subpath: string | null }} */ (target.resolved);
   try {
-    const metadata = await view(`${name}@${requested ?? "latest"}`);
+    const local = localPackages[name] ? readLocalPackage(name, localPackages[name], cwd) : null;
+    const metadata = local?.metadata ?? await view(`${name}@${requested ?? "latest"}`);
     if (!isRecord(metadata)) throw new Error("npm returned package metadata in an unreadable shape.");
     const meta = metadata;
+    if (local) validateLocalPackage(meta, { name, requested, subpath });
     // The registry lists a package's exports, so a wrong sub-path is caught here, before anything is installed.
     if (subpath) {
       const result = checkExports(meta.exports, subpath);
@@ -104,19 +158,21 @@ export async function resolveNpmTarget(target, view) {
     /** @type {Array<{ name: string, requested: string | null, version: string | null, subpath: string | null }>} */
     const companions = [];
     for (const companion of target.companions ?? []) {
-      const found = await view(`${companion.name}@${companion.requested ?? "latest"}`);
+      const companionLocal = localPackages[companion.name] ? readLocalPackage(companion.name, localPackages[companion.name], cwd) : null;
+      const found = companionLocal?.metadata ?? await view(`${companion.name}@${companion.requested ?? "latest"}`);
       if (!isRecord(found)) throw new Error(`npm returned metadata for ${companion.name} in an unreadable shape.`);
       const version = typeof found.version === "string" ? found.version : null;
+      if (companionLocal) validateLocalPackage(found, companion);
       if (companion.subpath) {
         const result = checkExports(found.exports, companion.subpath);
         if (result.checked && !result.ok) throw new Error(notExportedMessage({ name: companion.name, version, subpath: companion.subpath, exact: result.exact, patterns: result.patterns }));
       }
-      companions.push({ ...companion, version });
+      companions.push({ ...companion, version, ...(companionLocal ? { sourceType: companionLocal.sourceType, sourcePath: companionLocal.path } : {}) });
     }
     return {
       ...target,
       kind: flavor.kind,
-      resolved: { ...target.resolved, version: typeof meta.version === "string" ? meta.version : null, framework: flavor.framework, detectedBy: flavor.reason },
+      resolved: { ...target.resolved, version: typeof meta.version === "string" ? meta.version : null, framework: flavor.framework, detectedBy: flavor.reason, ...(local ? { sourceType: local.sourceType, sourcePath: local.path } : {}) },
       ...(companions.length ? { companions } : {}),
     };
   } catch (error) {

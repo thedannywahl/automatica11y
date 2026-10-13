@@ -266,7 +266,12 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     const adapterId = adapterForKind(planTarget.kind)?.id;
     /** @type {"react" | "vue" | "angular" | "svelte" | "html" | "wc" | "unknown"} */
     let flavor = adapterId === "react" || adapterId === "vue" || adapterId === "angular" || adapterId === "svelte" || adapterId === "html" || adapterId === "wc" ? adapterId : "unknown";
-    const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor });
+    const localCompanions = (planTarget.companions ?? []).filter((companion) => (companion.sourceType === "directory" || companion.sourceType === "tarball") && typeof companion.sourcePath === "string").map((companion) => ({ name: companion.name, sourceType: /** @type {"directory" | "tarball"} */ (companion.sourceType), sourcePath: /** @type {string} */ (companion.sourcePath) }));
+    const sourceType = resolved.sourceType;
+    const sourcePath = resolved.sourcePath;
+    const localSource = (sourceType === "directory" || sourceType === "tarball") && typeof sourcePath === "string" ? { sourceType: /** @type {"directory" | "tarball"} */ (sourceType), sourcePath } : undefined;
+    if (resolved.sourcePath && !localSource) throw new Error(`The saved plan has an invalid local source for ${resolved.name}.`);
+    const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor, ...(localSource ? { source: localSource } : {}), ...(localCompanions.length ? { companions: localCompanions } : {}) });
     const warnings = /** @type {string[]} */ ([...installed.warnings]);
     // What fixtures and templates import: the package, or the sub-path of it that was asked for.
     let importSpec = resolved.subpath ? `${resolved.name}/${resolved.subpath}` : resolved.name;
@@ -279,10 +284,10 @@ export async function auditNpm({ browser, planTarget, plan, cwd, install = insta
     // The other packages of a list target (`npm:a,b`) go into the same folder, so the scripts and styles of one see the others.
     /** @type {Array<{ name: string, subpath: string | null, version: string | null }>} */
     const companions = [];
-    const alreadyInstalled = new Set([resolved.name]);
+    const alreadyInstalled = new Set(installed.installedPackages ?? [resolved.name]);
     for (const companion of planTarget.companions ?? []) {
       // A second entry for a package that's already in the folder (a stylesheet and a script from one package) needs no second install.
-      const added = alreadyInstalled.has(companion.name) ? { warnings: /** @type {string[]} */ ([]), version: installedVersion(workDir, companion.name) } : await install({ dir: workDir, name: companion.name, version: companion.version, flavor: "unknown" });
+      const added = alreadyInstalled.has(companion.name) ? { warnings: /** @type {string[]} */ ([]), version: installedVersion(workDir, companion.name) } : await install({ dir: workDir, name: companion.name, version: companion.version, flavor: "unknown", ...(companion.sourceType && companion.sourcePath ? { source: { sourceType: companion.sourceType, sourcePath: companion.sourcePath } } : {}) });
       warnings.push(...added.warnings);
       if (companion.subpath) {
         const problem = subpathProblem(workDir, companion.name, companion.subpath, added.version ?? companion.version);

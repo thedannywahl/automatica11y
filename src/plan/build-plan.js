@@ -21,7 +21,8 @@ function slug(text) {
  */
 export async function buildPlan({ command, targets, options, browserVersion = null, ctx = {}, now = new Date() }) {
   const view = ctx.npmView ?? npmView;
-  const classified = await Promise.all(targets.map(async (raw) => resolveNpmTarget(await classifyTarget(raw, ctx), view)));
+  const localPackages = options.localPackages ?? {};
+  const classified = await Promise.all(targets.map(async (raw) => resolveNpmTarget(await classifyTarget(raw, ctx), view, localPackages, ctx.cwd ?? process.cwd())));
   const seen = new Map();
   const planTargets = classified.map((target) => {
     const base = slug(target.label ?? target.name);

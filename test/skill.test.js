@@ -182,7 +182,8 @@ test("every command the docs run exists, and every guide topic they name is real
 test("the docs write npm packages with the npm: prefix, as the tool requires", () => {
   const readme = read("README.md");
   for (const { name, text } of [{ name: "README.md", text: readme }, ...docPages, ...agentDocs]) {
-    assert.doesNotMatch(text, /(^|[\s=`])@[a-z][\w-]*\/[\w.-]+/m, `${name} has no bare scoped package as a target`);
+    const targets = text.replace(/^\s*--local-package\s+[^\s]+/gm, "--local-package <package>=<path>").replace(/^\s+"@[a-z][\w-]*\/[\w.-]+"(?=:)/gm, "  local-package-name:");
+    assert.doesNotMatch(targets, /(^|[\s=`])@[a-z][\w-]*\/[\w.-]+/m, `${name} has no bare scoped package as a target`);
     assert.doesNotMatch(text, /=(react-aria-components|@radix-ui)/, `${name} labels no bare package`);
   }
   assert.match(docsText, /compare next-gen=npm:@instructure\/ui-button\/Button\/v2 canvas=npm:@instructure\/ui-buttons\/Button\/v1/);
