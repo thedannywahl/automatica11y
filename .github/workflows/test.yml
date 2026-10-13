@@ -2,6 +2,7 @@ name: Test
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 concurrency:
@@ -17,8 +18,8 @@ jobs:
       matrix:
         node: [20, 22, 24, 26]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -28,4 +29,13 @@ jobs:
         run: node bin/automatica11y.js doctor
       - if: matrix.node == 26
         run: npm run lint
-      - run: npm test
+      - name: Run tests with detailed output
+        shell: bash
+        run: npm run test:release 2>&1 | tee test-output.txt
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: test-log-node-${{ matrix.node }}
+          path: test-output.txt
+          if-no-files-found: warn
