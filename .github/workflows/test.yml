@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Node ${{ matrix.node }}
@@ -11,15 +15,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        node: [20, 22, 24, 26]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-      - run: npm ci
-      # The runner has Google Chrome. This also puts the headless shell in the cache, so the tests find a browser either way.
-      - run: npx playwright-core install --with-deps --only-shell chromium
-      - run: npm run lint
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify runner browser
+        run: node bin/automatica11y.js doctor
+      - if: matrix.node == 26
+        run: npm run lint
       - run: npm test

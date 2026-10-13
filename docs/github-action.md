@@ -1,7 +1,7 @@
 Add `options.archetypes: [button, dialog]` to limit component coverage or `options.mapping: ./mapping.json` for authored fixtures. To audit local monorepo builds, add root-level `localPackages` entries from package names to built package directories (or `.tgz` files); build those packages before the action runs. `--plan` reports their resolved paths and versions without installing them. Add the `server` object from the next example when testing a local application instead of built files.
 # GitHub Action
 
-Run on an Ubuntu GitHub-hosted runner or an Ubuntu self-hosted runner with permission to install Chromium's system dependencies. The Action sets up Node 24, installs the tool from the selected Action checkout in an isolated temporary directory, and downloads the matching Playwright headless shell. It does not install or build your application.
+Run on an Ubuntu GitHub-hosted runner or an Ubuntu self-hosted runner with permission to install Chromium's system dependencies. The Action sets up Node 26, installs the tool from the selected Action checkout in an isolated temporary directory, and downloads the matching Playwright headless shell. It does not install or build your application.
 
 ## Built site
 
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout
       - uses: actions/setup-node
         with:
-          node-version: '24'
+          node-version: '26'
       - run: npm ci
       - run: npm run build
       - uses: thedannywahl/automatica11y

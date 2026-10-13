@@ -24,10 +24,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          node-version: 26
           cache: npm
-      - run: npm ci
-      - run: npx playwright-core install --with-deps --only-shell chromium
+      - run: npm ci --no-audit --no-fund
+      - name: Verify runner browser
+        run: node bin/automatica11y.js doctor
       - run: npm run lint
       # Explicitly skips only the known, ticketed VitePress accessibility test; all other tests run.
       - run: npm run test:release
