@@ -6,7 +6,7 @@ The [automatica11y](https://www.npmjs.com/package/automatica11y) npm package pro
 
 <ul style="list-style-type: none;">
   <li><span class="instui-icon -icon-nodedotjs" aria-hidden="true"></span> Node 20 or newer</li>
-  <li><span class="instui-icon -icon-googlechrome" aria-hidden="true"></span> Chrome or Chromium</li>
+  <li><span class="instui-icon -icon-googlechrome" aria-hidden="true"></span> A recent Chrome or Chromium (within two major versions of the one Playwright ships)</li>
 </ul>
 
 ## Installation
@@ -173,7 +173,7 @@ yarn dlx automatica11y compare npm:react-aria-components npm:@instructure/ui-but
 ### `doctor` command
 
 yarn dlx automatica11y doctor
-`doctor` checks your setup to make sure your system meets the [requirements](#requirements). If it can't find a browser, it prints the command to install one.
+`doctor` checks your setup to make sure your system meets the [requirements](#requirements). If it can't find a browser, it prints the command to install one. If the browser is too old, it tells you to update it. Add `--install-browser` to download Chromium when the check fails.
 
 ::: code-group
 

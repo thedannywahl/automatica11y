@@ -161,11 +161,11 @@ test("a real run with no browser exits 3 and prints the install command", async 
 });
 
 test("a real run writes the plan first, even when the browser won't start", { skip: !onUnix }, async () => {
-  const result = await run(["audit", "npm:react"], { env: { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser("123.0.4567.89") } });
+  const result = await run(["audit", "npm:react"], { env: { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser("200.0.4567.89") } });
   assert.equal(result.code, 3);
   assert.match(result.stderr, /Couldn't start the browser/);
   const plan = JSON.parse(readFileSync(join(result.cwd, "a11y-report", "plan.json"), "utf8"));
-  assert.equal(plan.tools.chromium, "123.0.4567.89");
+  assert.equal(plan.tools.chromium, "200.0.4567.89");
 });
 
 test("run --plan re-runs a saved plan and warns when versions differ", { skip: !onUnix }, async () => {
@@ -190,14 +190,37 @@ test("run --plan rejects missing and invalid plans", async () => {
 });
 
 test("doctor: exits 0 with a browser, 3 without", { skip: !onUnix }, async () => {
-  const ok = await run(["doctor"], { env: { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser("130.0.1.2") } });
+  const ok = await run(["doctor"], { env: { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser("200.0.1.2") } });
   assert.equal(ok.code, 0);
   assert.match(ok.stdout, /Node\s+\S+\s+ok/);
-  assert.match(ok.stdout, /130\.0\.1\.2/);
+  assert.match(ok.stdout, /200\.0\.1\.2/);
 
   const missing = await run(["doctor"], { env: { PATH: "", AUTOMATICA11Y_CHROME: "/does/not/exist" } });
   assert.equal(missing.code, 3);
   assert.match(missing.stderr, /npx playwright-core install --only-shell chromium/);
+
+  const old = await run(["doctor"], { env: { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser("100.0.1.2") } });
+  assert.equal(old.code, 3);
+  assert.match(old.stdout, /Browser\s+custom 100\.0\.1\.2\s+problem/);
+  assert.match(old.stderr, /too old/);
+});
+
+test("doctor --install-browser downloads only when the browser check fails", { skip: !onUnix }, async () => {
+  let calls = 0;
+  const installBrowser = async () => {
+    calls += 1;
+    return { ok: true, output: "" };
+  };
+  const present = await run(["doctor", "--install-browser"], { env: { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser("999.0.0.0") }, installBrowser });
+  assert.equal(present.code, 0);
+  assert.equal(calls, 0);
+
+  const missing = await run(["doctor", "--install-browser"], { env: { PATH: "", AUTOMATICA11Y_CHROME: "/does/not/exist" }, installBrowser });
+  assert.equal(calls, 1);
+  assert.match(missing.stdout, /Downloading Chromium/);
+
+  const bad = await run(["doctor", "--nope"], {});
+  assert.equal(bad.code, 2);
 });
 
 test("guide prints the guidance files, and each topic prints its own file", async () => {

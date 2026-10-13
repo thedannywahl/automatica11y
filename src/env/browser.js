@@ -1,15 +1,50 @@
 import { execFile } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { createRequire } from "node:module";
 import { homedir } from "node:os";
-import { delimiter, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 
 export const INSTALL_COMMAND = "npx playwright-core install --only-shell chromium";
 export const BROWSER_ENV_VAR = "AUTOMATICA11Y_CHROME";
-export const MIN_NODE_MAJOR = 20;
+/** How many major versions behind the Chromium that Playwright ships a browser may be. */
+export const CHROME_MAJOR_WINDOW = 2;
+
+const require = createRequire(import.meta.url);
+
+/** Folder of the installed playwright-core, found without importing it. */
+function playwrightDir() {
+  return dirname(require.resolve("playwright-core/package.json"));
+}
+
+/**
+ * The oldest Chrome or Chromium major version we accept: the one Playwright ships, minus the window.
+ * Read from Playwright's browser list, so it moves with the pinned playwright-core.
+ * @returns {number | null} Null when the list can't be read.
+ */
+export function minChromeMajor() {
+  try {
+    const { browsers } = JSON.parse(readFileSync(join(playwrightDir(), "browsers.json"), "utf8"));
+    const shipped = Number(browsers.find((/** @type {{ name: string }} */ b) => b.name === "chromium")?.browserVersion?.split(".")[0]);
+    return Number.isFinite(shipped) ? shipped - CHROME_MAJOR_WINDOW : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Download the Playwright headless shell, using the playwright-core this tool depends on.
+ * @returns {Promise<{ ok: boolean, output: string }>}
+ */
+export function installBrowser() {
+  return new Promise((resolve) => {
+    execFile(process.execPath, [join(playwrightDir(), "cli.js"), "install", "--only-shell", "chromium"], { timeout: 600000 }, (error, stdout, stderr) => {
+      resolve({ ok: !error, output: `${stdout}${stderr}`.trim() || (error?.message ?? "") });
+    });
+  });
+}
 
 /**
  * @typedef {{ kind: "chrome" | "chromium" | "headless-shell" | "custom", path: string, version: string | null }} Browser
- * @typedef {{ id: string, message: string, fix: string }} Problem
  */
 
 /**
@@ -93,6 +128,11 @@ function findHeadlessShell(platform, env) {
   return null;
 }
 
+/** @param {Browser} browser @param {number} minMajor */
+function isTooOld(browser, minMajor) {
+  return browser.version !== null && Number(browser.version.split(".")[0]) < minMajor;
+}
+
 /** @param {string} path @returns {Promise<string | null>} */
 function readVersion(path) {
   return new Promise((resolve) => {
@@ -107,7 +147,7 @@ function readVersion(path) {
  * Find a browser we can drive. Prefers an explicit override, then installed Chrome or Chromium,
  * then the Playwright headless shell. Never imports Playwright.
  * @param {{ env?: NodeJS.ProcessEnv, platform?: NodeJS.Platform }} [options]
- * @returns {Promise<{ browser: Browser | null, problem: Problem | null }>}
+ * @returns {Promise<{ browser: Browser | null, problem: import("./check.js").Problem | null }>}
  */
 export async function findBrowser({ env = process.env, platform = process.platform } = {}) {
   const override = env[BROWSER_ENV_VAR];
@@ -120,13 +160,19 @@ export async function findBrowser({ env = process.env, platform = process.platfo
     }
     return { browser: { kind: "custom", path: override, version: await readVersion(override) }, problem: null };
   }
+  const minMajor = minChromeMajor();
+  /** @type {Browser | null} */
+  let tooOld = null;
   for (const candidate of candidatePaths(platform, env)) {
     if (existsSync(candidate.path)) {
-      return { browser: { kind: /** @type {"chrome" | "chromium"} */ (candidate.kind), path: candidate.path, version: await readVersion(candidate.path) }, problem: null };
+      const browser = { kind: /** @type {"chrome" | "chromium"} */ (candidate.kind), path: candidate.path, version: await readVersion(candidate.path) };
+      if (minMajor === null || !isTooOld(browser, minMajor)) return { browser, problem: null };
+      tooOld ??= browser;
     }
   }
   const shell = findHeadlessShell(platform, env);
   if (shell) return { browser: { kind: "headless-shell", path: shell, version: await readVersion(shell) }, problem: null };
+  if (tooOld) return { browser: tooOld, problem: null };
   return {
     browser: null,
     problem: { id: "browser", message: "No Chrome or Chromium found.", fix: `Install Chrome, or run: ${INSTALL_COMMAND}` },
@@ -134,17 +180,21 @@ export async function findBrowser({ env = process.env, platform = process.platfo
 }
 
 /**
- * Check everything a real run needs. Used by `doctor` and by real runs.
- * @param {{ env?: NodeJS.ProcessEnv, platform?: NodeJS.Platform, nodeVersion?: string }} [options]
+ * Find a browser and check that it is recent enough.
+ * @param {{ env?: NodeJS.ProcessEnv, platform?: NodeJS.Platform }} [options]
  */
-export async function checkEnvironment({ env = process.env, platform = process.platform, nodeVersion = process.versions.node } = {}) {
-  /** @type {Problem[]} */
+export async function checkBrowser({ env = process.env, platform = process.platform } = {}) {
+  /** @type {import("./check.js").Problem[]} */
   const problems = [];
-  const major = Number(nodeVersion.split(".")[0]);
-  if (!(major >= MIN_NODE_MAJOR)) {
-    problems.push({ id: "node", message: `Node ${nodeVersion} is too old. automatica11y needs Node ${MIN_NODE_MAJOR} or newer.`, fix: `Install Node ${MIN_NODE_MAJOR} or newer from https://nodejs.org.` });
-  }
   const { browser, problem } = await findBrowser({ env, platform });
   if (problem) problems.push(problem);
-  return { ok: problems.length === 0, node: nodeVersion, browser, problems };
+  const minMajor = minChromeMajor();
+  if (browser && minMajor !== null && isTooOld(browser, minMajor)) {
+    problems.push({
+      id: "browser-old",
+      message: `${browser.kind} ${browser.version} is too old. automatica11y needs Chrome or Chromium ${minMajor} or newer.`,
+      fix: `Update Chrome, or run: ${INSTALL_COMMAND}`,
+    });
+  }
+  return { browser, problems };
 }

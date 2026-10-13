@@ -157,7 +157,7 @@ function knownFlags() {
   const defs = /OPTION_DEFS = [^{]*\{([\s\S]*?)\n\}\);/.exec(common)[1];
   const names = [...defs.matchAll(/^\s*"?([a-z0-9-]+)"?: \{/gm)].map((m) => `--${m[1]}`);
   // --yes and --prefer-online belong to npx, and --plan also takes a file under `run`.
-  return new Set([...names, "--version", "--plan", "--yes", "--prefer-online"]);
+  return new Set([...names, "--version", "--plan", "--yes", "--prefer-online", "--install-browser"]);
 }
 
 test("every flag the docs mention is a real flag", () => {
@@ -229,8 +229,10 @@ test("AGENTS.md bridges to the runner, and tells contributors what to run", () =
   assert.ok(agents.includes("npx --yes automatica11y@latest guide fixtures"));
   for (const path of [...agents.matchAll(/`(skills\/[^`]+)`/g)].map((m) => m[1])) assert.ok(existsSync(join(root, path)), `${path} exists`);
   assert.match(agents, /npm test/);
-  assert.match(agents, /If `npm test` can't run because Chrome or Chromium is missing, or if either command fails, stop\. Report the exact error and the command that failed, and don't report the change as complete/);
-  assert.match(agents, /a run that prints skipped tests isn't a pass either/);
+  assert.match(agents, /If the tests can't run because Chrome or Chromium is missing, or if either command fails, stop\. Report the exact error and the command that failed, and don't report the change as complete/);
+  assert.match(agents, /any additional skipped tests block completion/);
+  assert.match(agents, /one known upstream VitePress accessibility assertion/);
+  assert.match(agents, /npm run test:release/);
   assert.match(agents, /npm run lint/);
   assert.match(agents, /ships in the npm package/);
   assert.match(agents, /If the version check in the steps reports a mismatch, stop\. Report the installed version and the version the steps expect, and don't produce an audit or compare result until the user confirms how to proceed/);

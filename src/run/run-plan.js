@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
-import { checkEnvironment } from "../env/browser.js";
+import { checkEnvironment } from "../env/check.js";
 import { readToolVersions } from "../env/versions.js";
 import { launchBrowser } from "../harness/browser.js";
 import { serveStatic } from "../harness/static-serve.js";

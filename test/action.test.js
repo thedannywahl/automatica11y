@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { parse } from "yaml";
@@ -63,13 +63,26 @@ test("Action metadata pins dependencies and uploads before propagating failure",
   assert.match(action.inputs["local-packages"].description, /one package-name=path mapping per line/);
 });
 
-test("Marketplace releases are separate immutable semantic-version tags", () => {
-  const workflow = parse(readFileSync(new URL("../.github/workflows/action-release.yml", import.meta.url), "utf8"));
-  assert.deepEqual(workflow.on.push.tags, ["v*"]);
-  assert.equal(workflow.jobs.release.needs, "test");
-  assert.equal(workflow.jobs.release.permissions.contents, "write");
-  assert.equal(workflow.jobs.test.permissions, undefined);
-  assert.match(workflow.jobs.release.steps[0].run, /gh release create/);
+test("Marketplace and npm share one Changesets release owner", () => {
+  assert.equal(existsSync(new URL("../.github/workflows/action-release.yml", import.meta.url)), false);
+  const workflow = parse(readFileSync(new URL("../.github/workflows/changesets.yml", import.meta.url), "utf8"));
+  assert.equal(workflow.on.push.tags, undefined);
+  assert.equal(workflow.jobs.validation.uses, "./.github/workflows/test.yml");
+  assert.deepEqual(workflow.jobs.publish.needs, ["validation", "version"]);
+  const publish = workflow.jobs.publish.steps.find((/** @type {{ id?: string }} */ step) => step.id === "publish");
+  assert.equal(publish.with["create-github-releases"], true);
+  assert.equal(publish.with["push-git-tags"], true);
+});
+
+test("Action smoke tests are callable without duplicate push or PR runs", () => {
+  const workflow = parse(readFileSync(new URL("../.github/workflows/action-test.yml", import.meta.url), "utf8"));
+  assert.ok(Object.hasOwn(workflow.on, "workflow_call"));
+  assert.ok(Object.hasOwn(workflow.on, "workflow_dispatch"));
+  assert.equal(workflow.on.push, undefined);
+  assert.equal(workflow.on.pull_request, undefined);
+  assert.equal(workflow.concurrency, undefined);
+  assert.equal(workflow.jobs.action.strategy["fail-fast"], false);
+  assert.deepEqual(workflow.jobs.action.strategy.matrix.include.map((/** @type {{ case: string }} */ entry) => entry.case), ["clean", "violation", "compare", "incomplete", "server"]);
 });
 
 test("Action wrapper runs the real CLI and preserves failing browser results", async (context) => {

@@ -14,7 +14,7 @@ export function makeTree(files = {}) {
 }
 
 /** A stand-in browser: a shell script that prints a Chrome version. Unix only. */
-export function makeFakeBrowser(version = "123.0.4567.89") {
+export function makeFakeBrowser(version = "200.0.4567.89") {
   const root = makeTree();
   const path = join(root, "fake-chrome");
   writeFileSync(path, `#!/bin/sh\necho "Google Chrome ${version}"\n`);
