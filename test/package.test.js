@@ -54,6 +54,11 @@ test("Changesets versions only the npm package and publishes with isolated OIDC 
   assert.deepEqual(config.fixed, []);
   assert.deepEqual(config.linked, []);
   assert.deepEqual(workflow.jobs.version.permissions, { contents: "write", "pull-requests": "write" });
+  const version = workflow.jobs.version.steps.at(-1);
+  assert.match(version.uses, /^changesets\/action@/);
+  assert.equal(version.with["version-script"], "npm run changeset:version");
+  assert.equal(version.with["publish-script"], undefined);
+  assert.equal(version.with.script, undefined);
   assert.equal(workflow.jobs.publish.permissions["id-token"], "write");
   assert.equal(workflow.jobs.publish.permissions.contents, "write");
   assert.match(workflow.jobs.publish.steps.at(-1).uses, /changesets\/action\/publish@/);
