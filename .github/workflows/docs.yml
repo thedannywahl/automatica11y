@@ -10,8 +10,7 @@ on:
       - "docs/**"
       - "skills/**"
       - "docs/.vitepress/**"
-      - "scripts/prepare-docs.js"
-      - "site-assets/**"
+      - "docs/public/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/docs.yml"
@@ -36,6 +35,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run docs:build
+      - name: Set custom domain
+        run: printf 'automatica11y.dev\n' > site/CNAME
       - name: Publish to the docs branch
         working-directory: site
         run: |

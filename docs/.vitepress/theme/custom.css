@@ -17,7 +17,7 @@
 @import "@pantoken/plugin-simple-icons/icons/githubactions.css";
 
 :root {
-  --brand-mark-image: url("../../../site-assets/automatica11y-favicon.svg?inline");
+  --brand-mark-image: url("/favicon.svg");
   --vp-c-bg: var(--instui-color-background-container);
   --vp-nav-bg-color: var(--instui-color-background-container);
   --vp-local-nav-bg-color: var(--instui-color-background-container);
