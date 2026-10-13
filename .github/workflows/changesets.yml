@@ -1,0 +1,77 @@
+name: Changesets
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  version:
+    name: Open or update version PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Create or update version PR
+        uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          script: npm run changeset:version
+          commit-message: "chore: release packages"
+          pr-title: "chore: release packages"
+
+  test:
+    name: Validate release candidate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - name: Verify runner browser
+        run: node bin/automatica11y.js doctor
+      # Explicitly skips only the known, ticketed VitePress accessibility test; all other tests run.
+      - run: npm run test:release
+
+  publish:
+    name: Publish npm package and GitHub Release
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check trusted-publishing CLI requirements
+        run: |
+          npm_version="$(npm --version)"
+          node -e '
+            const [major, minor, patch] = process.argv[1].split(".").map(Number);
+            if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) {
+              throw new Error(`npm ${process.argv[1]} is too old for trusted publishing; need 11.5.1 or newer.`);
+            }
+          ' "$npm_version"
+      - name: Publish packages and create GitHub Releases
+        uses: changesets/action/publish@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          script: npm run release
+          create-github-releases: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}

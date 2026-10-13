@@ -3,9 +3,12 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { parse } from "yaml";
+import { updateRunnerSkillVersion } from "../scripts/sync-release-version.js";
 
 const root = new URL("../", import.meta.url).pathname;
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"));
 
 /**
  * What `npm pack` would put in the tarball, without writing one.
@@ -24,12 +27,37 @@ test("the package is ready to publish: public, MIT, ESM, Node 20 or newer", () =
   assert.equal(pkg.engines.node, ">=20");
   assert.equal(pkg.publishConfig.access, "public");
   assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+  assert.equal(lock.version, pkg.version, "package-lock root version matches package.json");
+  assert.equal(lock.packages[""].version, pkg.version, "locked root package version matches package.json");
   assert.ok(pkg.description.length > 20);
   assert.deepEqual(Object.keys(pkg.bin), ["automatica11y", "a11y"]);
   assert.equal(pkg.bin.a11y, pkg.bin.automatica11y, "the short name runs the same file");
   assert.ok(existsSync(join(root, pkg.bin.automatica11y)));
   assert.match(readFileSync(join(root, pkg.bin.automatica11y), "utf8"), /^#!\/usr\/bin\/env node\n/);
   assert.ok(statSync(join(root, pkg.bin.automatica11y)).mode & 0o111, "the bin file is executable");
+});
+
+test("release version sync updates all runner skill version checks", () => {
+  const source = readFileSync(join(root, "skills/automatica11y-runner/SKILL.md"), "utf8");
+  const updated = updateRunnerSkillVersion(source, "0.9.0");
+  assert.match(updated, /automatica11y \*\*0\.9\.x\*\*/);
+  assert.match(updated, /doesn't start with `0\.9\./);
+  assert.match(updated, /series this copy expects \(`0\.9\.x`\)/);
+  assert.doesNotMatch(updated, /0\.8\.x/);
+});
+
+test("Changesets versions only the npm package and publishes with isolated OIDC permissions", () => {
+  const config = JSON.parse(readFileSync(join(root, ".changeset/config.json"), "utf8"));
+  const workflow = parse(readFileSync(join(root, ".github/workflows/changesets.yml"), "utf8"));
+  assert.equal(config.baseBranch, "main");
+  assert.equal(config.access, "public");
+  assert.deepEqual(config.fixed, []);
+  assert.deepEqual(config.linked, []);
+  assert.deepEqual(workflow.jobs.version.permissions, { contents: "write", "pull-requests": "write" });
+  assert.equal(workflow.jobs.publish.permissions["id-token"], "write");
+  assert.equal(workflow.jobs.publish.permissions.contents, "write");
+  assert.match(workflow.jobs.publish.steps.at(-1).uses, /changesets\/action\/publish@/);
+  assert.equal(workflow.jobs.publish.steps.at(-1).with["create-github-releases"], true);
 });
 
 test("the tarball holds the tool, the skill, the docs, and the license, and nothing else", () => {

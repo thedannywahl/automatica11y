@@ -19,17 +19,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
-      - run: npm install --no-package-lock
+          node-version: 26
+          cache: npm
       - name: Install the latest of each tool
         run: >
-          npm install --no-package-lock --no-save
+          npm install --no-package-lock --no-save --no-audit --no-fund
           axe-core@latest @axe-core/playwright@latest accessibility-checker-engine@latest
           playwright-core@latest @guidepup/virtual-screen-reader@latest esbuild@latest valibot@latest
           @angular/core@latest @angular/common@latest @angular/compiler@latest @angular/platform-browser@latest
           @angular/cdk@latest @angular/material@latest rxjs@latest
           svelte@latest bits-ui@latest
-      - run: npx playwright-core install --with-deps --only-shell chromium
+      - name: Verify runner browser
+        run: node bin/automatica11y.js doctor
       - name: Record the versions
         run: npm ls --depth=0 | tee versions.txt
       - run: npm run lint

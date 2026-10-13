@@ -63,6 +63,15 @@ test("Action metadata pins dependencies and uploads before propagating failure",
   assert.match(action.inputs["local-packages"].description, /one package-name=path mapping per line/);
 });
 
+test("Marketplace releases are separate immutable semantic-version tags", () => {
+  const workflow = parse(readFileSync(new URL("../.github/workflows/action-release.yml", import.meta.url), "utf8"));
+  assert.deepEqual(workflow.on.push.tags, ["v*"]);
+  assert.equal(workflow.jobs.release.needs, "test");
+  assert.equal(workflow.jobs.release.permissions.contents, "write");
+  assert.equal(workflow.jobs.test.permissions, undefined);
+  assert.match(workflow.jobs.release.steps[0].run, /gh release create/);
+});
+
 test("Action wrapper runs the real CLI and preserves failing browser results", async (context) => {
   const { browser } = await findBrowser();
   if (!browser) return context.skip("No Chrome or Chromium found");

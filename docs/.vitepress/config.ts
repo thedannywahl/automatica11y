@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import type MarkdownIt from "markdown-it";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitepress";
-import { prepareDocs } from "../../scripts/prepare-docs.js";
+import llmstxt from "vitepress-plugin-llms";
 
 const hostname = "https://automatica11y.dev";
 const description = "Test and compare the accessibility of web pages, Storybook builds, and npm component libraries.";
@@ -21,7 +21,6 @@ const docsContentPlugin: Plugin = {
     server.watcher.add(skillFiles);
     server.watcher.on("change", (changedFile) => {
       if (!skillFiles.includes(resolve(changedFile))) return;
-      prepareDocs();
       server.ws.send({ type: "full-reload" });
     });
   },
@@ -147,7 +146,7 @@ export default defineConfig({
     config: installAccessibleTables,
   },
   vite: {
-    plugins: [docsContentPlugin, pantokenRootPlugin],
+    plugins: [docsContentPlugin, pantokenRootPlugin, llmstxt()],
     build: { cssTarget: "chrome130" },
   },
   buildEnd(siteConfig) {
