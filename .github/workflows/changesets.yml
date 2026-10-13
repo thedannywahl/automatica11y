@@ -22,7 +22,19 @@ jobs:
       - name: Create or update version PR
         uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
-          script: npm run changeset:version
+          script: |
+            npm exec -- changeset status --output /tmp/changeset-status.json
+            node --input-type=module -e '
+              import { readFileSync } from "node:fs";
+              import { execFileSync } from "node:child_process";
+
+              const { changesets } = JSON.parse(readFileSync("/tmp/changeset-status.json", "utf8"));
+              if (changesets.length === 0) {
+                console.log("No unreleased changesets; skipping versioning.");
+              } else {
+                execFileSync("npm", ["run", "changeset:version"], { stdio: "inherit" });
+              }
+            '
           commit-message: "chore: release packages"
           pr-title: "chore: release packages"
 
