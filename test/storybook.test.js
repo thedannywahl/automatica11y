@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { main } from "../src/cli.js";
@@ -120,7 +120,7 @@ async function audit(args, cwd = makeTree()) {
   } catch {
     // Early exits write no results.
   }
-  return { code, results, report, ...out };
+  return { code, results, report, ...out, cwd };
 }
 
 /** @param {import("../src/types.js").Results} result */
@@ -162,6 +162,23 @@ test("rules are scoped to the story, so page-level rules stay quiet", { skip }, 
   const all = Object.values(run.results.targets[0].archetypes).flatMap((a) => a.configs.flatMap((c) => Object.values(c.tiers.rules.engines).flatMap((e) => e.violations)));
   const pageLevel = new Set(["document-title", "html-has-lang", "landmark-one-main", "region", "page-has-heading-one", "html_lang_exists", "page_title_exists", "skip_main_exists"]);
   assert.deepEqual(all.filter((v) => pageLevel.has(v.ruleId)), []);
+});
+
+test("annotated screenshots are linked to their Storybook stories", { skip }, async () => {
+  const run = await audit(["audit", sbDir, "--archetypes", "button,form-field", "--engine", "axe", "--tiers", "rules", "--screenshots"]);
+  const target = run.results.targets[0];
+  const screenshots = Object.entries(target.archetypes).flatMap(([key, archetype]) => {
+    const screenshot = archetype.configs[0]?.tiers.rules?.engines?.axe?.screenshot;
+    return screenshot ? [{ story: key.replace(/^story:/, ""), screenshot }] : [];
+  });
+  assert.ok(screenshots.length > 0);
+  assert.equal(new Set(screenshots.map(({ screenshot }) => screenshot)).size, screenshots.length);
+  for (const { story: id, screenshot } of screenshots) {
+    assert.match(screenshot, new RegExp(`^screenshots/${target.id}/story-${id}-axe\\.png$`));
+    assert.ok(existsSync(join(run.cwd, "a11y-report", screenshot)));
+    assert.ok(run.report.includes(`- \`${id}\`: [Screenshot](${screenshot})`));
+  }
+  assert.match(run.report, /#1 `button-name`/);
 });
 
 test("--archetypes keeps matching stories and reports the archetypes that matched nothing", { skip }, async () => {

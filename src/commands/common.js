@@ -25,6 +25,8 @@ const OPTION_DEFS = /** @type {const} */ ({
   "fail-on-incomplete": { type: "string" },
   "fail-on-review": { type: "string" },
   "fail-on-checks": { type: "string" },
+  screenshots: { type: "boolean" },
+  "no-screenshots": { type: "boolean" },
   "server-command": { type: "string" },
   "server-url": { type: "string" },
   "server-timeout": { type: "string" },
@@ -141,6 +143,8 @@ export function parseRunArgs(command, argv, context = {}) {
   const axeFlag = values["fail-on-axe"] ?? (command === "ci" && tiers.includes("rules") && engines.includes("axe") ? "serious" : undefined);
   const ibmFlag = values["fail-on-ibm"] ?? (command === "ci" && tiers.includes("rules") && engines.includes("ibm") ? "1" : undefined);
   const modeFlag = values["fail-mode"];
+  const screenshotFlag = parsed.tokens?.filter((token) => token.kind === "option" && ["screenshots", "no-screenshots"].includes(token.name)).at(-1)?.name;
+  const screenshots = screenshotFlag ? screenshotFlag === "screenshots" : values.screenshots === true;
   /** @type {import("valibot").InferOutput<typeof import("../schema.js").FailConfigSchema> | null} */
   let fail = null;
   if (axeFlag === undefined && ibmFlag === undefined) {
@@ -164,6 +168,7 @@ export function parseRunArgs(command, argv, context = {}) {
     mapping: values.mapping ?? null,
     ...(Object.keys(localPackages).length ? { localPackages } : {}),
     maxStories,
+    screenshots,
     generate: (parsed.tokens?.filter((token) => token.kind === "option" && ["generate", "no-generate"].includes(token.name)).at(-1)?.name ?? (values["no-generate"] ? "no-generate" : "generate")) === "generate",
     out: values.out ?? "./a11y-report",
     fail,
@@ -354,6 +359,8 @@ const FLAGS = `Options:
   --local-package <name=path> Use a local package directory or .tgz for an npm target (repeatable).
   --max-stories <n>           Storybook story cap. Default 200.
   --no-generate               Don't build fixtures for npm packages. Only authored fixtures and the button and link templates run.
+  --screenshots               Capture annotated screenshots for rule violations. Off by default.
+  --no-screenshots            Disable screenshots configured in YAML.
   --plan                      Resolve and print the plan, then stop.
   --out <dir>                 Output directory. Default ./a11y-report.
   --fail-on-axe <impact>      minor, moderate, serious, critical, or none.

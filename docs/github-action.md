@@ -1,3 +1,4 @@
+With `screenshots: true`, annotated PNGs are included in the same artifact and linked from `report.md`. A job summary shows the outcome and independent engine counts; `summary: 'false'` disables it. Use normal GitHub `continue-on-error` when the caller wants to inspect a failing outcome without failing the job.
 Add `options.archetypes: [button, dialog]` to limit component coverage or `options.mapping: ./mapping.json` for authored fixtures. To audit local monorepo builds, add root-level `localPackages` entries from package names to built package directories (or `.tgz` files); build those packages before the action runs. `--plan` reports their resolved paths and versions without installing them. Add the `server` object from the next example when testing a local application instead of built files.
 # GitHub Action
 
@@ -120,6 +121,7 @@ One target audits; two or more compare under the same settings. Use one target p
 ```
 
 Named audit inputs are `wcag`, `level`, `tiers`, `engine`, `archetypes`, `lib-a11y`, `mapping`, `max-stories`, `generate`, and `out`. Lists use commas. `generate`, `fail-on-incomplete`, `fail-on-review`, `fail-on-checks`, `upload-artifact`, and `summary` take `'true'` or `'false'`. All inputs are documented in the root Action metadata. There is no raw shell-arguments input.
+Named audit inputs are `wcag`, `level`, `tiers`, `engine`, `archetypes`, `lib-a11y`, `mapping`, `max-stories`, `generate`, `screenshots`, and `out`. Lists use commas. `generate`, `screenshots`, `fail-on-incomplete`, `fail-on-review`, `fail-on-checks`, `upload-artifact`, and `summary` take `'true'` or `'false'`. Blank inputs leave YAML values unchanged. All inputs are documented in the root Action metadata. There is no raw shell-arguments input.
 
 For a matrix, use a unique artifact name and report directory:
 

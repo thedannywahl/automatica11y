@@ -112,6 +112,17 @@ test("mixing components and pages opens with the non-equivalence warning", { ski
   assert.ok(interactions.some((row) => row === "| page | not-applicable | not-applicable |"));
 });
 
+test("comparison details link annotated screenshots only for the target with violations", { skip }, async () => {
+  const run = await compare([`bad=${fixtures}missing-label.html`, `clean=${fixtures}clean.html`, "--engine", "axe", "--tiers", "rules", "--screenshots"]);
+  assert.equal(run.code, 0, run.stderr);
+  const bad = run.results.targets[0].archetypes.page.configs[0].tiers.rules.engines.axe.screenshot;
+  const clean = run.results.targets[1].archetypes.page.configs[0].tiers.rules.engines.axe.screenshot;
+  assert.ok(bad);
+  assert.equal(clean, undefined);
+  assert.ok(run.report.includes(`[Annotated screenshot](${bad})`));
+  assert.ok(!run.report.includes("clean/page-axe.png"));
+});
+
 test("a canvas-only target shows as not-testable in the matrix, beside one that ran", { skip }, async () => {
   const run = await compare([`chart=${fixtures}canvas-only.html`, `table=${fixtures}canvas-table.html`, "--tiers", "rules"]);
   const rules = table(run.report, "### Rules.");

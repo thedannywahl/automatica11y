@@ -19,6 +19,7 @@ import { evaluateFailCheck, evaluateOutcome } from "./fail-check.js";
 import { mapPool } from "./pool.js";
 import { explainFrameworkError } from "../frameworks/errors.js";
 import { auditNpm } from "./audit-npm.js";
+import { captureRuleScreenshots } from "./a11y-screenshots.js";
 import { adapterFor } from "../frameworks/index.js";
 import { failedTarget, summarize } from "./summary.js";
 import { EXIT } from "../exit.js";
@@ -46,9 +47,10 @@ const UNSUPPORTED_KIND = (/** @type {string} */ kind) => `${kind} targets aren't
  * @param {PlanTarget} planTarget
  * @param {Plan} plan
  * @param {string[]} extraWarnings
+ * @param {string} outputDir
  * @returns {Promise<TargetResult>}
  */
-async function auditPage(browser, url, planTarget, plan, extraWarnings) {
+async function auditPage(browser, url, planTarget, plan, extraWarnings, outputDir) {
   const opened = await openPage(browser, url);
   try {
     /** @type {ReturnType<typeof import("../schema.js").parseResults>["targets"][number]["archetypes"][string]["configs"][number]["tiers"]} */
@@ -66,6 +68,7 @@ async function auditPage(browser, url, planTarget, plan, extraWarnings) {
       } else {
         tiers.vsr = await runVsr(opened.page, { scope: "body" }).catch(failedVsr);
       }
+      if (tier === "rules") await captureRuleScreenshots(opened.page, tiers.rules, { enabled: plan.options.screenshots, outputDir, target: planTarget.id, context: "page" });
     }
     /** @type {Record<string, ArchetypeResult>} */
     const archetypes = { page: { status: "ran", configs: [{ libA11y: "n/a", tiers }] } };
@@ -91,9 +94,11 @@ async function auditPage(browser, url, planTarget, plan, extraWarnings) {
  * @param {string} base
  * @param {ReturnType<typeof listStories>[number]} story
  * @param {Plan} plan
+ * @param {string} targetId
+ * @param {string} outputDir
  * @returns {Promise<StoryOutcome>}
  */
-async function auditStory(browser, base, story, plan) {
+async function auditStory(browser, base, story, plan, targetId, outputDir) {
   const opened = await openPage(browser, storyUrl(base, story.id));
   try {
     await waitForStory(opened.page);
@@ -110,6 +115,7 @@ async function auditStory(browser, base, story, plan) {
               : tier === "conditions"
                 ? CONDITIONS_NOT_APPLICABLE_FOR_STORIES
                 : await runVsr(opened.page, { scope: "#storybook-root" }).catch(failedVsr);
+            if (tier === "rules") await captureRuleScreenshots(opened.page, tiers.rules, { enabled: plan.options.screenshots, outputDir, target: targetId, context: `story-${story.id}` });
     }
     const hidden = notTestableEntries(await closedShadowHosts(opened.page));
     return { id: story.id, ok: true, archetype: { status: "ran", configs: [{ libA11y: "n/a", tiers }] }, hidden };
@@ -126,9 +132,10 @@ async function auditStory(browser, base, story, plan) {
  * @param {PlanTarget} planTarget
  * @param {Plan} plan
  * @param {Server[]} servers
+ * @param {string} outputDir
  * @returns {Promise<TargetResult>}
  */
-async function auditStorybook(browser, planTarget, plan, servers) {
+async function auditStorybook(browser, planTarget, plan, servers, outputDir) {
   const resolved = /** @type {{ index: string, url: string, path?: string }} */ (planTarget.resolved);
   const index = await readIndex(resolved);
   const stories = listStories(index);
@@ -143,7 +150,7 @@ async function auditStorybook(browser, planTarget, plan, servers) {
     servers.push(server);
     base = `${server.origin}/`;
   }
-  const audited = await mapPool(picked.selected, STORY_CONCURRENCY, (story) => auditStory(browser, base, story, plan));
+  const audited = await mapPool(picked.selected, STORY_CONCURRENCY, (story) => auditStory(browser, base, story, plan, planTarget.id, outputDir));
 
   /** @type {Record<string, ArchetypeResult>} */
   const archetypes = {};
@@ -204,25 +211,26 @@ async function auditStorybook(browser, planTarget, plan, servers) {
  */
 async function runTarget(browser, planTarget, plan, io) {
   if (planTarget.status === "failed") return { result: failedTarget(planTarget.id, planTarget.reason), mapping: null };
+  const outputDir = resolve(io.cwd, plan.options.out);
   /** @type {Server[]} */
   const servers = [];
   try {
     const pageNote = plan.options.archetypes ? ["--archetypes only applies to Storybook and npm targets. This page was checked as a whole."] : [];
-    if (planTarget.kind === "storybook") return { result: await auditStorybook(browser, planTarget, plan, servers), mapping: null };
-    if (NPM_KINDS.has(planTarget.kind)) return await auditNpm({ browser, planTarget, plan, cwd: io.cwd, install: io.installPackage });
-    if (planTarget.kind === "url") return { result: await auditPage(browser, planTarget.resolved.url, planTarget, plan, pageNote), mapping: null };
+    if (planTarget.kind === "storybook") return { result: await auditStorybook(browser, planTarget, plan, servers, outputDir), mapping: null };
+    if (NPM_KINDS.has(planTarget.kind)) return await auditNpm({ browser, planTarget, plan, cwd: io.cwd, outputDir, install: io.installPackage });
+    if (planTarget.kind === "url") return { result: await auditPage(browser, planTarget.resolved.url, planTarget, plan, pageNote, outputDir), mapping: null };
     if (planTarget.kind === "html-file") {
       const file = planTarget.resolved.path;
       const server = await serveStatic(dirname(file));
       servers.push(server);
-      return { result: await auditPage(browser, `${server.origin}/${encodeURIComponent(basename(file))}`, planTarget, plan, pageNote), mapping: null };
+      return { result: await auditPage(browser, `${server.origin}/${encodeURIComponent(basename(file))}`, planTarget, plan, pageNote, outputDir), mapping: null };
     }
     if (planTarget.kind === "static-dir") {
       const dir = planTarget.resolved.path;
       if (!existsSync(resolve(dir, "index.html"))) return { result: failedTarget(planTarget.id, "The directory has no index.html to check."), mapping: null };
       const server = await serveStatic(dir);
       servers.push(server);
-      return { result: await auditPage(browser, `${server.origin}/`, planTarget, plan, ["Only index.html was checked. Other pages in the directory weren't.", ...pageNote]), mapping: null };
+      return { result: await auditPage(browser, `${server.origin}/`, planTarget, plan, ["Only index.html was checked. Other pages in the directory weren't.", ...pageNote], outputDir), mapping: null };
     }
     return { result: failedTarget(planTarget.id, UNSUPPORTED_KIND(planTarget.kind)), mapping: null };
   } catch (error) {

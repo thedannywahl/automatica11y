@@ -32,6 +32,7 @@ test("the package is ready to publish: public, MIT, ESM, Node 22 or newer", () =
   assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
   assert.equal(lock.version, pkg.version, "package-lock root version matches package.json");
   assert.equal(lock.packages[""].version, pkg.version, "locked root package version matches package.json");
+  assert.deepEqual(lock.packages[""].engines, pkg.engines, "locked root engines match package.json");
   assert.ok(pkg.description.length > 20);
   assert.deepEqual(Object.keys(pkg.bin), ["automatica11y", "a11y"]);
   assert.equal(pkg.bin.a11y, pkg.bin.automatica11y, "the short name runs the same file");

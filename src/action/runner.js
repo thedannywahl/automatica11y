@@ -19,6 +19,10 @@ export function inputArgs(inputs) {
     if (!["true", "false"].includes(inputs.generate)) throw new Error("generate must be true or false.");
     args.push(inputs.generate === "true" ? "--generate" : "--no-generate");
   }
+    if (inputs.screenshots?.trim()) {
+      if (!["true", "false"].includes(inputs.screenshots)) throw new Error("screenshots must be true or false.");
+      args.push(inputs.screenshots === "true" ? "--screenshots" : "--no-screenshots");
+    }
   const targets = (inputs.targets ?? "").split(/\r?\n/).map((target) => target.trim()).filter(Boolean);
   return [...args, "--", ...targets];
 }

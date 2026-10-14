@@ -89,6 +89,8 @@ export const PlanSchema = v.object({
     maxStories: v.pipe(v.number(), v.integer(), v.minValue(1)),
     /** Build fixtures from a package's parts when none is authored. A plan saved before this existed generates. */
     generate: v.optional(v.boolean(), true),
+    /** Capture annotated screenshots for rule violations. */
+    screenshots: v.optional(v.boolean(), false),
     out: v.string(),
     fail: v.nullable(FailConfigSchema),
     policy: v.optional(v.object({ incomplete: v.boolean(), review: v.boolean(), checks: v.boolean() }), { incomplete: false, review: false, checks: false }),
@@ -138,6 +140,7 @@ const EngineResultSchema = v.object({
   /** Rules that passed. Both engines count rules, not elements. */
   passesCount: v.optional(v.number()),
   notes: v.optional(v.array(v.string())),
+  screenshot: v.optional(v.string()),
 });
 
 const TierResultSchema = v.object({

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer, request } from "node:http";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -67,6 +67,22 @@ test("missing label: each engine reports its own rule, labeled and separate", { 
   const summary = run.results.targets[0].summary.engines;
   assert.equal(summary.axe.violationsByImpact.critical, 1);
   assert.equal(summary.ibm.violationsByToolkitLevel["1"], 1);
+});
+
+test("annotated screenshots are opt-in and linked beside rule findings", { skip }, async () => {
+  const target = `${fixtures}missing-label.html`;
+  const without = await audit(["audit", target, "--engine", "axe", "--tiers", "rules"]);
+  assert.equal(tiersOf(without.results).rules.engines.axe.screenshot, undefined);
+
+  const run = await audit(["audit", target, "--engine", "axe", "--tiers", "rules", "--screenshots"]);
+  const screenshot = tiersOf(run.results).rules.engines.axe.screenshot;
+  assert.ok(screenshot);
+  assert.match(screenshot, /^screenshots\/[a-z0-9_-]+\/page-axe\.png$/);
+  const imagePath = join(run.cwd, "a11y-report", screenshot);
+  assert.ok(existsSync(imagePath));
+  assert.equal(readFileSync(imagePath).subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+  assert.ok(run.report.includes(`[Annotated screenshot](${screenshot})`));
+  assert.match(run.report, /#1 `.*`/);
 });
 
 test("low contrast and missing alt text", { skip }, async () => {

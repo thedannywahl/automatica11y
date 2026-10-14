@@ -14,6 +14,17 @@ test("YAML config preserves explicit disabling values and arrays", () => {
   assert.deepEqual(configArgs(config), ["--wcag", "2.2", "--engine", "axe", "--no-generate", "--fail-on-axe", "none", "--fail-on-incomplete", "false"]);
 });
 
+test("annotated screenshot option defaults off and config/CLI values override in order", () => {
+  const cwd = makeTree({ ".automatica11y.yml": "version: 1\ntargets: [./dist]\noptions:\n  screenshots: true\n" });
+  const config = loadConfig(undefined, cwd);
+  assert.deepEqual(configArgs(config), ["--screenshots"]);
+  assert.equal(parseRunArgs("audit", ["./dist"], { cwd }).options.screenshots, true);
+  assert.equal(parseRunArgs("audit", ["./dist", "--no-screenshots"], { cwd }).options.screenshots, false);
+  assert.equal(parseRunArgs("audit", ["./dist", "--no-screenshots", "--screenshots"], { cwd }).options.screenshots, true);
+  assert.equal(parseRunArgs("audit", ["./dist"]).options.screenshots, false);
+  assert.equal(parseRunArgs("audit", ["./dist", "--screenshots"]).options.screenshots, true);
+});
+
 test("local package mappings work in YAML and as repeatable CLI options", () => {
   const cwd = makeTree({ ".automatica11y.yml": "version: 1\nlocalPackages:\n  fake-ui: ./packages/ui\n" });
   const config = loadConfig(undefined, cwd);
