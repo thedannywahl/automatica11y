@@ -33,6 +33,39 @@ const F = "fail";
 const N = "not-applicable";
 const NAMES = ["reduced-motion-respected", "dark-mode-contrast", "more-contrast-respected", "less-contrast-stays-readable", "reduced-transparency-respected", "forced-colors-focus-visible", "reflow-at-320px", "text-spacing-no-clipping"];
 
+test("conditions overlap in isolated contexts, stay bounded, and close every context", { skip }, async (t) => {
+  const browser = session.browser;
+  const newContext = browser.newContext.bind(browser);
+  const original = browser.contexts().length;
+  let active = 0;
+  let peak = 0;
+  /** @param {Parameters<typeof browser.newContext>[0]} options */
+  const trackedNewContext = async (options) => {
+    const context = await newContext(options);
+    active += 1;
+    peak = Math.max(peak, active);
+    context.once("close", () => { active -= 1; });
+    return context;
+  };
+  t.mock.method(browser, "newContext", trackedNewContext);
+  const result = await runConditions(browser, `${server.origin}/base.html`, "button");
+  assert.deepEqual(result.checks.map((check) => check.name), NAMES);
+  assert.deepEqual(result.checks.map((check) => check.result), [N, N, N, N, N, P, P, P]);
+  assert.ok(peak > 2, `checks overlap: ${peak} contexts`);
+  assert.ok(peak <= 6, `at most three checks with two contexts each: ${peak}`);
+  assert.equal(active, 0);
+  assert.equal(browser.contexts().length, original);
+});
+
+test("concurrent conditions report missing pages as errors and close their contexts", { skip }, async () => {
+  const browser = session.browser;
+  const original = browser.contexts().length;
+  const result = await runConditions(browser, `${server.origin}/missing.html`, "page");
+  assert.deepEqual(result.checks.map((check) => check.name), NAMES);
+  assert.ok(result.checks.every((check) => check.result === "error" && check.detail.includes("HTTP 404")));
+  assert.equal(browser.contexts().length, original);
+});
+
 /** One page per row: the archetype, then the result of each check in order (motion, dark mode, more contrast, less contrast, transparency, forced colors, reflow, spacing). */
 /** @type {Record<string, [string, string[]]>} */
 const PAGES = {

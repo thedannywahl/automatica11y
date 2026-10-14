@@ -101,6 +101,21 @@ test("validation has one reusable matrix and a fail-closed aggregate gate", () =
   assert.deepEqual(workflow.permissions, { contents: "read" });
 });
 
+test("the test matrix refreshes the npm download cache after test-time installs", () => {
+  const workflow = parse(readFileSync(join(root, ".github/workflows/test.yml"), "utf8"));
+  const steps = workflow.jobs.test.steps;
+  const setup = steps.find((/** @type {{ uses?: string }} */ step) => step.uses?.startsWith("actions/setup-node@"));
+  assert.equal(setup.with.cache, undefined);
+  assert.equal(setup.with["package-manager-cache"], false);
+  const cache = steps.find((/** @type {{ uses?: string }} */ step) => step.uses?.startsWith("actions/cache@"));
+  assert.match(cache.uses, /^actions\/cache@[a-f0-9]{40}$/);
+  assert.equal(cache.with.path, "~/.npm");
+  assert.ok(cache.with.key.includes("${{ hashFiles('package-lock.json') }}"));
+  assert.ok(cache.with.key.endsWith("${{ github.run_id }}-${{ github.run_attempt }}"));
+  assert.equal(cache.with["restore-keys"].split("\n")[0], "npm-tests-${{ runner.os }}-${{ matrix.node }}-${{ hashFiles('package-lock.json') }}-");
+  assert.ok(steps.indexOf(cache) < steps.findIndex((/** @type {{ name?: string }} */ step) => step.name === "Install dependencies"));
+});
+
 test("release policy distinguishes shipped changes from development-only changes", () => {
   const manifest = { name: "automatica11y", version: "0.9.0", dependencies: { axe: "1" }, devDependencies: { typescript: "1" } };
   assert.equal(requiresChangeset(["src/cli.js"], manifest, manifest), true);

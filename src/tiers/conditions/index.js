@@ -8,7 +8,7 @@ import { installConditions } from "./kit.js";
 const TIMEOUT_MS = 60_000;
 
 /**
- * Run the conditions checks against a fixture page or a whole page. Each check opens its own fresh pages.
+ * Run the conditions checks three at a time against a fixture page or a whole page, in separate contexts.
  * A check that can't finish reports `error`, and one that can't reduce the page to colors reports `undetermined`.
  * Neither counts as a pass.
  * @param {import("playwright-core").Browser} browser
@@ -16,9 +16,10 @@ const TIMEOUT_MS = 60_000;
  * @param {string} archetype An archetype name for a fixture, or "page" for a whole page.
  */
 export async function runConditions(browser, url, archetype) {
+  const checks = conditionChecksFor(archetype);
   const results = [];
-  for (const check of conditionChecksFor(archetype)) {
-    results.push(await runCheck(browser, url, check, { kits: [installHelpers, installMeasure, installConditions], needsTrigger: archetype !== "page", timeoutMs: TIMEOUT_MS, waitUntil: archetype === "page" ? "networkidle" : "load" }));
+  for (let start = 0; start < checks.length; start += 3) {
+    results.push(...await Promise.all(checks.slice(start, start + 3).map((check) => runCheck(browser, url, check, { kits: [installHelpers, installMeasure, installConditions], needsTrigger: archetype !== "page", timeoutMs: TIMEOUT_MS, waitUntil: archetype === "page" ? "networkidle" : "load" }))));
   }
   return { status: "ran", checks: results };
 }

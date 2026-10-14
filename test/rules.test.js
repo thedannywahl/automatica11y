@@ -8,7 +8,7 @@ import { findBrowser } from "../src/env/browser.js";
 import { launchBrowser } from "../src/harness/browser.js";
 import { serveStatic } from "../src/harness/static-serve.js";
 import { selfTest } from "../src/tiers/rules/index.js";
-import { parseResults } from "../src/schema.js";
+import { parseResults, TIERS } from "../src/schema.js";
 import { makeIo, makeTree } from "./helpers/fixtures.js";
 
 const fixtures = new URL("./fixtures/", import.meta.url).pathname;
@@ -43,7 +43,7 @@ const tiersOf = (results, index = 0) => results.targets[index].archetypes.page.c
 const ids = (engineResult) => engineResult.violations.map((v) => v.ruleId).sort();
 
 test("clean page: neither engine reports violations, and the wording stays careful", { skip }, async () => {
-  const run = await audit(["audit", `${fixtures}clean.html`]);
+  const run = await audit(["audit", `${fixtures}clean.html`, "--tiers", "rules"]);
   assert.equal(run.code, 0, run.stderr);
   const { axe, ibm } = tiersOf(run.results).rules.engines;
   assert.deepEqual(ids(axe), []);
@@ -54,7 +54,7 @@ test("clean page: neither engine reports violations, and the wording stays caref
 });
 
 test("missing label: each engine reports its own rule, labeled and separate", { skip }, async () => {
-  const run = await audit(["audit", `${fixtures}missing-label.html`]);
+  const run = await audit(["audit", `${fixtures}missing-label.html`, "--tiers", "rules"]);
   const { axe, ibm } = tiersOf(run.results).rules.engines;
   assert.deepEqual(ids(axe), ["label"]);
   assert.deepEqual(ids(ibm), ["input_label_exists"]);
@@ -70,20 +70,20 @@ test("missing label: each engine reports its own rule, labeled and separate", { 
 });
 
 test("low contrast and missing alt text", { skip }, async () => {
-  const contrast = await audit(["audit", `${fixtures}low-contrast.html`]);
+  const contrast = await audit(["audit", `${fixtures}low-contrast.html`, "--tiers", "rules"]);
   const c = tiersOf(contrast.results).rules.engines;
   assert.deepEqual(ids(c.axe), ["color-contrast"]);
   assert.deepEqual(ids(c.ibm), ["text_contrast_sufficient"]);
   assert.equal(contrast.results.tools.chromium, available.version);
 
-  const alt = await audit(["audit", `${fixtures}missing-alt.html`]);
+  const alt = await audit(["audit", `${fixtures}missing-alt.html`, "--tiers", "rules"]);
   const a = tiersOf(alt.results).rules.engines;
   assert.deepEqual(ids(a.axe), ["image-alt"]);
   assert.deepEqual(ids(a.ibm), ["img_alt_valid"]);
 });
 
 test("IBM needs-review items stay out of the violations", { skip }, async () => {
-  const run = await audit(["audit", `${fixtures}clean.html`]);
+  const run = await audit(["audit", `${fixtures}clean.html`, "--tiers", "rules"]);
   const { ibm } = tiersOf(run.results).rules.engines;
   assert.ok(ibm.incomplete.length > 0);
   assert.ok(ibm.incomplete.every((f) => ["potential", "manual", "recommendation"].includes(f.kind)));
@@ -91,29 +91,29 @@ test("IBM needs-review items stay out of the violations", { skip }, async () => 
 });
 
 test("--engine picks one engine or both", { skip }, async () => {
-  const axeOnly = await audit(["audit", `${fixtures}missing-label.html`, "--engine", "axe"]);
+  const axeOnly = await audit(["audit", `${fixtures}missing-label.html`, "--engine", "axe", "--tiers", "rules"]);
   assert.deepEqual(Object.keys(tiersOf(axeOnly.results).rules.engines), ["axe"]);
-  const ibmOnly = await audit(["audit", `${fixtures}missing-label.html`, "--engine", "ibm"]);
+  const ibmOnly = await audit(["audit", `${fixtures}missing-label.html`, "--engine", "ibm", "--tiers", "rules"]);
   assert.deepEqual(Object.keys(tiersOf(ibmOnly.results).rules.engines), ["ibm"]);
-  const both = await audit(["audit", `${fixtures}missing-label.html`, "--engine", "ibm,axe"]);
+  const both = await audit(["audit", `${fixtures}missing-label.html`, "--engine", "ibm,axe", "--tiers", "rules"]);
   assert.deepEqual(Object.keys(tiersOf(both.results).rules.engines).sort(), ["axe", "ibm"]);
 });
 
 test("--level A drops the AA rules", { skip }, async () => {
-  const run = await audit(["audit", `${fixtures}low-contrast.html`, "--level", "A"]);
+  const run = await audit(["audit", `${fixtures}low-contrast.html`, "--level", "A", "--tiers", "rules"]);
   const { axe, ibm } = tiersOf(run.results).rules.engines;
   assert.deepEqual(ids(axe), []);
   assert.deepEqual(ids(ibm), []);
 });
 
 test("--level AAA tells the reader IBM has no AAA rules", { skip }, async () => {
-  const run = await audit(["audit", `${fixtures}clean.html`, "--level", "AAA", "--engine", "ibm"]);
+  const run = await audit(["audit", `${fixtures}clean.html`, "--level", "AAA", "--engine", "ibm", "--tiers", "rules"]);
   assert.match(tiersOf(run.results).rules.engines.ibm.notes[0], /levels A and AA/);
   assert.match(run.report, /Note: IBM's WCAG rulesets cover levels A and AA/);
 });
 
 test("the interactions tier is not applicable to a page, and says so", { skip }, async () => {
-  const run = await audit(["audit", `${fixtures}clean.html`]);
+  const run = await audit(["audit", `${fixtures}clean.html`, "--tiers", "interactions,vsr"]);
   const tiers = tiersOf(run.results);
   assert.equal(tiers.interactions.status, "not-applicable");
   assert.equal(tiers.vsr.status, "ran");
@@ -128,17 +128,17 @@ test("--tiers limits what runs and what the matrix shows", { skip }, async () =>
 });
 
 test("html files, static directories, and URLs all work", { skip }, async () => {
-  const file = await audit(["audit", `${fixtures}missing-alt.html`]);
+  const file = await audit(["audit", `${fixtures}missing-alt.html`, "--tiers", "rules"]);
   assert.equal(file.results.targets[0].status, "ran");
 
-  const dir = await audit(["audit", `${fixtures}static-site`]);
+  const dir = await audit(["audit", `${fixtures}static-site`, "--tiers", "rules"]);
   assert.equal(dir.results.targets[0].status, "ran");
   assert.deepEqual(ids(tiersOf(dir.results).rules.engines.axe), []);
   assert.match(dir.results.targets[0].warnings[0], /Only index\.html was checked/);
 
   const server = await serveStatic(fixtures);
   try {
-    const url = await audit(["audit", `${server.origin}/missing-label.html`]);
+    const url = await audit(["audit", `${server.origin}/missing-label.html`, "--tiers", "rules"]);
     assert.equal(url.results.targets[0].status, "ran");
     assert.deepEqual(ids(tiersOf(url.results).rules.engines.axe), ["label"]);
   } finally {
@@ -147,7 +147,7 @@ test("html files, static directories, and URLs all work", { skip }, async () => 
 });
 
 test("a directory without index.html fails that target, and all failing exits 4", { skip }, async () => {
-  const run = await audit(["audit", `${fixtures}static-site-no-index`]);
+  const run = await audit(["audit", `${fixtures}static-site-no-index`, "--tiers", "rules"]);
   assert.equal(run.code, 4);
   assert.match(run.results.targets[0].reason, /no index\.html/);
 });
@@ -162,7 +162,7 @@ test("a page that returns an error status fails that target and the rest still r
   try {
     // Classification would reject the 404 URL up front, so edit the saved plan to reach the run step.
     const cwd = makeTree();
-    await audit(["compare", `${base}/ok`, `${base}/ok2`, "--plan"], { cwd });
+    await audit(["compare", `${base}/ok`, `${base}/ok2`, "--tiers", "rules", "--plan"], { cwd });
     const planFile = join(cwd, "a11y-report", "plan.json");
     const plan = JSON.parse(readFileSync(planFile, "utf8"));
     plan.targets[1].resolved.url = `${base}/gone`;
@@ -179,7 +179,7 @@ test("a page that returns an error status fails that target and the rest still r
 });
 
 test("compare runs every target and keeps each one's results apart", { skip }, async () => {
-  const run = await audit(["compare", `bad=${fixtures}missing-label.html`, `good=${fixtures}clean.html`]);
+  const run = await audit(["compare", `bad=${fixtures}missing-label.html`, `good=${fixtures}clean.html`, "--tiers", "rules"]);
   assert.equal(run.code, 0);
   assert.deepEqual(run.results.targets.map((t) => t.id), ["bad", "good"]);
   assert.equal(run.results.targets[0].summary.engines.axe.violations, 1);
@@ -189,7 +189,7 @@ test("compare runs every target and keeps each one's results apart", { skip }, a
 });
 
 test("one failed target doesn't stop a comparison", { skip }, async () => {
-  const run = await audit(["compare", `${fixtures}clean.html`, `${fixtures}static-site-no-index`]);
+  const run = await audit(["compare", `${fixtures}clean.html`, `${fixtures}static-site-no-index`, "--tiers", "rules"]);
   assert.equal(run.code, 0);
   assert.deepEqual(run.results.targets.map((t) => t.status), ["ran", "failed"]);
   assert.match(run.report, /This target failed: The directory has no index\.html to check\./);
@@ -198,29 +198,29 @@ test("one failed target doesn't stop a comparison", { skip }, async () => {
 test("fail flags set the exit code", { skip }, async () => {
   const bad = `${fixtures}missing-label.html`;
   const good = `${fixtures}clean.html`;
-  assert.equal((await audit(["audit", bad, "--fail-on-axe", "serious"])).code, 1);
-  assert.equal((await audit(["audit", bad, "--fail-on-ibm", "1"])).code, 1);
-  assert.equal((await audit(["audit", good, "--fail-on-axe", "minor", "--fail-on-ibm", "3"])).code, 0);
-  const both = await audit(["audit", bad, "--fail-on-axe", "serious", "--fail-on-ibm", "1", "--fail-mode", "all"]);
+  assert.equal((await audit(["audit", bad, "--fail-on-axe", "serious", "--tiers", "rules"])).code, 1);
+  assert.equal((await audit(["audit", bad, "--fail-on-ibm", "1", "--tiers", "rules"])).code, 1);
+  assert.equal((await audit(["audit", good, "--fail-on-axe", "minor", "--fail-on-ibm", "3", "--tiers", "rules"])).code, 0);
+  const both = await audit(["audit", bad, "--fail-on-axe", "serious", "--fail-on-ibm", "1", "--fail-mode", "all", "--tiers", "rules"]);
   assert.equal(both.code, 1);
   assert.equal(both.results.failCheck.tripped, true);
   assert.equal(both.results.failCheck.axe.hits, 1);
   assert.equal(both.results.failCheck.ibm.hits, 1);
   assert.match(both.report, /## Fail check\./);
   // axe sees nothing at this threshold, so "all" doesn't trip even though IBM does.
-  const split = await audit(["audit", `${fixtures}low-contrast.html`, "--fail-on-axe", "critical", "--fail-on-ibm", "1", "--fail-mode", "all"]);
+  const split = await audit(["audit", `${fixtures}low-contrast.html`, "--fail-on-axe", "critical", "--fail-on-ibm", "1", "--fail-mode", "all", "--tiers", "rules"]);
   assert.equal(split.code, 0);
   assert.equal(split.results.failCheck.ibm.tripped, true);
   assert.equal(split.results.failCheck.axe.tripped, false);
   // No fail flags: findings never change the exit code.
-  const none = await audit(["audit", bad]);
+  const none = await audit(["audit", bad, "--tiers", "rules"]);
   assert.equal(none.code, 0);
   assert.equal(none.results.failCheck, null);
 });
 
 test("the same plan run twice gives the same findings", { skip }, async () => {
   const cwd = makeTree();
-  const first = await audit(["audit", `${fixtures}low-contrast.html`, "--out", "./one"], { cwd });
+  const first = await audit(["audit", `${fixtures}low-contrast.html`, "--out", "./one", "--tiers", "rules"], { cwd });
   const planned = JSON.parse(readFileSync(join(cwd, "one", "plan.json"), "utf8"));
   assert.ok(planned);
   const a = JSON.parse(readFileSync(join(cwd, "one", "results.json"), "utf8"));
@@ -252,6 +252,7 @@ test("self-test: passes with real engines, and refuses when an engine misses a k
 
 test("results.json validates against the schema and records tool versions", { skip }, async () => {
   const run = await audit(["audit", `${fixtures}clean.html`]);
+  assert.deepEqual(Object.keys(tiersOf(run.results)).sort(), [...TIERS].sort());
   assert.equal(run.results.schema, 1);
   assert.equal(run.results.planRef, "plan.json");
   assert.match(run.results.tools["axe-core"], /^\d+\.\d+\.\d+/);

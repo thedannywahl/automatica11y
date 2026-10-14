@@ -148,7 +148,7 @@ async function audit(args, cwd = makeTree()) {
 }
 
 test("audit: the tier shows in the results, the matrix, and the report", { skip }, async () => {
-  const run = await audit(["audit", `${fixtures}missing-label.html`]);
+  const run = await audit(["audit", `${fixtures}missing-label.html`, "--tiers", "vsr"]);
   const vsr = run.results.targets[0].archetypes.page.configs[0].tiers.vsr;
   assert.equal(vsr.status, "ran");
   assert.equal(vsr.simulated, true);
@@ -161,7 +161,7 @@ test("audit: the tier shows in the results, the matrix, and the report", { skip 
 });
 
 test("audit: a Storybook walks each story inside its root, and the report groups the flags", { skip }, async () => {
-  const run = await audit(["audit", `${fixtures}storybook-static`]);
+  const run = await audit(["audit", `${fixtures}storybook-static`, "--tiers", "vsr"]);
   const target = run.results.targets[0];
   /** @param {string} id */
   const phrases = (id) => target.archetypes[`story:${id}`].configs[0].tiers.vsr.log[0].announcements;
