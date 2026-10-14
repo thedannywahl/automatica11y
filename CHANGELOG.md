@@ -1,5 +1,22 @@
 # automatica11y
 
+## 0.10.0
+
+### Minor Changes
+
+- e27ab8a: Add opt-in annotated screenshots for rule violations and link them from reports.
+- bf013ca: Require Node.js 22 or newer and update module tracing to use synchronous customization hooks.
+
+### Patch Changes
+
+- 4441eba: Run conditions checks three at a time in isolated browser contexts, preserving result order and limiting concurrent pages. Clear completed check timers so audits and tests do not wait for unused timeouts before exiting.
+- 93ba9d0: Update waza evaluations, triggers, and automatica11y skill content.
+- bf013ca: Clarify packaged contributor validation instructions and unify package and Action releases behind the Node matrix, Action smoke tests, and explicit Changesets gates.
+  
+  Update `doctor` command to notify on out-of-date browser or node versions.
+  
+  Drop support for Node 20
+
 ## 0.9.0
 
 ### Minor Changes
