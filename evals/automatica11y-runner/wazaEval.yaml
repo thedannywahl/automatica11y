@@ -1,0 +1,26 @@
+name: automatica11y-runner-eval
+description: Trigger and anti-trigger evaluation for the automatica11y runner skill.
+skill: automatica11y-runner
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 300
+  parallel: false
+  executor: copilot-sdk
+  model: claude-sonnet-5.5
+metrics:
+  - name: task_completion
+    weight: 0.7
+    threshold: 0.8
+    description: Did the runner skill trigger for audit workflows and stay idle for unrelated requests?
+  - name: efficiency
+    weight: 0.3
+    threshold: 0.7
+    description: Did the runner skill stay within behavior limits?
+graders:
+  - type: behavior
+    name: token-budget
+    config:
+      max_tokens: 150000
+tasks:
+  - "tasks/*.yaml"

@@ -1,0 +1,23 @@
+id: runner-positive-trigger-002
+name: Requested comparison command triggers runner skill
+description: A user already chose automatica11y and requests a component-library comparison command without running it.
+tags:
+  - positive-trigger
+inputs:
+  prompt: "I was asked to use automatica11y to compare React Aria with Headless UI. Before running anything, show me the target grouping and exact command; don't run the audit yet."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: gives-comparison-command
+    config:
+      contains:
+        - "compare"
+        - "react-aria-components"
+        - "@headlessui/react"

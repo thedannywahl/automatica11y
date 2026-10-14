@@ -1,0 +1,23 @@
+id: runner-negative-trigger-001
+name: Unrelated coffee joke does not trigger runner skill
+description: An unrelated humor request should not invoke automatica11y.
+tags:
+  - negative-trigger
+inputs:
+  prompt: "Tell me a short joke about coffee."
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: avoids-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: negative
+      threshold: 0.6
+  - type: text
+    name: omits-audit-language
+    config:
+      not_contains:
+        - "automatica11y"
+        - "WCAG"
+        - "npx --yes"

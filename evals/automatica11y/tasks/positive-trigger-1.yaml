@@ -1,16 +1,22 @@
 id: positive-trigger-001
-name: Positive Trigger 1
-description: Auto-generated positive-trigger task.
+name: Page audit request triggers the skill
+description: A natural-language page accessibility question should invoke automatica11y.
 tags:
   - positive-trigger
 inputs:
-  prompt: "Use automatica11y to help me complete this task"
+  prompt: "How accessible is the Radix Dialog component? Do not run an audit yet. First state the exact guide command you ran, then ask me which target I mean."
 expected:
   should_trigger: true
 graders:
+  - type: trigger
+    name: triggers-automatica11y-skill
+    config:
+      skill_path: "skills/automatica11y/SKILL.md"
+      mode: positive
+      threshold: 0.6
   - type: text
-    name: contains-keywords
+    name: follows-skill-steps
     config:
       contains:
-        - "automatica11y"
+        - "guide skill"
 

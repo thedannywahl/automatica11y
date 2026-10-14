@@ -1,16 +1,28 @@
 id: positive-trigger-002
-name: Positive Trigger 2
-description: Auto-generated positive-trigger task.
+name: Component comparison triggers the skill
+description: A comparison of component libraries should invoke automatica11y.
 tags:
   - positive-trigger
 inputs:
-  prompt: "I need assistance with automatica11y-related work"
+  prompt: "Compare React Aria and Headless UI. Do not run audits yet. Tell me what target details you need, and include the exact names React Aria and Headless UI in your reply."
 expected:
   should_trigger: true
 graders:
+  - type: trigger
+    name: triggers-automatica11y-skill
+    config:
+      skill_path: "skills/automatica11y/SKILL.md"
+      mode: positive
+      threshold: 0.6
   - type: text
-    name: contains-keywords
+    name: follows-skill-steps
     config:
       contains:
-        - "automatica11y"
+        - "guide skill"
+  - type: text
+    name: covers-both-libraries
+    config:
+      contains:
+        - "React Aria"
+        - "Headless UI"
 
