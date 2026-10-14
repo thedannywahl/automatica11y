@@ -151,7 +151,7 @@ test("release policy rejects impersonated version PRs including matching fork br
 
 test("release policy permits only generated version bookkeeping", () => {
   const manifest = { name: "automatica11y", version: "0.9.0" };
-  const skill = readFileSync(join(root, "skills/automatica11y-runner/SKILL.md"), "utf8");
+  const skill = updateRunnerSkillVersion(readFileSync(join(root, "skills/automatica11y-runner/SKILL.md"), "utf8"), manifest.version);
   /** @type {Record<string, string>} */
   const before = { "package.json": JSON.stringify(manifest), "package-lock.json": JSON.stringify({ version: "0.9.0", packages: { "": manifest } }), "skills/automatica11y-runner/SKILL.md": skill };
   /** @type {Record<string, string>} */
