@@ -90,9 +90,9 @@ export function coverageMatrix(plan, results) {
 
 /**
  * @param {Finding} finding
- * @param {{ showImpact: boolean, showToolkit: boolean }} options
+ * @param {{ showImpact: boolean, showToolkit: boolean, markerStart?: number | null }} options
  */
-export function findingBlock(finding, { showImpact, showToolkit }) {
+export function findingBlock(finding, { showImpact, showToolkit, markerStart = null }) {
   const meta = [
     showImpact && finding.impact ? `impact: ${finding.impact}` : null,
     showToolkit && finding.toolkitLevel != null ? `IBM Toolkit level ${finding.toolkitLevel}` : null,
@@ -101,7 +101,7 @@ export function findingBlock(finding, { showImpact, showToolkit }) {
     plural(finding.nodeCount, "element"),
   ].filter(Boolean);
   const lines = [`- ${code(finding.ruleId)} (${meta.join("; ")}). ${esc(finding.help)} [Rule help](${finding.helpUrl})`];
-  for (const node of finding.nodes) lines.push(`  - ${code(node.selector)} ${node.html ? code(node.html) : ""}`.trimEnd());
+  for (const [index, node] of finding.nodes.entries()) lines.push(`  - ${markerStart === null ? "" : `#${markerStart + index} `}${code(node.selector)} ${node.html ? code(node.html) : ""}`.trimEnd());
   if (finding.nodeCount > finding.nodes.length) lines.push(`  - and ${num(finding.nodeCount - finding.nodes.length)} more`);
   return lines.join("\n");
 }
@@ -120,8 +120,15 @@ export function engineSection(engine, result, nested = false) {
   const cfg = result.config ? `Configuration: ${code(JSON.stringify(result.config))}.` : "";
   const out = [title, "", cfg, ""];
   out.push("**Violations.**", "");
+  if (result.screenshot) out.push(`[Annotated screenshot](${result.screenshot})`, "");
   if (result.violations.length === 0) out.push(`No automated violations found by ${ENGINE_NAMES[engine]}.`);
-  else out.push(...result.violations.map((f) => findingBlock(f, { showImpact, showToolkit })));
+  else {
+    let markerStart = 1;
+    for (const finding of result.violations) {
+      out.push(findingBlock(finding, { showImpact, showToolkit, markerStart: result.screenshot ? markerStart : null }));
+      markerStart += finding.nodes.length;
+    }
+  }
   out.push("", "**Needs review.**", "");
   if (result.incomplete.length === 0) out.push("Nothing flagged for review.");
   else out.push(...result.incomplete.map((f) => findingBlock(f, { showImpact, showToolkit })));
@@ -210,6 +217,21 @@ export function storybookSection(planTarget, target) {
     if (violations.rows.length === 0) lines.push(`No automated violations found by ${ENGINE_NAMES[engine]} across ${plural(violations.ranStories, "story", "stories")}.`);
     else lines.push(...ruleTable(violations.rows, engine));
     lines.push("", "**Needs review by rule.**", "", ...ruleTable(review.rows, engine));
+    const screenshots = Object.entries(target.archetypes).flatMap(([key, archetype]) => {
+      const result = archetype.configs[0]?.tiers.rules?.engines?.[engine];
+      return result?.screenshot ? [{ story: key.replace(/^story:/, ""), screenshot: result.screenshot, violations: result.violations }] : [];
+    });
+    if (screenshots.length) {
+      lines.push("", "**Annotated screenshots.**", "");
+      for (const { story, screenshot, violations } of screenshots) {
+        lines.push(`- ${code(story)}: [Screenshot](${screenshot})`);
+        let marker = 1;
+        for (const finding of violations) {
+          for (const node of finding.nodes) lines.push(`  - #${marker++} ${code(finding.ruleId)} ${code(node.selector)}`);
+        }
+      }
+      lines.push("");
+    }
     lines.push("", "Element-level detail for every story is in results.json.", "");
   }
   const walks = Object.entries(target.archetypes).map(([key, a]) => ({ id: key.replace(/^story:/, ""), vsr: a.configs[0]?.tiers.vsr })).filter((w) => w.vsr?.status === "ran");

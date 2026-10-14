@@ -27,6 +27,7 @@ const OPTION_NAMES = {
   wcag: "wcag", level: "level", tiers: "tiers", engines: "engine",
   archetypes: "archetypes", libA11y: "lib-a11y", mapping: "mapping",
   maxStories: "max-stories", out: "out", generate: "generate",
+  screenshots: "screenshots",
 };
 /** @type {Record<string, string>} */
 const FAIL_NAMES = { axe: "fail-on-axe", ibm: "fail-on-ibm", mode: "fail-mode", incomplete: "fail-on-incomplete", review: "fail-on-review", checks: "fail-on-checks" };
@@ -70,8 +71,8 @@ export function loadConfig(file, cwd) {
     for (const [key, value] of Object.entries(config.options)) {
       if (["tiers", "engines", "archetypes", "libA11y"].includes(key)) {
         if (!Array.isArray(value) || !value.length || value.some((item) => typeof item !== "string")) throw new Error(`options.${key} must be a nonempty string array.`);
-      } else if (key === "generate") {
-        if (typeof value !== "boolean") throw new Error("options.generate must be boolean.");
+      } else if (key === "generate" || key === "screenshots") {
+        if (typeof value !== "boolean") throw new Error(`options.${key} must be boolean.`);
       } else if (key === "maxStories") {
         if (!Number.isInteger(value) || value < 1) throw new Error("options.maxStories must be a positive integer.");
       } else if (typeof value !== "string" || !value.trim()) throw new Error(`options.${key} must be a nonempty string (quote WCAG versions).`);
@@ -101,6 +102,7 @@ export function configArgs(config) {
   const args = [];
   for (const [key, value] of Object.entries(config.options ?? {})) {
     if (key === "generate") args.push(value ? "--generate" : "--no-generate");
+    else if (key === "screenshots") args.push(value ? "--screenshots" : "--no-screenshots");
     else args.push(`--${OPTION_NAMES[key]}`, Array.isArray(value) ? value.join(",") : String(value));
   }
   for (const [key, value] of Object.entries(config.fail ?? {})) args.push(`--${FAIL_NAMES[key]}`, value === null ? "none" : String(value));

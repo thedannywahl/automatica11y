@@ -1,0 +1,24 @@
+id: runner-positive-screenshots-explicit
+name: Explicit screenshot request enables captures
+description: An explicit request for annotated accessibility screenshots should add the screenshots option without asking again.
+tags:
+  - positive-trigger
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit https://example.com and include annotated screenshots of rule violations. Show me the exact command, but don't run it."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: includes-screenshot-option
+    config:
+      contains:
+        - "https://example.com"
+        - "--screenshots"
+      not_contains:
+        - "--no-screenshots"

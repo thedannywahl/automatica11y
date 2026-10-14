@@ -9,6 +9,7 @@
 | `--level A\|AA\|AAA` | `AA` | The conformance level. IBM Equal Access has no AAA rules, so it runs its AA rules and says so. |
 | `--engine axe,ibm` | both | Which rule engines run. |
 | `--tiers rules,interactions,computed,conditions,vsr` | all | Which tiers run. |
+| `--screenshots` / `--no-screenshots` | off | Save annotated full-page screenshots for rule violations and link them from the report. YAML: `options.screenshots`. |
 | `--archetypes a,b` | all | Limit npm and Storybook targets to these archetypes. |
 | `--lib-a11y on,off` | both | For libraries with opt-in accessibility features. See [Writing fixtures](writing-fixtures.md). |
 | `--mapping <file>` | none | A mapping file for npm targets. |
@@ -35,6 +36,7 @@ Run `automatica11y run --plan <plan.json>` to repeat a saved plan. It warns if t
 ## Output
 
 - `report.md` is a complete report, written without any model. It opens with a coverage matrix, then lists findings, then ends with a method note.
+- With `--screenshots`, `report.md` links to annotated PNGs beside the relevant findings, and `results.json` records their paths relative to the output directory.
 - `results.json` holds everything, including element selectors and announcement logs.
 - `plan.json` records what ran and the resolved tool and package versions.
 - `mapping.json` appears for npm targets. See [Writing fixtures](writing-fixtures.md).

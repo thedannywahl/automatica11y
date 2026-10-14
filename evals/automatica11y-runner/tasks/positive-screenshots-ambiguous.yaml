@@ -1,0 +1,23 @@
+id: runner-positive-screenshots-ambiguous
+name: Ambiguous visual evidence asks about captures
+description: A request for visual evidence without explicitly asking for screenshots should clarify the screenshot preference.
+tags:
+  - positive-trigger
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit https://example.com and give me visual evidence of accessibility issues. Ask me anything needed before showing the command; don't run it."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: clarifies-screenshot-preference
+    config:
+      contains:
+        - "annotated screenshots"
+      not_contains:
+        - "--screenshots"

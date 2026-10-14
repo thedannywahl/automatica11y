@@ -31,6 +31,8 @@ inputs:
     description: Maximum Storybook stories.
   generate:
     description: Generate npm fixtures (true or false).
+  screenshots:
+    description: Save annotated screenshots for rule violations (true or false).
   out:
     description: Report directory, which must be empty or absent. Default ./a11y-report.
   fail-on-axe:

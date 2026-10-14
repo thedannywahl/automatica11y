@@ -120,6 +120,10 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(runner, /read the generated source before you rely on it/);
   assert.match(runner, /Say which results come from generated fixtures\. A generated fixture is a guess about how the library is assembled/);
   assert.match(runner, /\| `--no-generate` \| off \|/);
+  assert.ok(runner.includes("| `--screenshots` / `--no-screenshots` | off |"));
+  assert.match(runner, /use `--screenshots` when the user explicitly asks for them/);
+  assert.match(runner, /If the user asks for visual evidence without clearly asking for annotated screenshots, ask whether to include them before showing the command/);
+  assert.match(runner, /Preserve any screenshot links from `report\.md` next to the findings they support/);
   assert.match(runner, /For a `no-match` archetype, write a fixture only if the library's documentation names a component, or a documented way, to make it/);
   assert.match(runner, /A target that failed while others ran still exits 0, and the failure is in the results/);
   assert.match(runner, /order axe-core findings by impact and IBM findings by Toolkit level/);

@@ -46,7 +46,10 @@ test("no command, unknown command, and --help", async () => {
   const help = await run(["--help"]);
   assert.equal(help.code, 0);
   assert.match(help.stdout, /automatica11y compare/);
-  assert.equal((await run(["audit", "--help"])).code, 0);
+  const auditHelp = await run(["audit", "--help"]);
+  assert.equal(auditHelp.code, 0);
+  assert.match(auditHelp.stdout, /--screenshots/);
+  assert.match(auditHelp.stdout, /--no-screenshots/);
 });
 
 test("check is an alias for audit", async () => {
@@ -88,7 +91,7 @@ test("fail flag validation", async () => {
 test("--plan writes a valid plan.json and exits 0", async () => {
   const cwd = makeTree({ "page.html": "<h1>Hi</h1>", "sb/index.json": STORYBOOK_INDEX });
   const fetch = fakeFetch({ "https://example.com/": { body: "<h1>Hi</h1>" } });
-  const result = await run(["compare", "local=./page.html", "./sb", "https://example.com/", "radix=npm:@radix-ui/react-dialog@1.1.0", "--plan", "--fail-on-axe", "serious", "--fail-on-ibm", "1", "--fail-mode", "all", "--engine", "axe,ibm"], { cwd, fetch });
+  const result = await run(["compare", "local=./page.html", "./sb", "https://example.com/", "radix=npm:@radix-ui/react-dialog@1.1.0", "--plan", "--fail-on-axe", "serious", "--fail-on-ibm", "1", "--fail-mode", "all", "--engine", "axe,ibm", "--screenshots"], { cwd, fetch });
   assert.equal(result.code, 0, result.stderr);
   const plan = parsePlan(JSON.parse(readFileSync(join(cwd, "a11y-report", "plan.json"), "utf8")));
   assert.equal(plan.command, "compare");
@@ -97,6 +100,7 @@ test("--plan writes a valid plan.json and exits 0", async () => {
   assert.deepEqual(plan.options.engines, ["axe", "ibm"]);
   assert.deepEqual(plan.options.libA11y, ["on", "off"]);
   assert.equal(plan.options.maxStories, 200);
+  assert.equal(plan.options.screenshots, true);
   assert.deepEqual(plan.targets.map((t) => [t.id, t.kind, t.status]), [
     ["local", "html-file", "ok"],
     ["sb", "storybook", "ok"],

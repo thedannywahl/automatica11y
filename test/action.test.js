@@ -11,6 +11,9 @@ test("Action inputs preserve argument boundaries without shell evaluation", () =
   const args = inputArgs({ targets: "label=./path with spaces\n--dangerous\nnpm:one,two", out: "$(touch nope)", "local-packages": "@scope/components=./packages/components/dist\n@scope/interactions=./packages/interactions/dist\n", generate: "false" });
   assert.deepEqual(args, ["--out", "$(touch nope)", "--local-package", "@scope/components=./packages/components/dist", "--local-package", "@scope/interactions=./packages/interactions/dist", "--no-generate", "--", "label=./path with spaces", "--dangerous", "npm:one,two"]);
   assert.throws(() => inputArgs({ generate: "maybe" }), /true or false/);
+    assert.deepEqual(inputArgs({ screenshots: "true", targets: "./dist" }), ["--screenshots", "--", "./dist"]);
+    assert.deepEqual(inputArgs({ screenshots: "false", targets: "./dist" }), ["--no-screenshots", "--", "./dist"]);
+    assert.throws(() => inputArgs({ screenshots: "maybe" }), /screenshots must be true or false/);
 });
 
 test("Action output uses delimiter-safe multiline records", () => {
@@ -60,6 +63,7 @@ test("Action metadata pins dependencies and uploads before propagating failure",
   assert.ok(steps.findIndex((step) => step.id === "artifact") < steps.findIndex((step) => step.name === "Propagate CI outcome"));
   assert.equal(action.inputs["fail-on-axe"].default, undefined);
   assert.equal(action.inputs["fail-on-incomplete"].default, undefined);
+  assert.equal(action.inputs.screenshots.default, undefined);
   assert.match(action.inputs["local-packages"].description, /one package-name=path mapping per line/);
 });
 

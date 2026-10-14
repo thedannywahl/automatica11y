@@ -75,6 +75,7 @@ Options you can set, and nothing else:
 | `--level A\|AA\|AAA` | `AA` | The user names a level. IBM Equal Access has no AAA rules, so it runs its AA rules and says so. |
 | `--engine axe,ibm` | both | The user wants one rule engine. |
 | `--tiers rules,interactions,computed,conditions,vsr` | all five | The user wants fewer checks. |
+| `--screenshots` / `--no-screenshots` | off | The user explicitly requests annotated screenshots of rule violations, or disables screenshots configured in YAML. |
 | `--archetypes a,b` | all | The user cares about some components. Choose from button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, live-region, chart. |
 | `--lib-a11y on,off` | both | Only for libraries with opt-in accessibility features. |
 | `--mapping <file>` | none | You wrote or edited a mapping file. |
@@ -86,7 +87,7 @@ Options you can set, and nothing else:
 | `--fail-on-ibm <1\|2\|3>` | off | Gating on IBM Toolkit level. |
 | `--fail-mode any\|all` | `any` | How to combine the two fail flags. |
 
-Use the target and the settings the user already gave, and ask only for what's missing. If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one before you run anything. Don't pick a target for them.
+Use the target and the settings the user already gave, and ask only for what's missing. Annotated screenshots are optional and off by default: use `--screenshots` when the user explicitly asks for them, and leave them off for ordinary audit requests. If the user asks for visual evidence without clearly asking for annotated screenshots, ask whether to include them before showing the command. Preserve any screenshot links from `report.md` next to the findings they support. If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one before you run anything. Don't pick a target for them.
 
 Pass only the options in the table above, with the values it lists. If the user names a setting the tool doesn't have, or a value outside those lists (for example, WCAG 3.0), tell them which setting is unsupported, list the supported values, and ask which to use. Don't substitute a default or invent a value.
 
@@ -214,6 +215,7 @@ Write the narrative from `results.json`. Never write from memory, and never repe
 16. End with a plain method note. Say what automated tools can't catch: whether alt text is meaningful, whether link and heading text make sense in context, cognitive load, real focus and reading order in use, and how real screen readers behave. Those need a person.
 
 Use the structure of `report.md`. Quote selectors and rule IDs exactly as `results.json` has them.
+Keep `report.md` screenshot links attached to their relevant finding or story when writing a separate summary.
 
 ## 7. When a target can't be tested
 
