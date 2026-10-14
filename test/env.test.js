@@ -2,18 +2,58 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { checkEnvironment, findBrowser, INSTALL_COMMAND } from "../src/env/browser.js";
+import { findBrowser, INSTALL_COMMAND, minChromeMajor } from "../src/env/browser.js";
+import { checkEnvironment } from "../src/env/check.js";
+import { checkNode, MIN_NODE_MAJOR } from "../src/env/node.js";
 import { readPackageVersion, readToolVersions } from "../src/env/versions.js";
 import { makeFakeBrowser, makeTree } from "./helpers/fixtures.js";
 
 const onUnix = process.platform !== "win32";
 
-test("Node 19 fails the environment check; Node 20 passes that part", async () => {
+test("checkNode: reports a problem only below the minimum major", () => {
+  assert.equal(checkNode(`${MIN_NODE_MAJOR}.0.0`).length, 0);
+  assert.equal(checkNode(`${MIN_NODE_MAJOR - 1}.9.0`)[0].id, "node");
+  assert.deepEqual(checkNode(), checkNode(process.versions.node));
+});
+
+test("Node 21 fails the environment check; Node 22 passes that part", async () => {
   const env = { PATH: "", AUTOMATICA11Y_CHROME: "/does/not/exist" };
-  const old = await checkEnvironment({ env, nodeVersion: "19.9.0" });
+  const old = await checkEnvironment({ env, nodeVersion: "21.9.0" });
   assert.ok(old.problems.some((p) => p.id === "node"));
-  const fine = await checkEnvironment({ env, nodeVersion: "20.0.0" });
+  const fine = await checkEnvironment({ env, nodeVersion: "22.0.0" });
   assert.ok(!fine.problems.some((p) => p.id === "node"));
+});
+
+test("a browser older than the minimum fails the environment check; a newer or unversioned one passes", { skip: !onUnix }, async () => {
+  /** @param {string} version */
+  const check = (version) => checkEnvironment({ env: { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser(version) } });
+  const min = minChromeMajor();
+  assert.ok(min > 100, "the floor is read from the installed playwright-core");
+  const old = await check(`${min - 1}.0.0.0`);
+  const problem = old.problems.find((p) => p.id === "browser-old");
+  assert.ok(problem);
+  assert.match(problem.fix, new RegExp(INSTALL_COMMAND));
+  assert.equal(old.ok, false);
+  const fine = await check(`${min}.0.0.0`);
+  assert.ok(!fine.problems.some((p) => p.id === "browser-old"));
+});
+
+test("a system browser that is too old gives way to a downloaded headless shell", { skip: !onUnix }, async () => {
+  const bin = makeTree();
+  const chrome = join(bin, "google-chrome");
+  writeFileSync(chrome, '#!/bin/sh\necho "Google Chrome 100.0.0.0"\n');
+  chmodSync(chrome, 0o755);
+  const cache = makeTree();
+  const dir = join(cache, "chromium_headless_shell-1248", "chrome-headless-shell-mac-arm64");
+  mkdirSync(dir, { recursive: true });
+  const shell = join(dir, "chrome-headless-shell");
+  writeFileSync(shell, `#!/bin/sh\necho "Chromium ${minChromeMajor()}.0.0.0"\n`);
+  chmodSync(shell, 0o755);
+  const env = { PATH: bin, PLAYWRIGHT_BROWSERS_PATH: cache, HOME: bin };
+  const { browser } = await findBrowser({ platform: "linux", env });
+  assert.equal(browser.kind, "headless-shell");
+  const old = await checkEnvironment({ platform: "linux", env: { PATH: bin, PLAYWRIGHT_BROWSERS_PATH: makeTree(), HOME: bin } });
+  assert.ok(old.problems.some((p) => p.id === "browser-old"), "with no shell to fall back to, the old browser is reported");
 });
 
 test("an override that points nowhere is a problem that names the variable", async () => {

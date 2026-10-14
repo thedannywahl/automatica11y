@@ -45,7 +45,7 @@ for (const [label, dir, text] of [["the bootstrap skill", bootstrapDir, bootstra
     assert.equal(dir.split("/").pop(), name, "the folder is named for the skill");
     assert.ok(description.length <= 1024, "description fits in 1,024 characters");
     assert.ok(compatibility.length <= 500);
-    assert.match(compatibility, /Node 20/);
+    assert.match(compatibility, /Node 22/);
     assert.ok(text.split("\n").length < 500, "the body stays under 500 lines");
   });
 }
@@ -67,7 +67,7 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   assert.ok(bootstrap.indexOf("guide skill\n   ```") < bootstrap.indexOf("After reading the steps"), "the unsupported-setting check comes after the command that prints the steps");
   assert.doesNotMatch(bootstrap.slice(0, bootstrap.indexOf("npx --yes")), /supported/, "nothing before the guide asks the agent to know the supported values");
   assert.doesNotMatch(bootstrap, /(^|\s)--(?!yes\b|version\b|prefer-online\b)[a-z]/m, "the bootstrap lists no tool flags (--yes and --prefer-online belong to npx, --version to node), so it can't fall out of step with the tool");
-  assert.match(bootstrap, /fails or prints no version number, tell the user that Node\.js 20 or newer couldn't be verified, include the error text, and stop/);
+  assert.match(bootstrap, /fails or prints no version number, tell the user that Node\.js 22 or newer couldn't be verified, include the error text, and stop/);
   assert.match(bootstrap, /Don't guess at results/);
   assert.match(bootstrap, /exits with an error or prints no usable output, including after that retry, tell the user it failed, include the error text, and stop/);
   assert.match(bootstrap, /Don't continue with partial instructions/);
@@ -157,7 +157,7 @@ function knownFlags() {
   const defs = /OPTION_DEFS = [^{]*\{([\s\S]*?)\n\}\);/.exec(common)[1];
   const names = [...defs.matchAll(/^\s*"?([a-z0-9-]+)"?: \{/gm)].map((m) => `--${m[1]}`);
   // --yes and --prefer-online belong to npx, and --plan also takes a file under `run`.
-  return new Set([...names, "--version", "--plan", "--yes", "--prefer-online"]);
+  return new Set([...names, "--version", "--plan", "--yes", "--prefer-online", "--install-browser"]);
 }
 
 test("every flag the docs mention is a real flag", () => {
@@ -229,8 +229,10 @@ test("AGENTS.md bridges to the runner, and tells contributors what to run", () =
   assert.ok(agents.includes("npx --yes automatica11y@latest guide fixtures"));
   for (const path of [...agents.matchAll(/`(skills\/[^`]+)`/g)].map((m) => m[1])) assert.ok(existsSync(join(root, path)), `${path} exists`);
   assert.match(agents, /npm test/);
-  assert.match(agents, /If `npm test` can't run because Chrome or Chromium is missing, or if either command fails, stop\. Report the exact error and the command that failed, and don't report the change as complete/);
-  assert.match(agents, /a run that prints skipped tests isn't a pass either/);
+  assert.match(agents, /If the tests can't run because Chrome or Chromium is missing, or if either command fails, stop\. Report the exact error and the command that failed, and don't report the change as complete/);
+  assert.match(agents, /any additional skipped tests block completion/);
+  assert.match(agents, /one known upstream VitePress accessibility assertion/);
+  assert.match(agents, /npm run test:release/);
   assert.match(agents, /npm run lint/);
   assert.match(agents, /ships in the npm package/);
   assert.match(agents, /If the version check in the steps reports a mismatch, stop\. Report the installed version and the version the steps expect, and don't produce an audit or compare result until the user confirms how to proceed/);

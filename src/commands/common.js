@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { checkEnvironment } from "../env/browser.js";
+import { checkEnvironment } from "../env/check.js";
 import { readToolVersions } from "../env/versions.js";
 import { buildPlan, findDuplicateLabel } from "../plan/build-plan.js";
 import { loadMappingFile } from "../plan/mapping.js";
@@ -16,7 +16,7 @@ export { EXIT };
 export class UsageError extends Error {}
 
 /**
- * @typedef {{ stdout: { write(text: string): unknown }, stderr: { write(text: string): unknown }, cwd: string, env: NodeJS.ProcessEnv, fetch?: import("../plan/classify.js").FetchLike, npmView?: (spec: string) => Promise<unknown>, installPackage?: typeof import("../harness/npm-install.js").installPackage, platform?: NodeJS.Platform }} Io
+ * @typedef {{ stdout: { write(text: string): unknown }, stderr: { write(text: string): unknown }, cwd: string, env: NodeJS.ProcessEnv, fetch?: import("../plan/classify.js").FetchLike, npmView?: (spec: string) => Promise<unknown>, installPackage?: typeof import("../harness/npm-install.js").installPackage, platform?: NodeJS.Platform, installBrowser?: typeof import("../env/browser.js").installBrowser }} Io
  */
 
 const OPTION_DEFS = /** @type {const} */ ({

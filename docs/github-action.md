@@ -3,6 +3,8 @@ Add `options.archetypes: [button, dialog]` to limit component coverage or `optio
 
 Run on an Ubuntu GitHub-hosted runner or an Ubuntu self-hosted runner with permission to install Chromium's system dependencies. The Action sets up Node 26, installs the tool from the selected Action checkout in an isolated temporary directory, and downloads the matching Playwright headless shell. It does not install or build your application.
 
+The npm package and Action share the same release version and immutable `v<version>` tag. Pin the reviewed release commit for production; the Action runs code from that checkout, not the latest npm version. Releases are created only after the Node matrix and Action smoke tests pass. GitHub Marketplace listing setup remains a repository-owner task.
+
 ## Built site
 
 Build your site first, then pass its output directory. Built HTML and Storybook directories are served automatically; they do not need a separate dev server.

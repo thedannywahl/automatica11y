@@ -61,7 +61,7 @@ The same logic applies to the rest of the stack. Prefer the fastest option an ag
 | Concern | Choice | Why |
 |---|---|---|
 | Bundler | esbuild | See above. |
-| Test runner | `node:test` | Built into Node 20 or newer. No dependency, no config. |
+| Test runner | `node:test` | Built into Node 22 or newer. No dependency, no config. |
 | Language | Plain ESM JavaScript with JSDoc | No build step. `npm publish` ships `src/` as written. See Finding 6. |
 | Arg parsing | `node:util` `parseArgs` | No dependency. |
 | Schemas | valibot | Small, modular, and tree-shakable, so cold `npx` starts stay quick. Zod 4 is the fallback. See the M0 benchmark. |
@@ -155,7 +155,7 @@ Exit: five short notes, one yes or no on the package name, and one schema librar
 
 ### M1. Skeleton (done).
 
-- [x] `package.json` (`"type": "module"`, Node 20 or newer, `bin`, `files`), `jsconfig.json` for editor checks, test runner (`node:test`).
+- [x] `package.json` (`"type": "module"`, Node 22 or newer, `bin`, `files`), `jsconfig.json` for editor checks, test runner (`node:test`).
 - [x] `cli.js` with `audit`, `compare`, `run`, `doctor`, `--version`. Usage errors exit 2. (`init-skill` was built in M1 as a stub and removed in M8.)
 - [x] `plan/classify.js` with one test per row in the section 4 table, plus the label syntax and the "bare `button` is a package" rule.
 - [x] `schema.js` (valibot, holds plan, mapping, and results schemas), `env/versions.js`, `env/browser.js`.
@@ -356,7 +356,7 @@ Exit: all acceptance criteria in spec section 13. They hold. See the check at th
 - **Agent-agnostic.** No skill or guide names an agent, vendor, or agent-specific path, and a test fails if one appears. The runner carries the essentials of the fixture contract and a React and a web component example, so it still works if the fixture guide can't be opened, and says to run `guide fixtures` to print it. The runner names the version series it works with (`0.2.x`) and stops on a mismatch. The README explains `guide`, and which skill folder to copy.
 - **Packaging.** `private` is gone, `license` is MIT, `files` covers `bin`, `src`, `SKILL.md`, and `references`, and `prepublishOnly` runs the type check. A test checks the real tarball contents with `npm pack --dry-run`, that every import in `src` is a declared dependency, that the README documents every flag and exit code, and that the version and the skill series agree. The tarball is about 66 KB.
 - **Clean install.** I packed the tarball, installed it into an empty folder, and ran `--version`, `doctor`, an `audit` with a fail flag on a local page, an `audit` of the real Shoelace package from the registry, and `audit` on a real npm package. All worked. `npm link` would have changed the global npm prefix, and the tarball install tests the same bin entry more faithfully, so I didn't link.
-- **CI.** `.github/workflows/test.yml` runs lint and tests on Node 20, 22, and 24 on every push. `latest-deps.yml` runs weekly against the latest of every tool and opens (or comments on) an issue labeled `latest-deps` when a test fails. **Neither workflow has run on GitHub.** The YAML parses, but only the first real run shows whether the steps work, and I've only run the suite on Node 24.
+- **CI.** `.github/workflows/test.yml` runs lint and tests on Node 22, 24, and 26 for pull requests. `latest-deps.yml` runs weekly against the latest of every tool and opens (or comments on) an issue labeled `latest-deps` when a test fails. **Neither workflow has run on GitHub.** The YAML parses, but only the first real run shows whether the steps work, and I've only run the suite on Node 24.
 - **Not tested.** The skill hasn't run in a live agent session. The guard tests check it against the CLI, but not how a model follows it.
 
 **Release.** `automatica11y@0.0.0-stage` is on npm (a placeholder published by thedannywahl), so the name is claimed. `0.2.0` isn't published. When it is, `npm publish` runs the type check first. After publishing, `npx automatica11y@latest --version` should print `0.2.0`, and the skill's handshake will work as written.

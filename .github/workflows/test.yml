@@ -1,41 +1,120 @@
 name: Test
 
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+  workflow_call:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: validation-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
     name: Node ${{ matrix.node }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24, 26]
+        node: [22, 24, 26]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
-          cache: npm
+          package-manager-cache: false
+      - name: Cache npm downloads including test installs
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.npm
+          key: npm-tests-${{ runner.os }}-${{ matrix.node }}-${{ hashFiles('package-lock.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            npm-tests-${{ runner.os }}-${{ matrix.node }}-${{ hashFiles('package-lock.json') }}-
+            npm-tests-${{ runner.os }}-${{ matrix.node }}-
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+        shell: bash
+        run: npm ci --no-audit --no-fund 2>&1 | tee install-output.txt
       - name: Verify runner browser
-        run: node bin/automatica11y.js doctor
+        shell: bash
+        run: node bin/automatica11y.js doctor 2>&1 | tee browser-output.txt
       - if: matrix.node == 26
-        run: npm run lint
+        shell: bash
+        run: npm run lint 2>&1 | tee lint-output.txt
       - name: Run tests with detailed output
         shell: bash
-        run: npm run test:release 2>&1 | tee test-output.txt
+        run: |
+          npm run test:release 2>&1 | tee test-output.txt
+          node scripts/release-policy.js test-summary
       - name: Upload test log
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: test-log-node-${{ matrix.node }}
-          path: test-output.txt
+          name: test-log-node-${{ matrix.node }}-attempt-${{ github.run_attempt }}
+          path: '*-output.txt'
           if-no-files-found: warn
+      - name: Summarize validation
+        if: always()
+        env:
+          NODE_VERSION: ${{ matrix.node }}
+          OUTCOME: ${{ job.status }}
+        run: |
+          {
+            printf '### Node %s: %s\n\n' "$NODE_VERSION" "$OUTCOME"
+            printf 'Commit: %s\n\n' "$GITHUB_SHA"
+            printf 'Known exception: the upstream VitePress accessibility assertion is opted out.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  smoke:
+    uses: ./.github/workflows/action-test.yml
+    permissions:
+      contents: read
+
+  release-policy:
+    name: Release policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: github.event_name == 'pull_request'
+        with:
+          node-version: 26
+          cache: npm
+      - name: Validate PR release policy
+        if: github.event_name == 'pull_request'
+        env:
+          RELEASE_ACTOR: ${{ vars.RELEASE_ACTOR }}
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/release-policy.js
+      - name: Main release policy
+        if: github.event_name != 'pull_request'
+        run: echo 'Release policy is enforced before PR merge; main still runs the complete validation gate.'
+
+  ci-gate:
+    name: ci-gate
+    needs: [test, smoke, release-policy]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require all validation jobs
+        env:
+          MATRIX_RESULT: ${{ needs.test.result }}
+          SMOKE_RESULT: ${{ needs.smoke.result }}
+          POLICY_RESULT: ${{ needs.release-policy.result }}
+        run: |
+          if [[ "$MATRIX_RESULT" != success || "$SMOKE_RESULT" != success || "$POLICY_RESULT" != success ]]; then
+            echo "::error::Validation failed: matrix=$MATRIX_RESULT, smoke=$SMOKE_RESULT, policy=$POLICY_RESULT"
+            exit 1
+          fi

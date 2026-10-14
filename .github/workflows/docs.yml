@@ -1,49 +1,132 @@
 name: Docs
 
-# Builds the documentation site and publishes it to the `docs` branch, which GitHub Pages serves.
-# The branch holds only the built site, and each publish replaces it.
-
 on:
-  push:
+  workflow_run:
+    workflows: [Changesets]
+    types: [completed]
     branches: [main]
-    paths:
-      - "docs/**"
-      - "skills/**"
-      - "docs/.vitepress/**"
-      - "docs/public/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/docs.yml"
   workflow_dispatch:
+    inputs:
+      source:
+        description: Main or an existing immutable release tag (for example v0.9.0).
+        type: string
+        default: main
 
 permissions:
-  contents: write
+  contents: read
+  actions: read
 
 concurrency:
   group: docs
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  publish:
-    name: Build and publish
-    runs-on: ubuntu-latest
+  source:
+    name: Resolve trusted documentation source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      version: ${{ steps.source.outputs.version }}
+      trigger: ${{ steps.source.outputs.trigger }}
+      should-deploy: ${{ steps.source.outputs.should-deploy }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          package-manager-cache: false
+      - name: Resolve release or manual source
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DOCS_SOURCE: ${{ inputs.source }}
+        run: node scripts/docs-deploy.js
+
+  publish:
+    name: Build and publish
+    needs: source
+    if: needs.source.outputs.should-deploy == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      SOURCE_SHA: ${{ needs.source.outputs.sha }}
+      SOURCE_VERSION: ${{ needs.source.outputs.version }}
+      SOURCE_TRIGGER: ${{ needs.source.outputs.trigger }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reject stale automatic deployments
+        id: freshness
+        run: |
+          should_deploy=true
+          if [[ "$SOURCE_TRIGGER" == release ]]; then
+            remote=$(git ls-remote --heads origin docs)
+            if [[ -n "$remote" ]]; then
+              git fetch --no-tags origin docs
+            fi
+            if [[ -n "$remote" ]] && git cat-file -e 'FETCH_HEAD:.automatica11y-deploy.json' 2>/dev/null; then
+              previous=$(git show 'FETCH_HEAD:.automatica11y-deploy.json' | jq -r '.sha')
+              if [[ ! "$previous" =~ ^[a-f0-9]{40}$ ]]; then
+                echo "::error::Invalid deployed source metadata."
+                exit 1
+              fi
+              if git merge-base --is-ancestor "$SOURCE_SHA" "$previous"; then
+                echo 'This release is already deployed or superseded; skipping.'
+                should_deploy=false
+              elif ! git merge-base --is-ancestor "$previous" "$SOURCE_SHA"; then
+                echo "::error::Deployment histories diverged; inspect them before a manual deployment."
+                exit 1
+              fi
+            fi
+          fi
+          echo "should-deploy=$should_deploy" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.freshness.outputs.should-deploy == 'true'
         with:
           node-version: 26
           cache: npm
       - name: Install dependencies
+        if: steps.freshness.outputs.should-deploy == 'true'
         run: npm ci --no-audit --no-fund
-      - run: npm run docs:build
+      - name: Build matching documentation
+        if: steps.freshness.outputs.should-deploy == 'true'
+        run: |
+          node --input-type=module -e '
+            import assert from "node:assert/strict";
+            import { readFileSync } from "node:fs";
+            if (process.env.SOURCE_VERSION) assert.equal(JSON.parse(readFileSync("package.json", "utf8")).version, process.env.SOURCE_VERSION);
+          '
+          npm run docs:build
       - name: Set custom domain
+        if: steps.freshness.outputs.should-deploy == 'true'
         run: printf 'automatica11y.dev\n' > site/CNAME
+      - name: Record deployed source
+        if: steps.freshness.outputs.should-deploy == 'true'
+        run: |
+          node --input-type=module -e '
+            import { writeFileSync } from "node:fs";
+            writeFileSync("site/.automatica11y-deploy.json", JSON.stringify({ sha: process.env.SOURCE_SHA, version: process.env.SOURCE_VERSION, trigger: process.env.SOURCE_TRIGGER }));
+          '
       - name: Publish to the docs branch
+        if: steps.freshness.outputs.should-deploy == 'true'
         working-directory: site
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git init --initial-branch=docs
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all
-          git commit --message "docs: build from ${GITHUB_SHA}"
-          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" docs
+          git commit --message "docs: build from ${SOURCE_SHA}"
+          gh auth setup-git
+          git push --force "https://github.com/$GITHUB_REPOSITORY.git" docs
+          printf 'Deployed docs from %s (%s).\n' "$SOURCE_SHA" "$SOURCE_TRIGGER" >> "$GITHUB_STEP_SUMMARY"

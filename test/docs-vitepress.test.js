@@ -46,7 +46,7 @@ test("all documentation sources build at clean VitePress routes", () => {
   );
   assert.ok(readdirSync(out).includes(".nojekyll"));
   const docsWorkflow = readFileSync(join(root, ".github/workflows/docs.yml"), "utf8");
-  assert.match(docsWorkflow, /"docs\/public\/\*\*"/);
+  assert.match(docsWorkflow, /workflows: \[Changesets\]/);
   assert.match(docsWorkflow, /printf 'automatica11y\.dev\\n' > site\/CNAME/);
   for (const page of pageList) {
     assert.ok(html[page.out], `${page.route} was built`);

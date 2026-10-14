@@ -1,6 +1,6 @@
 ---
 name: automatica11y-runner
-compatibility: Needs Node 20 or newer, Chrome or Chromium, a shell that can run npx or the installed automatica11y command, and network access to the npm registry.
+compatibility: Needs Node 22 or newer, a recent Chrome or Chromium, a shell that can run npx or the installed automatica11y command, and network access to the npm registry.
 description: The full steps for running automatica11y audits and comparisons, from building the command to writing the report. Use it when the automatica11y skill or AGENTS.md sends you here, or when you've already been told to run automatica11y and need the steps.
 ---
 
@@ -32,7 +32,7 @@ If the user installed the tool globally (`npm i -g automatica11y`), `automatica1
 npx --yes automatica11y@latest doctor
 ```
 
-Relay any fix it prints, then stop until the user has applied it. Exit code 3 means a problem with the environment: Node older than 20, or no Chrome or Chromium. Don't install or configure anything yourself. That logic lives in the tool.
+Relay any fix it prints, then stop until the user has applied it. Exit code 3 means a problem with the environment: Node older than 22, no Chrome or Chromium, or a Chrome or Chromium more than two major versions behind the one Playwright ships. If the problem is the browser, ask the user once whether to download Chromium (about 100 MB). On a yes, run `npx --yes automatica11y@latest doctor --install-browser` and report what it prints. Don't install or configure anything else yourself. That logic lives in the tool.
 
 ## 3. Turn the request into a command
 

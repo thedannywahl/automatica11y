@@ -84,6 +84,8 @@ export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_
   let opened = null;
   /** @type {Array<Awaited<ReturnType<typeof openPage>>>} */
   const variants = [];
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timeout;
   /** @param {import("../../types.js").Page} page */
   const beforeGoto = async (page) => { for (const kit of kits) await page.addInitScript(kit); };
   try {
@@ -101,12 +103,13 @@ export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_
     if (needsTrigger) await ctx.trigger.waitFor({ state: "attached", timeout: 3000 });
     const outcome = await Promise.race([
       check.run(ctx),
-      new Promise((_, reject) => setTimeout(() => reject(new Error(`The check took longer than ${timeoutMs / 1000} seconds.`)), timeoutMs)),
+      new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error(`The check took longer than ${timeoutMs / 1000} seconds.`)), timeoutMs); }),
     ]);
     return { name: check.name, criteria: check.criteria, ...outcome };
   } catch (error) {
     return { name: check.name, criteria: check.criteria, result: "error", detail: `The check couldn't finish: ${(error instanceof Error ? error.message : String(error)).split("\n")[0]}` };
   } finally {
+    clearTimeout(timeout);
     await opened?.close();
     for (const other of variants) await other.close();
   }
