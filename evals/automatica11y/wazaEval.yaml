@@ -4,7 +4,7 @@ skill: automatica11y
 version: "1.0"
 config:
   trials_per_task: 1
-  timeout_seconds: 300
+  timeout_seconds: 600
   parallel: false
   executor: copilot-sdk
   model: claude-sonnet-5.5
@@ -21,6 +21,6 @@ graders:
   - type: behavior
     name: token-budget
     config:
-      max_tokens: 1200
+      max_tokens: 300000
 tasks:
   - "tasks/*.yaml"

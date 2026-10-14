@@ -61,6 +61,13 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   assert.match(bootstrap, /After reading the steps, pass only settings they list as supported\. If the user named a setting they don't list as supported, tell the user which setting is unsupported, list the supported values from the steps, and ask which to use/);
   assert.match(bootstrap, /Don't ask again for anything they've already said/);
   assert.ok(bootstrap.includes("npx --yes automatica11y@latest guide skill"), "it runs the steps directly, with no detour through the overview");
+  assert.match(bootstrap, /1\. Run this first, read all of what it prints, and follow it/);
+  assert.ok(bootstrap.indexOf("guide skill\n   ```") < bootstrap.indexOf("node --version"), "the guide runs before Node failure diagnosis");
+  assert.match(bootstrap, /If the guide fails, check `node --version`/);
+  assert.match(bootstrap, /Don't narrate each step/);
+  assert.match(bootstrap, /Before answering, state the guide command you actually ran/);
+  assert.match(bootstrap, /Don't claim to have run a command you couldn't execute/);
+  assert.match(bootstrap, /Retry only for `ETARGET`, and never more than once/);
   assert.match(bootstrap, /If the error mentions `ETARGET` \(npm says a version doesn't exist, usually because its local list is out of date\), run the command once more with `--prefer-online`: `npx --yes --prefer-online automatica11y@latest guide skill`/);
   assert.match(bootstrap, /If the command exits with an error or prints no usable output, including after that retry, tell the user it failed, include the error text, and stop/);
   // The check comes after the guide is read, so the agent has the supported values when it needs them.
