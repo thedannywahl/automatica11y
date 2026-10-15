@@ -1,0 +1,47 @@
+id: bootstrap-unsupported-setting
+name: An unsupported setting lists the guide's supported values
+description: "Guide-failure scenario: WCAG 3.0 isn't in the guide, so the skill names it as unsupported, lists the supported versions, and asks which to use."
+tags:
+  - options
+inputs:
+  prompt: "Run an accessibility check on https://example.com with automatica11y, using WCAG 3.0."
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
+        fixture: mocks/guide-skill.md
+      - args: ["--yes", "automatica11y@latest", "--version"]
+        stdout: "0.10.0\n"
+      - args: ["--yes", "automatica11y@latest", "doctor"]
+        fixture: mocks/doctor-ok.txt
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-automatica11y-skill
+    config:
+      skill_path: "skills/automatica11y/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: lists-supported-versions
+    config:
+      contains:
+        - "2.0"
+        - "2.1"
+        - "2.2"
+      regex_match:
+        - "(?i)(unsupported|not supported|isn't supported|doesn't support|does not support)"
+      not_contains:
+        - "--wcag 3"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

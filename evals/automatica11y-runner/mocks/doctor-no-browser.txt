@@ -1,0 +1,6 @@
+automatica11y doctor
+  Node     24.22.0  ok
+  Browser  not found  problem
+
+No Chrome or Chromium found.
+  Fix: Install Chrome, or run: npx playwright-core install --only-shell chromium

@@ -136,7 +136,7 @@ async function showMessage(ctx) {
   const deadline = Date.now() + 2500;
   let after = await ctx.page.evaluate(() => window.__a11y.live());
   while (Date.now() < deadline && !(after.present && after.visible && (after.text || after.named))) {
-    await ctx.settle(80);
+    await ctx.observe(80);
     after = await ctx.page.evaluate(() => window.__a11y.live());
   }
   return { before, after, appeared: after.present && after.visible };
@@ -199,7 +199,7 @@ const LIVE_REGION_CHECKS = [
     async run(ctx) {
       const { appeared } = await showMessage(ctx);
       if (!appeared) return na(`${NO_MESSAGE} Focus wasn't checked.`);
-      await ctx.settle(200);
+      await ctx.observe(200);
       const s = await ctx.snap();
       return s.activeIsTrigger ? pass("Focus stayed on the trigger when the message appeared.") : fail(`Focus moved to ${where(s)} when the message appeared. A status message is announced without taking focus.`);
     },
@@ -229,7 +229,7 @@ const LIVE_REGION_CHECKS = [
       await ctx.settle();
       await ctx.press("Enter");
       if (!(await ctx.waitFor((s) => !s.rootExists || !s.rootVisible, 1500))) return na("Enter didn't remove the message, so where focus goes wasn't checked.");
-      await ctx.settle(200);
+      await ctx.observe(200);
       const s = await ctx.snap();
       return s.bodyActive ? fail("Focus fell back to the page when the message was removed. Move it to the trigger or another control.") : pass(`Focus moved to ${where(s)} when the message was removed.`);
     },
@@ -319,7 +319,7 @@ export const ARCHETYPE_CHECKS = {
       criteria: ["2.1.1"],
       async run(ctx) {
         if (!(await openMenu(ctx))) return na("The menu didn't open with the keyboard, so item navigation wasn't checked.");
-        await ctx.settle(120);
+        await ctx.observe(120);
         const items = (await ctx.items('[role^="menuitem"]')).filter((i) => i.visible);
         if (items.length < 2) return na(`The menu has ${items.length} visible menu ${items.length === 1 ? "item" : "items"}, so there is nothing to move between.`);
         const start = items.find((i) => i.active)?.uid ?? null;
@@ -336,7 +336,7 @@ export const ARCHETYPE_CHECKS = {
       criteria: ["2.1.1", "2.4.3"],
       async run(ctx) {
         if (!(await openMenu(ctx))) return na("The menu didn't open with the keyboard, so Escape wasn't checked.");
-        await ctx.settle(120);
+        await ctx.observe(120);
         await ctx.press("Escape");
         if (!(await ctx.waitFor((x) => !x.rootVisible && x.expanded !== "true", 800))) return fail("The menu stayed open after Escape.");
         const back = await ctx.waitFor((x) => x.activeIsTrigger, 800);
@@ -476,7 +476,7 @@ export const ARCHETYPE_CHECKS = {
           return na("The control couldn't be filled, so invalid input wasn't tried.");
         }
         await ctx.press("Tab");
-        await ctx.settle(200);
+        await ctx.observe(200);
         /** Error text that wasn't there before the input went wrong. A hint linked all along doesn't count. */
         const read = async () => {
           const now = await ctx.page.evaluate(() => window.__a11y.errorInfo());
@@ -486,7 +486,7 @@ export const ARCHETYPE_CHECKS = {
         if (!info.invalid && !info.linked.length && !info.live.length) {
           // Some fields only validate on submit.
           await ctx.trigger.press("Enter").catch(() => {});
-          await ctx.settle(200);
+          await ctx.observe(200);
           info = await read();
         }
         if (!info.invalid && !info.linked.length && !info.live.length) return na("Invalid input didn't put the field in an invalid state, so there was no error to check.");
@@ -541,7 +541,7 @@ export const ARCHETYPE_CHECKS = {
         const box = await root.boundingBox();
         if (!box) return na("The tooltip has no box to move onto.");
         await ctx.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 8 });
-        await ctx.settle(400);
+        await ctx.observe(400);
         return (await ctx.snap()).rootVisible ? pass("The tooltip stayed visible when the pointer moved onto it.") : fail("The tooltip disappeared when the pointer moved from the trigger onto it. Content shown on hover must stay reachable.");
       },
     },
@@ -562,13 +562,13 @@ function toggles(key) {
     const before = await read();
     await ctx.focus();
     await ctx.press(key);
-    await ctx.settle(150);
+    await ctx.observe(150);
     const after = await read();
     /** @param {typeof before} a @param {typeof before} b */
     const changed = (a, b) => (a.expanded !== null ? a.expanded !== b.expanded : a.shown !== b.shown);
     if (!changed(before, after)) return fail(`${key} didn't toggle the section.`);
     await ctx.press(key);
-    await ctx.settle(150);
+    await ctx.observe(150);
     const again = await read();
     return changed(after, again) ? pass(`${key} expanded and collapsed the section (aria-expanded ${before.expanded} then ${after.expanded}).`) : fail(`${key} opened the section but didn't close it again.`);
   };

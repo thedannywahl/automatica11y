@@ -1,0 +1,29 @@
+id: runner-options-plan
+name: A classification preview becomes --plan
+description: The user wants to see how targets classify without testing anything, so the command carries --plan.
+tags:
+  - options
+inputs:
+  prompt: "I've already checked the automatica11y guide. Before testing anything, I want to see how automatica11y would classify https://example.com and the npm package @radix-ui/react-dialog side by side, without running any checks. Show me the exact command, but don't run it."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: sets-plan
+    config:
+      contains:
+        - "compare"
+        - "npm:@radix-ui/react-dialog"
+        - "--plan"
+  - type: tool_constraint
+    name: runs-nothing
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

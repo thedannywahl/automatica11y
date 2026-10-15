@@ -4,7 +4,7 @@ import { chmodSync, existsSync, readFileSync, readdirSync, statSync, symlinkSync
 import { join } from "node:path";
 import { test } from "node:test";
 import { parse } from "yaml";
-import { updateRunnerSkillVersion } from "../scripts/sync-release-version.js";
+import { updateEvalVersions, updateRunnerSkillVersion } from "../scripts/sync-release-version.js";
 import { isVersionPullRequest, productionLock, requiresChangeset, validateTestSummary, validateVersionDiff } from "../scripts/release-policy.js";
 import { trustedReleaseRun, validateDocsRequest, validateManualSource } from "../scripts/docs-deploy.js";
 import { makeTree } from "./helpers/fixtures.js";
@@ -41,6 +41,11 @@ test("the package is ready to publish: public, MIT, ESM, Node 22 or newer", () =
   assert.ok(statSync(join(root, pkg.bin.automatica11y)).mode & 0o111, "the bin file is executable");
 });
 
+test("browser-heavy test files run with bounded concurrency in both test commands", () => {
+  assert.ok(pkg.scripts.test.split(/\s+/).includes("--test-concurrency=2"), "limit browser contention without relaxing fixture deadlines");
+  assert.equal(pkg.scripts["test:release"], "AUTOMATICA11Y_SKIP_VITEPRESS_A11Y=1 npm test");
+});
+
 test("release version sync updates all runner skill version checks", () => {
   const source = readFileSync(join(root, "skills/automatica11y-runner/SKILL.md"), "utf8");
   const updated = updateRunnerSkillVersion(source, "0.9.0");
@@ -48,6 +53,49 @@ test("release version sync updates all runner skill version checks", () => {
   assert.match(updated, /doesn't start with `0\.9\./);
   assert.match(updated, /series this copy expects \(`0\.9\.x`\)/);
   assert.doesNotMatch(updated, /0\.8\.x/);
+});
+
+test("release version sync updates eval mocks and expectations but preserves intentional mismatches", () => {
+  const suite = `name: runner-eval
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "automatica11y@latest", "--version"]
+        stdout: "0.9.0\\n"
+`;
+  assert.match(updateEvalVersions(suite, "0.10.0"), /stdout: "0\.10\.0\\n"/);
+
+  const versionError = `id: runner-preflight-version-error
+graders:
+  - name: includes-error-text
+    config:
+      contains:
+        - "E404"
+        - "0.9.x"
+`;
+  assert.match(updateEvalVersions(versionError, "0.10.0"), /- "0\.10\.x"/);
+
+  const mismatch = `id: runner-preflight-version-mismatch
+description: Version outside the 0.9.x series.
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "automatica11y@latest", "--version"]
+        stdout: "1.0.0\\n"
+graders:
+  - name: reports-both-versions
+    config:
+      contains:
+        - "1.0.0"
+        - "0.9"
+`;
+  const updatedMismatch = updateEvalVersions(mismatch, "0.10.0");
+  assert.match(updatedMismatch, /outside the 0\.10\.x series/);
+  assert.match(updatedMismatch, /stdout: "1\.0\.0\\n"/);
+  assert.match(updatedMismatch, /- "0\.10"/);
+
+  const historicalReport = `id: historical-report\ncontent:\n  report: "automatica11y 0.9.0"\n`;
+  assert.equal(updateEvalVersions(historicalReport, "0.10.0"), historicalReport);
 });
 
 test("Changesets versions only the npm package and publishes with isolated OIDC permissions", () => {

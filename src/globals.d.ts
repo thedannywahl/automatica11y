@@ -117,6 +117,7 @@ interface AngularPackageExport extends PackageExport {
 }
 
 interface Window {
+  __a11ySelectors: ReturnType<typeof import("./tiers/rules/selectors.js").browserSelectors>;
   __a11y: A11yHelpers;
   __a11yMeasure: A11yMeasure;
   __a11yConditions: A11yConditions;

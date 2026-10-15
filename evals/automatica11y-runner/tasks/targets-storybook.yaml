@@ -1,0 +1,27 @@
+id: runner-targets-storybook
+name: A Storybook URL is the target
+description: A published Storybook is audited by its URL.
+tags:
+  - targets
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit the components in our Storybook at https://storybook.example.com. Show me the exact command, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: uses-storybook-url
+    config:
+      regex_match:
+        - "audit\\s+([\\w-]+=)?https://storybook\\.example\\.com"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

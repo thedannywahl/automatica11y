@@ -1,0 +1,40 @@
+id: runner-preflight-version-mismatch
+name: Wrong version series stops before doctor
+description: When the version check prints a version outside the 0.10.x series, the runner reports both versions and stops.
+tags:
+  - preflight
+inputs:
+  prompt: "I've been asked to use automatica11y. Audit https://example.com for accessibility."
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "automatica11y@latest", "--version"]
+        stdout: "1.0.0\n"
+      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
+        fixture: mocks/guide-skill.md
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: reports-both-versions
+    config:
+      contains:
+        - "1.0.0"
+        - "0.10"
+  - type: tool_constraint
+    name: stops-before-doctor-and-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y@latest (doctor|audit|compare)"

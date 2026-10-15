@@ -1,0 +1,43 @@
+id: bootstrap-no-target
+name: No target asks for one after reading the guide
+description: An accessibility request with no URL, Storybook, or package makes the skill ask which to test instead of guessing.
+tags:
+  - targets
+inputs:
+  prompt: "Can you run a WCAG accessibility check for me?"
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
+        fixture: mocks/guide-skill.md
+      - args: ["--yes", "automatica11y@latest", "--version"]
+        stdout: "0.10.0\n"
+      - args: ["--yes", "automatica11y@latest", "doctor"]
+        fixture: mocks/doctor-ok.txt
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-automatica11y-skill
+    config:
+      skill_path: "skills/automatica11y/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: asks-for-target
+    config:
+      regex_match:
+        - "(?i)which (target|url|storybook|package|page|site)|what (would you like|should I) (test|check)"
+        - "\\?"
+        - "(?i)(URL|Storybook|npm|package|page|site)"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

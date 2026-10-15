@@ -1,0 +1,22 @@
+id: runner-lighthouse-panel-how-to
+name: Lighthouse panel instructions leave runner idle
+description: A question about another tool's UI gets a direct answer, not an automatica11y run.
+tags:
+  - lighthouse-panel-how-to
+inputs:
+  prompt: "How do I open the Lighthouse panel in Chrome DevTools?"
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: avoids-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: negative
+      threshold: 0.6
+  - type: text
+    name: runs-nothing
+    config:
+      not_contains:
+        - "automatica11y"
+        - "npx --yes"

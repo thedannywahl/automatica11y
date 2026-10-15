@@ -1,0 +1,29 @@
+id: runner-targets-plain-html
+name: A plain HTML library names its files as sub-paths
+description: A stylesheet package and a script package become one target that names the files to load, with the native-template caveat.
+tags:
+  - targets
+inputs:
+  prompt: "I've already checked the automatica11y guide. Our design system has no framework. Pages load base.css from @acme/css and behavior.iife.js from @acme/behavior. Audit it. Show me the exact command and anything I should know about what the result will show, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: names-files-and-caveat
+    config:
+      regex_match:
+        - "npm:@acme/css/base\\.css,@acme/behavior/behavior\\.iife\\.js|npm:@acme/behavior/behavior\\.iife\\.js,@acme/css/base\\.css"
+        - "(?i)native"
+        - "(?i)fixture"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

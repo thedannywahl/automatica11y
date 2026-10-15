@@ -1,0 +1,49 @@
+id: runner-report-compare-failed
+name: A failed target in a comparison is reported with its reason
+description: One of three compared targets couldn't be reached. The runner reports the others and lists the failed one with the reason from results.json, without retrying or guessing.
+tags:
+  - report
+inputs:
+  prompt: "I've been asked to use automatica11y. I already ran npx --yes automatica11y@latest compare home=./clean.html about=./missing-alt.html offline=http://127.0.0.1:9/ and the output is in ./a11y-report. Write up the comparison from those results. Don't run the tool again."
+  context:
+    fixture: fixtures/reports/compare-failed
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: reports-the-failure
+    config:
+      contains:
+        - "offline"
+        - "fetch failed"
+        - "home"
+        - "about"
+      regex_not_match:
+        - "(?i)\\b(is|are|was|be|fully) accessible\\b"
+        - "(?i)\\bcompliant\\b"
+        - "\\b\\d{1,3}\\s*/\\s*100\\b"
+  - type: prompt
+    name: follows-report-rules
+    config:
+      prompt: |
+        You are grading an accessibility comparison written from automatica11y results. Three page targets were compared: "home" (zero violations), "about" (one image-alt violation from axe-core and one img_alt_valid violation from IBM Equal Access), and "offline", which failed because the URL didn't respond.
+        Pass only if all of these hold:
+        1. It says every target used the same WCAG version, level, and rules.
+        2. It opens with the coverage matrix (target by tier) before the findings.
+        3. "offline" is reported as a failed target with the reason from the results, and as a gap in coverage. It is never counted as a pass or ranked against the others.
+        4. axe-core and IBM findings are kept separate and never added together.
+        5. "no automated violations found" is used only for "home", per engine.
+        6. There is no single score or ranking number, and nothing is called accessible or compliant.
+        Fail if any rule is broken or if any number doesn't appear in the results.
+  - type: tool_constraint
+    name: does-not-rerun
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

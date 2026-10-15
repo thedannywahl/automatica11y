@@ -114,7 +114,12 @@ export function parsePlan(input) {
 const TIER_STATUS = ["ran", "skipped", "not-applicable", "not-testable", "failed"];
 const IMPACT_COUNTS = v.object({ critical: v.number(), serious: v.number(), moderate: v.number(), minor: v.number() });
 
-const NodeSchema = v.object({ selector: v.string(), html: v.string() });
+const NodeSchema = v.object({
+  selector: v.string(),
+  selectorPath: v.optional(v.array(v.object({ selector: v.string(), enter: v.picklist(["shadow", "frame"]) }))),
+  selectorError: v.optional(v.string()),
+  html: v.string(),
+});
 
 /** One finding from one engine. `impact` belongs to axe. `toolkitLevel` belongs to IBM. Neither converts to the other. */
 const FindingSchema = v.object({

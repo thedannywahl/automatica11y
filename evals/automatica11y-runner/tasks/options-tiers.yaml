@@ -1,0 +1,27 @@
+id: runner-options-tiers
+name: Fewer checks become --tiers
+description: The user wants only rule checks and measured contrast, so the command carries --tiers rules,computed.
+tags:
+  - options
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit https://example.com, but only run the rule engines and the computed contrast checks. Skip interactions, conditions, and the virtual screen reader. Show me the exact command, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: sets-tiers
+    config:
+      regex_match:
+        - "--tiers (rules,computed|computed,rules)\\b"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

@@ -66,6 +66,18 @@ test("concurrent conditions report missing pages as errors and close their conte
   assert.equal(browser.contexts().length, original);
 });
 
+test("fastFixture preserves condition results and does not suppress reduced-motion failures", { skip, timeout: 180_000 }, async () => {
+  const initial = session.browser.contexts().length;
+  for (const name of ["base", "scheme-good", "scheme-bad", "motion-transition-bad"]) {
+    const url = `${server.origin}/${name}.html`;
+    const normal = await runConditions(session.browser, url, "button");
+    const fast = await runConditions(session.browser, url, "button", { fastFixture: true });
+    assert.deepEqual(fast, normal, name);
+    if (name === "motion-transition-bad") assert.equal(fast.checks[0].result, "fail");
+  }
+  assert.equal(session.browser.contexts().length, initial);
+});
+
 /** One page per row: the archetype, then the result of each check in order (motion, dark mode, more contrast, less contrast, transparency, forced colors, reflow, spacing). */
 /** @type {Record<string, [string, string[]]>} */
 const PAGES = {
@@ -91,9 +103,11 @@ const PAGES = {
   "whole-page": ["page", [N, N, N, N, N, P, P, P]],
 };
 
+const FAST_FIXTURES = new Set(["base", "scheme-good", "scheme-bad"]);
+
 for (const [page, [archetype, expected]] of Object.entries(PAGES)) {
   test(`${page}: each conditions check gives its known result`, { skip, timeout: 180_000 }, async () => {
-    const result = await runConditions(session.browser, `${server.origin}/${page}.html`, archetype);
+    const result = await runConditions(session.browser, `${server.origin}/${page}.html`, archetype, { fastFixture: FAST_FIXTURES.has(page) });
     assert.equal(result.status, "ran");
     assert.deepEqual(result.checks.map((c) => c.name), NAMES);
     assert.deepEqual(result.checks.map((c) => c.result), expected, JSON.stringify(result.checks.map((c) => `${c.name}: ${c.detail}`), null, 1));

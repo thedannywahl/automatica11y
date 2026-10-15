@@ -1,0 +1,27 @@
+id: runner-targets-npm-subpath
+name: An entry point becomes a versioned sub-path
+description: The user names one entry of a scoped package at a version, so the spec carries the version and the sub-path.
+tags:
+  - targets
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit version 3.1.0 of @acme/ui, but only the entry people import as @acme/ui/button. Show me the exact command, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: writes-subpath
+    config:
+      contains:
+        - "npm:@acme/ui@3.1.0/button"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

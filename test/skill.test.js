@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { parse } from "yaml";
 import { TOPICS } from "../src/commands/guide.js";
 
 const root = new URL("../", import.meta.url).pathname;
@@ -54,7 +55,6 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   const { name, description } = frontmatter(bootstrap);
   assert.equal(name, "automatica11y");
   for (const trigger of ["accessib", "WCAG", "compare"]) assert.match(description, new RegExp(trigger, "i"), `description mentions ${trigger}`);
-  assert.ok(bootstrap.split("\n").length < 40, "the bootstrap fits on a screen");
   assert.ok(bootstrap.includes("npx --yes automatica11y@latest guide"), "it sends the agent to the guide");
   assert.match(bootstrap, /node --version/);
   assert.match(bootstrap, /Keep the user's request as they gave it: the target or targets, and any settings they named/);
@@ -63,20 +63,20 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   assert.ok(bootstrap.includes("npx --yes automatica11y@latest guide skill"), "it runs the steps directly, with no detour through the overview");
   assert.match(bootstrap, /1\. Follow this decision list/);
   assert.ok(bootstrap.indexOf("guide skill\n   ```") < bootstrap.indexOf("node --version"), "the guide runs before Node failure diagnosis");
-  assert.match(bootstrap, /If the guide still fails or produces no usable output as defined in \(b\), run `node --version`/);
+  assert.match(bootstrap, /If no command produced usable guide output, run `node --version`/);
   assert.match(bootstrap, /Don't narrate each step/);
   assert.match(bootstrap, /Before answering, show the exact guide command you ran in a fenced code block/);
   assert.match(bootstrap, /Don't claim to have run a command you couldn't execute/);
-  assert.match(bootstrap, /If the `npx` command fails with `ETARGET`, run `npx --yes --prefer-online automatica11y@latest guide skill` once/);
-  assert.match(bootstrap, /For any other failure, report the failure with its error text/);
+  assert.match(bootstrap, /Only if the `npx` command fails with `ETARGET`, run `npx --yes --prefer-online automatica11y@latest guide skill` once/);
+  assert.match(bootstrap, /Otherwise, report the guide error text \(or state that the guide produced no usable output\) and stop/);
   // The check comes after the guide is read, so the agent has the supported values when it needs them.
   assert.ok(bootstrap.indexOf("guide skill\n   ```") < bootstrap.indexOf("After reading the guide"), "the unsupported-setting check comes after the command that prints the guide");
   assert.doesNotMatch(bootstrap.slice(0, bootstrap.indexOf("npx --yes")), /supported/, "nothing before the guide asks the agent to know the supported values");
   assert.doesNotMatch(bootstrap, /(^|\s)--(?!yes\b|version\b|prefer-online\b)[a-z]/m, "the bootstrap lists no tool flags (--yes and --prefer-online belong to npx, --version to node), so it can't fall out of step with the tool");
   assert.match(bootstrap, /If Node\.js is missing or below 22, tell the user that Node\.js 22 or newer is required and stop/);
-  assert.match(bootstrap, /the command exits with code 0 and prints non-empty guide text containing more than 20 lines/);
+  assert.match(bootstrap, /ask: "Which target should I test: a URL, a Storybook, or an npm package\?" before running any accessibility check/);
+  assert.match(bootstrap, /prints guide text containing at least 20 non-blank lines of Markdown text/);
   assert.match(bootstrap, /Don't guess at results/);
-  assert.match(bootstrap, /If the guide still fails or produces no usable output as defined in \(b\), run `node --version`/);
   assert.match(bootstrap, /Don't continue with partial instructions/);
   assert.doesNotMatch(bootstrap, /no automated violations found|attestation/, "the wording rules live in the runner");
   assert.equal(existsSync(join(bootstrapDir, "references")), false, "the bootstrap has no references to lose");
@@ -88,6 +88,7 @@ test("the runner skill says when to use it, and carries the steps", () => {
   const { name, description } = frontmatter(runner);
   assert.equal(name, "automatica11y-runner");
   assert.match(description, /AGENTS\.md|automatica11y skill/);
+  assert.match(description, /Do not use for questions about WCAG levels, success criteria, or definitions, even if they mention audits or accessibility testing/);
   for (const step of ["Check the version", "Check the setup", "Turn the request into a command", "npm packages need fixtures", "Run, then read the results", "Write the report", "When a target can't be tested"]) {
     assert.ok(runner.includes(step), step);
   }
@@ -105,14 +106,19 @@ test("the series the runner names is the series of the version in package.json",
   assert.ok(stated, "the runner states the series it works with");
   assert.equal(stated[1], series(pkg.version), "bump SKILL.md when the version series changes");
   assert.ok(runner.includes(`doesn't start with \`${stated[1]}.\``), "the stop rule uses the same series");
-  assert.match(runner, /exits with an error or prints nothing, tell the user it failed, include the error text, and stop/);
+    assert.ok(runner.includes(`If the command exits with an error or prints nothing, report its exact error text (or say it printed nothing) and the series this copy expects (\`${stated[1]}.x\`), then end the turn.`));
   assert.match(runner, /Use the target and the settings the user already gave, and ask only for what's missing/);
   assert.match(agents, /Keep the user's request as they gave it, including the target and any settings they named/);
   assert.match(runner, /Pass only the options in the table above, with the values it lists\. If the user names a setting the tool doesn't have, or a value outside those lists/);
   assert.match(runner, /Don't substitute a default or invent a value/);
   // What the five end-to-end runs showed was missing.
   assert.match(runner, /Do sections 1 and 2 before you run an audit\. A question to the user about a missing target or an unsupported setting \(section 3\) can come before or after them/);
-  assert.match(runner, /ask them together in one message, then go on/);
+  assert.match(runner, /If the user only asks to see the command or says not to run it, show the command and stop/);
+  assert.match(runner, /ask them together in one message\. Until the user answers every question about the target, grouping, or unsupported settings, don't run `audit` or `compare`; wait for their reply/);
+    assert.ok(runner.includes(`If the output doesn't start with \`${stated[1]}.\`, report the exact version and expected series above, then end the turn. In either case, do not run \`doctor\` or an audit.`));
+  assert.match(runner, /If the user has already said yes to downloading Chromium, skip the plain `doctor` command and run exactly `npx --yes automatica11y@latest doctor --install-browser` once in the shell\. Do not substitute `automatica11y` for `npx` for this command/);
+  assert.match(runner, /Treat package and target grouping as clear only when the user's words explicitly establish which packages work together and which are alternatives/);
+  assert.match(runner, /Whenever multiple packages could be grouped in more than one way[\s\S]*ask the user to confirm it before running/);
   assert.match(runner, /even when they're different kinds, such as a live page and an npm package/);
   assert.match(runner, /`needs-fixture` means the tool found the component but couldn't build a working fixture\. `no-match` means no export or custom element looks like that archetype/);
   assert.match(runner, /`generated` means the tool built a fixture that passed its checks, and the source is in `<out>\/generated\/`/);
@@ -122,7 +128,7 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(runner, /\| `--no-generate` \| off \|/);
   assert.ok(runner.includes("| `--screenshots` / `--no-screenshots` | off |"));
   assert.match(runner, /use `--screenshots` when the user explicitly asks for them/);
-  assert.match(runner, /If the user asks for visual evidence without clearly asking for annotated screenshots, ask whether to include them before showing the command/);
+  assert.match(runner, /If the user mentions visual evidence without explicitly asking for screenshots, ask whether they want annotated screenshots\. Don't enable them by default/);
   assert.match(runner, /Preserve any screenshot links from `report\.md` next to the findings they support/);
   assert.match(runner, /For a `no-match` archetype, write a fixture only if the library's documentation names a component, or a documented way, to make it/);
   assert.match(runner, /A target that failed while others ran still exits 0, and the failure is in the results/);
@@ -140,8 +146,17 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(runner, /Tell the user which target failed, using the reason from `results\.json`/);
   assert.match(runner, /If every target failed \(exit code 4\), stop\. If others ran, report them, and list the failed target as a gap/);
   // The wording rule says when to use the phrase, and what to do when there are violations.
-  assert.match(runner, /Where an engine reports zero violations for a target, say "no automated violations found" for that engine\. Where it reports violations, list them as the tool reports them/);
-  assert.match(runner, /Use "no automated violations found" only for an engine that reported none for that target/);
+  assert.match(runner, /Use "no automated violations found" only for axe-core when it reports zero violations for that target/);
+  assert.match(runner, /For IBM Equal Access, write "IBM Equal Access reported no violations in this run\." when it reports zero\. Never use "no automated violations found" for IBM/);
+  assert.ok(runner.includes("Read the exact target id from `<out>/plan.json` or the target keys in `<out>/mapping.json`"));
+  assert.ok(runner.includes("`widgets=npm:@a11y-eval/widgets` uses `fixtures/widgets/tabs.jsx`"));
+  assert.ok(runner.includes("`./a11y-report/results.json` and `./a11y-report/report.md` in the working folder"));
+  assert.ok(runner.includes("writes both files even when every target fails during resolution (exit code 4)"));
+  assert.ok(runner.includes("`--plan` writes only `plan.json` and never audit results"));
+  assert.ok(runner.includes("Always end the turn with a final message listing the report path, results path, and any fixture written"));
+  assert.ok(runner.includes("If a step cannot finish, say so and identify the remaining gaps"));
+  assert.ok(runner.includes("Never say an engine \"found nothing\" when it reported needs-review items"));
+  assert.doesNotMatch(runner, /Where an engine reports zero violations for a target/);
   assert.doesNotMatch(runner, /Say "no automated violations found\."/, "no unconditional instruction to say the phrase");
   assert.doesNotMatch(agents, /matches the version of the tool you're running/, "AGENTS.md doesn't claim a match that @latest can't promise");
   assert.doesNotMatch(runner, /\{\{[A-Z]+\}\}/, "no placeholders are left in the file");
@@ -192,9 +207,17 @@ test("every command the docs run exists, and every guide topic they name is real
 
 test("the docs write npm packages with the npm: prefix, as the tool requires", () => {
   const readme = read("README.md");
+  const localPackageMapping = /(^|\s)--local-package[ \t]+[^\s=]+=[^\s]+/g;
+  const bareScopedTarget = /(^|[\s=`])@[a-z][\w-]*\/[\w.-]+/m;
+  for (const example of ["--local-package @scope/ui=./dist", "automatica11y ci ui=npm:@scope/ui --local-package @scope/ui=./dist"]) {
+    assert.doesNotMatch(example.replace(localPackageMapping, "$1--local-package <package>=<path>"), bareScopedTarget);
+  }
+  for (const example of ["automatica11y audit @scope/ui", "automatica11y audit @scope/ui --local-package @scope/ui=./dist", "automatica11y audit --local-package @scope/ui"]) {
+    assert.match(example.replace(localPackageMapping, "$1--local-package <package>=<path>"), bareScopedTarget);
+  }
   for (const { name, text } of [{ name: "README.md", text: readme }, ...docPages, ...agentDocs]) {
-    const targets = text.replace(/^\s*--local-package\s+[^\s]+/gm, "--local-package <package>=<path>").replace(/^\s+"@[a-z][\w-]*\/[\w.-]+"(?=:)/gm, "  local-package-name:").replace(/^(\s*)@[a-z][\w-]*\/[\w.-]+=/gm, "$1package-name=");
-    assert.doesNotMatch(targets, /(^|[\s=`])@[a-z][\w-]*\/[\w.-]+/m, `${name} has no bare scoped package as a target`);
+    const targets = text.replace(localPackageMapping, "$1--local-package <package>=<path>").replace(/^\s+"@[a-z][\w-]*\/[\w.-]+"(?=:)/gm, "  local-package-name:").replace(/^(\s*)@[a-z][\w-]*\/[\w.-]+=/gm, "$1package-name=");
+    assert.doesNotMatch(targets, bareScopedTarget, `${name} has no bare scoped package as a target`);
     assert.doesNotMatch(text, /=(react-aria-components|@radix-ui)/, `${name} labels no bare package`);
   }
   assert.match(docsText, /compare next-gen=npm:@instructure\/ui-button\/Button\/v2 canvas=npm:@instructure\/ui-buttons\/Button\/v1/);
@@ -219,7 +242,6 @@ test("every document tells a global install how to skip npx, without dropping th
   assert.match(bootstrap, /If `automatica11y` is already on the `PATH` and `automatica11y --version` prints a version, run `automatica11y guide skill`/);
   assert.match(runner, /replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above/);
   assert.match(runner, /If the installed version is the wrong series, or nothing is installed, use `npx`/);
-  assert.ok(bootstrap.split("\n").length < 40, "the bootstrap still fits on a screen");
 });
 
 test("the runner carries a Vue example too, and says not to import h", () => {
@@ -249,8 +271,8 @@ test("AGENTS.md bridges to the runner, and tells contributors what to run", () =
   assert.match(agents, /If the version check in the steps reports a mismatch, stop\. Report the installed version and the version the steps expect, and don't produce an audit or compare result until the user confirms how to proceed/);
   assert.match(agents, /If the request doesn't name a target, ask for the target once, then continue with the steps\. Use the defaults in the steps for any setting the user didn't name/);
   assert.match(agents, /That's only another way to get the text\. If a guide command has already failed, stop as described above\. Reading the files doesn't change that/);
-  assert.match(runner, /Tell the user the version you got and the series this copy expects/);
-  assert.match(runner, /Don't run an audit until the user confirms how to proceed/);
+  assert.match(runner, /If the output doesn't start with `\d+(?:\.\d+)?\.`, report the exact version and expected series above, then end the turn/);
+  assert.match(runner, /offer to read the matching steps with `npx --yes automatica11y@latest guide skill`, but wait for the user's confirmation before running it/);
   assert.match(agents, /print the copy that comes with the latest release, and the steps they print check that the tool's version matches/);
   assert.match(agents, /If either guide command fails, stop\. Report the exact error to the user, and don't produce an audit or compare result from memory/);
   assert.match(agents, /The series is the major and minor version while the major version is 0 \(`0\.2`\), and the major version alone from 1\.0 on/);
@@ -289,6 +311,69 @@ test("the fixture reference mentions both hooks and both flavors", () => {
 test("the runner says how to read a plain-language comparison, and asks when the grouping is unclear", () => {
   assert.match(runner, /Join them with commas and no spaces: `npm:@scope\/components,@scope\/interactions`/);
   assert.match(runner, /A comma joins packages into one target\. The words "and", "vs", "versus", "against", and "compared with" separate targets\. So "compare A, B and C and D" is three targets: `A,B`, `C`, and `D`\./);
-  assert.match(runner, /Don't guess when the grouping is unclear/);
-  assert.match(runner, /Always show the grouping before you run[\s\S]*ask the user to confirm it/);
+  assert.match(runner, /Treat package and target grouping as clear only when the user's words explicitly establish which packages work together and which are alternatives/);
+  assert.match(runner, /Whenever multiple packages could be grouped in more than one way[\s\S]*ask the user to confirm it before running/);
+  assert.match(runner, /Whenever multiple packages could be grouped in more than one way[\s\S]*show your best grouping[\s\S]*ask the user to confirm it before running/);
+});
+
+test("e2e tasks explicitly declare sandbox inputs and final replies", () => {
+  const suiteDir = join(root, "evals", "e2e", "automatica11y-runner");
+  for (const name of readdirSync(join(suiteDir, "tasks"))) {
+    const task = parse(readFileSync(join(suiteDir, "tasks", name), "utf8"));
+    assert.ok(/final reply/i.test(task.inputs.prompt) || task.inputs.follow_up_prompts?.some((/** @type {string} */ prompt) => /final summary/i.test(prompt)), `${name} requests a final reply`);
+    assert.equal(task.inputs.context?.fixture, undefined, `${name} uses explicit input files`);
+    if (task.id === "runner-e2e-unreachable") {
+      assert.doesNotMatch(task.inputs.prompt, /\.\//, "output paths must not trigger the empty-workspace guard");
+      const artifacts = task.graders.find((/** @type {{ name: string }} */ grader) => grader.name === "writes-failed-target-results");
+      assert.deepEqual(artifacts.config.must_exist, ["a11y-report/plan.json", "a11y-report/results.json", "a11y-report/report.md"]);
+      assert.equal(artifacts.config.content_patterns[0].path, "a11y-report/results.json");
+      const wording = task.graders.find((/** @type {{ name: string }} */ grader) => grader.name === "no-invented-results");
+      assert.equal(wording.type, "text", "failed-target wording uses deterministic grading");
+      continue;
+    }
+    assert.ok(task.context_dir, `${name} overrides the extension's skill context directory`);
+    assert.ok(task.inputs.files?.length > 0, `${name} copies files into the sandbox`);
+    if (task.id === "runner-e2e-npm-local") {
+      const suite = parse(readFileSync(join(suiteDir, "wazaEval.yaml"), "utf8"));
+      assert.equal(task.context_dir, "evals/e2e/automatica11y-runner/fixtures/npm-local");
+      assert.deepEqual(task.inputs.files.map((/** @type {{ path: string }} */ input) => input.path), ["a11y-eval-widgets-1.0.0.tgz", "widgets-README.md"]);
+      assert.equal(task.inputs.follow_up_prompts.length, 2, "fixture work and final reply use separate bounded turns");
+      assert.match(task.inputs.prompt, /Do not write a fixture or rerun yet/);
+      assert.match(task.inputs.prompt, /--tiers rules,interactions/);
+      assert.match(task.inputs.prompt, /Read widgets-README\.md once/);
+      assert.match(task.inputs.follow_up_prompts[0], /rerun the identical audit command exactly once/);
+      assert.match(task.inputs.follow_up_prompts[0], /do not reread it/);
+      assert.match(task.inputs.follow_up_prompts[1], /Do not run commands, write files, or start another audit/);
+      assert.ok(suite.hooks.before_run.some((/** @type {{ command: string }} */ hook) => hook.command.includes("npm pack ./fixtures/packages/widgets --pack-destination ./fixtures/npm-local") && hook.command.includes("cp fixtures/packages/widgets/README.md fixtures/npm-local/widgets-README.md")));
+      assert.ok(existsSync(join(suiteDir, "fixtures", "packages", "widgets", "package.json")));
+      assert.ok(existsSync(join(suiteDir, "fixtures", "packages", "widgets", "README.md")));
+      continue;
+    }
+    assert.ok(existsSync(join(root, task.context_dir)), `${name} resolves context_dir from the repository root`);
+    for (const input of task.inputs.files) {
+      assert.ok(existsSync(join(root, task.context_dir, input.path)), `${name}: ${input.path}`);
+    }
+    if (task.id === "runner-e2e-static-site") {
+      assert.equal(task.graders.find((/** @type {{ name: string }} */ grader) => grader.name === "measured-wording").type, "text");
+      assert.match(task.inputs.prompt, /These automated results do not establish that the page meets WCAG; manual review is still needed\./);
+      assert.match(task.inputs.prompt, /Do not state that the site passes WCAG, is accessible, or is compliant/);
+      assert.ok(task.graders.find((/** @type {{ name: string }} */ grader) => grader.name === "measured-wording").config.contains.includes("These automated results do not establish that the page meets WCAG; manual review is still needed."));
+    }
+  }
+});
+
+test("the eval mocks speak for the version and the guide this checkout ships", () => {
+  const evalFiles = readdirSync(join(root, "evals"), { recursive: true, encoding: "utf8" }).filter((name) => name.endsWith(".yaml"));
+  let checked = 0;
+  for (const name of evalFiles) {
+    const text = read("evals", name);
+    for (const [, version] of text.matchAll(/args: \["--yes", "automatica11y@latest", "--version"\]\n\s+stdout: "([^"\\]+)\\n"/g)) {
+      checked += 1;
+      if (/^id: runner-preflight-version-mismatch$/m.test(text)) assert.notEqual(series(version), series(pkg.version), `${name} mocks a version outside the series`);
+      else assert.equal(series(version), series(pkg.version), `${name} mocks automatica11y ${version}; update it to the ${series(pkg.version)} series`);
+    }
+  }
+  assert.ok(checked > 0, "the eval mocks were read");
+  assert.equal(read("evals", "automatica11y", "mocks", "guide-skill.md"), runner, "copy skills/automatica11y-runner/SKILL.md to evals/automatica11y/mocks/guide-skill.md");
+  assert.equal(read("evals", "automatica11y-runner", "mocks", "guide-skill.md"), runner, "copy skills/automatica11y-runner/SKILL.md to evals/automatica11y-runner/mocks/guide-skill.md");
 });

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { criterionFromDigits } from "../../wcag/index.js";
+import { installSelectors } from "./selectors.js";
 
 const require = createRequire(import.meta.url);
 /** @type {string | null} */
@@ -43,11 +44,24 @@ function criterionFromTag(tag) {
 }
 
 /**
- * An axe target can be nested for iframes and shadow roots. Flatten it to one readable selector.
+ * Preserve axe's outer frame steps and inner shadow-root steps.
  * @param {import("axe-core").NodeResult["target"]} target
+ * @returns {Pick<import('../../types.js').Finding['nodes'][number], 'selector' | 'selectorPath'>}
  */
 function selectorFor(target) {
-  return (Array.isArray(target) ? target.flat(Infinity) : [target]).join(" ");
+  const frames = Array.isArray(target) ? target : [target];
+  /** @type {NonNullable<import('../../types.js').Finding['nodes'][number]['selectorPath']>} */
+  const selectorPath = [];
+  let selector = "";
+  for (const [frameIndex, frame] of frames.entries()) {
+    const shadows = Array.isArray(frame) ? frame : [frame];
+    for (const [shadowIndex, part] of shadows.entries()) {
+      selector = String(part);
+      if (shadowIndex < shadows.length - 1) selectorPath.push({ selector, enter: "shadow" });
+      else if (frameIndex < frames.length - 1) selectorPath.push({ selector, enter: "frame" });
+    }
+  }
+  return { selector, ...(selectorPath.length ? { selectorPath } : {}) };
 }
 
 /**
@@ -63,7 +77,7 @@ function normalize(items, maxNodes) {
     help: item.help,
     helpUrl: item.helpUrl,
     nodeCount: item.nodes.length,
-    nodes: item.nodes.slice(0, maxNodes).map((node) => ({ selector: selectorFor(node.target), html: String(node.html).slice(0, 300) })),
+    nodes: item.nodes.slice(0, maxNodes).map((node) => ({ ...selectorFor(node.target), html: String(node.html).slice(0, 300) })),
   }));
 }
 
@@ -79,12 +93,24 @@ export async function runAxe(page, { wcag, level, maxNodes = 5, scope = null }) 
   const builder = new AxeBuilder({ page, axeSource: loadAxe() }).withTags(tags);
   for (const selector of [scope ?? []].flat()) builder.include(selector);
   const result = await builder.analyze();
+  await installSelectors(page);
+  const [violations, incomplete] = await page.evaluate((groups) => groups.map((findings) => findings.map((finding) => ({
+    ...finding,
+    nodes: finding.nodes.map((node) => {
+      try {
+        window.__a11ySelectors.resolve(node);
+        return node;
+      } catch (error) {
+        return { ...node, selectorError: error instanceof Error ? error.message : String(error) };
+      }
+    }),
+  }))), [normalize(result.violations, maxNodes), normalize(result.incomplete, maxNodes)]);
   return {
     status: /** @type {const} */ ("ran"),
     version: result.testEngine.version,
     config: { tags, ...(scope ? { scope } : {}) },
-    violations: normalize(result.violations, maxNodes),
-    incomplete: normalize(result.incomplete, maxNodes),
+    violations,
+    incomplete,
     passesCount: result.passes.length,
     notes: /** @type {string[]} */ ([]),
   };

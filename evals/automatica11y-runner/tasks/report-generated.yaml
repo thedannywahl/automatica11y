@@ -1,0 +1,52 @@
+id: runner-report-generated
+name: Results from a generated fixture are called lower evidence
+description: Dialog interaction failures came from a generated fixture and tabs from an authored one. The runner names the recipe, calls the generated result lower evidence, and doesn't weigh the two as equals.
+tags:
+  - report
+inputs:
+  prompt: "I've been asked to use automatica11y. I already ran npx --yes automatica11y@latest audit npm:@a11y-eval/widgets --local-package @a11y-eval/widgets=./a11y-eval-widgets-1.0.0.tgz --archetypes dialog,tabs, with my own tabs fixture. The output is in ./a11y-report. Write up the report from those results. Don't run the tool again."
+  context:
+    fixture: fixtures/reports/generated
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: names-recipe-and-evidence
+    config:
+      contains:
+        - "dialog-compound"
+        - "focus-moves-into-dialog"
+        - "escape-closes"
+        - "target_spacing_sufficient"
+        - "authored"
+      regex_match:
+        - "(?i)generated"
+        - "(?i)((lower|weaker|less) evidence|wiring)"
+      regex_not_match:
+        - "(?i)\\b(is|are|was|be|fully) accessible\\b"
+        - "(?i)\\bcompliant\\b"
+  - type: prompt
+    name: follows-report-rules
+    config:
+      prompt: |
+        You are grading an accessibility report written from automatica11y results for one React component package. The dialog ran from a generated fixture (recipe dialog-compound) and failed three interaction checks: focus-moves-into-dialog, tab-stays-inside-dialog, and escape-closes. The tabs ran from an authored fixture. axe-core found no violations. IBM Equal Access found one Toolkit level 3 violation, target_spacing_sufficient, on a tab, plus needs-review items.
+        Pass only if all of these hold:
+        1. It says which results come from the generated fixture, names the recipe, and calls them lower evidence than an authored fixture, noting a failure may come from the wiring rather than the library.
+        2. It doesn't compare the generated dialog result with the authored tabs result as if they were equal evidence.
+        3. Findings are broken out by archetype. axe-core and IBM are reported separately, never added together, and IBM's level isn't converted to an axe impact.
+        4. Violations, needs-review items, and passes are separate lists, and interaction checks are reported apart from the rule engines.
+        5. "no automated violations found" is used only for axe-core, and not for IBM Equal Access.
+        6. Nothing is called accessible or compliant, there's no single score, and it ends with a method note.
+        Fail if any rule is broken or if any number doesn't appear in the results.
+  - type: tool_constraint
+    name: does-not-rerun
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

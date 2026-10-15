@@ -1,0 +1,43 @@
+id: runner-clarify-one-message
+name: Missing target and unsupported setting are asked together
+description: With no target and an unsupported WCAG version, the runner asks both questions in one message, then builds the command from the answers.
+tags:
+  - clarify
+inputs:
+  prompt: "I've already checked the automatica11y guide. Run an accessibility audit against WCAG 3.0. When you have what you need, show me the exact command, but don't run it."
+  responder:
+    instructions: "The target is the live page https://example.org. Use WCAG 2.2. Answer every question you're asked in one reply. Abstain if asked about anything else."
+    max_followups: 2
+expected:
+  should_trigger: true
+checkpoints:
+  - after_turn: 1
+    graders:
+      - type: text
+        name: asks-both-at-once
+        config:
+          contains:
+            - "2.2"
+          regex_match:
+            - "(?i)(URL|target|page|Storybook|package)"
+            - "(?i)(\\?|confirm|which|do you want)"
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: builds-command-from-answers
+    config:
+      regex_match:
+        - "(?i)(automatica11y(@latest)? audit\\s+(\\w+=)?https://example\\.org|which\\s+(target|url|page|storybook|package)|what\\s+(target|url|page))"
+      not_contains:
+        - "--wcag 3"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

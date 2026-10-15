@@ -1,0 +1,27 @@
+id: runner-targets-bare-word
+name: A bare word asks package or folder
+description: A bare word could be the npm package or the folder ./button, so the runner asks which before running anything.
+tags:
+  - targets
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit button with automatica11y."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: offers-both-readings
+    config:
+      regex_match:
+        - "(?i)(package|folder).*(\\?|which|or)|((\\?|which|or).*(package|folder))"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

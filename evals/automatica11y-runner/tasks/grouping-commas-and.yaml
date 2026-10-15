@@ -1,0 +1,31 @@
+id: runner-grouping-commas-and
+name: Commas join packages and "and" separates targets
+description: '"compare A, B and C and D" reads as three labelled targets, with A and B joined into one, shown as a grouping table before any run.'
+tags:
+  - grouping
+inputs:
+  prompt: "I've already checked the automatica11y guide. Compare @pantoken/html-css, @pantoken/html-js and @instructure/ui and @pantoken/web-components. Show me the grouping and the exact command, but don't run it."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: groups-three-targets
+    config:
+      regex_match:
+        - "automatica11y(@latest)? compare"
+        - "[\\w-]+=npm:@pantoken/html-css,@pantoken/html-js\\b"
+        - "[\\w-]+=npm:@instructure/ui\\b"
+        - "[\\w-]+=npm:@pantoken/web-components\\b"
+        - "(?i)\\|\\s*label\\s*\\|"
+  - type: tool_constraint
+    name: runs-no-compare
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

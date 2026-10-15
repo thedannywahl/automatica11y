@@ -1,0 +1,35 @@
+id: runner-options-defaults
+name: A plain request uses the defaults
+description: An ordinary audit request adds no gating, screenshots, or settings the user didn't name.
+tags:
+  - options
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit https://example.com. Show me the exact command, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: adds-nothing-unasked
+    config:
+      regex_match:
+        - "automatica11y(@latest)? audit https://example\\.com"
+      not_contains:
+        - "--fail-on"
+        - "--screenshots"
+        - "--wcag"
+        - "--level"
+        - "--engine"
+        - "--tiers"
+        - "--archetypes"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

@@ -217,7 +217,7 @@ async function runTarget(browser, planTarget, plan, io) {
   try {
     const pageNote = plan.options.archetypes ? ["--archetypes only applies to Storybook and npm targets. This page was checked as a whole."] : [];
     if (planTarget.kind === "storybook") return { result: await auditStorybook(browser, planTarget, plan, servers, outputDir), mapping: null };
-    if (NPM_KINDS.has(planTarget.kind)) return await auditNpm({ browser, planTarget, plan, cwd: io.cwd, outputDir, install: io.installPackage });
+    if (NPM_KINDS.has(planTarget.kind)) return await auditNpm({ browser, planTarget, plan, cwd: io.cwd, outputDir, install: io.installPackage, fastFixture: io.fastFixture, interactionConcurrency: io.interactionConcurrency, onFixturePhase: io.onFixturePhase });
     if (planTarget.kind === "url") return { result: await auditPage(browser, planTarget.resolved.url, planTarget, plan, pageNote, outputDir), mapping: null };
     if (planTarget.kind === "html-file") {
       const file = planTarget.resolved.path;
@@ -261,6 +261,12 @@ function describeResult(target) {
  * @returns {Promise<number>} The exit code.
  */
 export async function runPlan(plan, io) {
+  if (plan.targets.every((target) => target.status === "failed")) {
+    writeResults(plan, plan.targets.map((target) => failedTarget(target.id, target.reason ?? "Target resolution failed.")), null, io);
+    const outDir = resolve(io.cwd, plan.options.out);
+    io.stdout.write(`  Wrote ${resolve(outDir, "results.json")}\n  Wrote ${resolve(outDir, "report.md")}\n`);
+    return EXIT.ALL_TARGETS_FAILED;
+  }
   const environment = await checkEnvironment({ env: io.env, platform: io.platform });
   if (!environment.ok) {
     for (const problem of environment.problems) io.stderr.write(`${problem.message}\n  Fix: ${problem.fix}\n`);
@@ -302,21 +308,8 @@ export async function runPlan(plan, io) {
       if ("npm" in result && result.npm) planTarget.kind = adapterFor(result.npm.flavor).kind;
     }
 
-    const failCheck = evaluateFailCheck(targets, plan.options.fail);
-    const results = parseResults({
-      schema: 1,
-      planRef: "plan.json",
-      runAt: new Date().toISOString(),
-      tools: readToolVersions({ chromium: version }),
-      targets,
-      failCheck,
-      outcome: evaluateOutcome(targets, plan.options, failCheck),
-      warnings: [],
-    });
+    const results = writeResults(plan, targets, version, io);
     const outDir = resolve(io.cwd, plan.options.out);
-    mkdirSync(outDir, { recursive: true });
-    writeFileSync(resolve(outDir, "results.json"), `${JSON.stringify(results, null, 2)}\n`);
-    writeFileSync(resolve(outDir, "report.md"), renderReport({ plan, results }));
     for (const [relative, text] of Object.entries(generatedFiles)) {
       const file = resolve(outDir, relative);
       mkdirSync(dirname(file), { recursive: true });
@@ -342,4 +335,29 @@ export async function runPlan(plan, io) {
   } finally {
     await browser.close().catch(() => {});
   }
+}
+
+/**
+ * @param {Plan} plan
+ * @param {TargetResult[]} targets
+ * @param {string | null} chromium
+ * @param {import("../commands/common.js").Io} io
+ */
+function writeResults(plan, targets, chromium, io) {
+  const failCheck = evaluateFailCheck(targets, plan.options.fail);
+  const results = parseResults({
+    schema: 1,
+    planRef: "plan.json",
+    runAt: new Date().toISOString(),
+    tools: readToolVersions({ chromium }),
+    targets,
+    failCheck,
+    outcome: evaluateOutcome(targets, plan.options, failCheck),
+    warnings: [],
+  });
+  const outDir = resolve(io.cwd, plan.options.out);
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(resolve(outDir, "results.json"), `${JSON.stringify(results, null, 2)}\n`);
+  writeFileSync(resolve(outDir, "report.md"), renderReport({ plan, results }));
+  return results;
 }

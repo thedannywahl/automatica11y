@@ -32,6 +32,7 @@ import { captureRuleScreenshots } from "./a11y-screenshots.js";
 /** @typedef {ReturnType<typeof import("../schema.js").parseMappingFile>[string]} TargetMapping */
 /** @typedef {NonNullable<TargetResult["archetypes"][string]["fixture"]>} FixtureInfo */
 /** @typedef {TargetResult["archetypes"][string]["configs"][number]} FixtureConfig */
+/** @typedef {<T>(phase: string, task: () => Promise<T>) => Promise<T>} PhaseTimer */
 
 /**
  * The states worth checking for each archetype. The first is where a page starts.
@@ -97,9 +98,9 @@ function readInstalledMeta(workDir, name) {
 
 /**
  * Load the whole package in a page to list its exports and the custom elements it defines.
- * @param {{ browser: Browser, workDir: string, flavor: string, pkg: string, buildDir: string, warnings: string[] }} options
+ * @param {{ browser: Browser, workDir: string, flavor: string, pkg: string, buildDir: string, warnings: string[], fastFixture: boolean }} options
  */
-async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
+async function discover({ browser, workDir, flavor, pkg, buildDir, warnings, fastFixture }) {
   const adapter = adapterFor(flavor);
   const entryFile = join(workDir, "discover.js");
   writeFileSync(entryFile, adapter.discoverEntry(pkg));
@@ -108,7 +109,7 @@ async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
   /** @type {string[]} */
   const errors = [];
   try {
-    const opened = await openPage(browser, `${server.origin}/discover.html`, { beforeGoto: watchErrors(errors) });
+    const opened = await openPage(browser, `${server.origin}/discover.html`, { beforeGoto: watchErrors(errors), waitUntil: fastFixture ? "load" : "networkidle" });
     try {
       await opened.page.waitForFunction(() => window.__a11yExports !== undefined, undefined, { timeout: 15_000 });
     } catch {
@@ -151,23 +152,26 @@ async function discover({ browser, workDir, flavor, pkg, buildDir, warnings }) {
 
 /**
  * Open one fixture page, check it follows the contract, and run the tiers in each state. `libA11y` is `on`, `off`, or `n/a`.
- * @param {{ browser: Browser, url: string, archetype: string, plan: Plan, libA11y: string, targetId: string, outputDir: string }} options
+ * @param {{ browser: Browser, url: string, archetype: string, plan: Plan, libA11y: string, targetId: string, outputDir: string, fastFixture: boolean, interactionConcurrency: number, timed: PhaseTimer }} options
  * @returns {Promise<{ gap: string } | { configs: FixtureConfig[], hidden: string[] }>}
  */
-async function auditFixturePage({ browser, url, archetype, plan, libA11y, targetId, outputDir }) {
+async function auditFixturePage({ browser, url, archetype, plan, libA11y, targetId, outputDir, fastFixture, interactionConcurrency, timed }) {
+  /** @type {PhaseTimer} */
+  const measure = (phase, task) => timed(`fixture:${archetype}:${libA11y}:${phase}`, task);
   /** @type {string[]} */
   const errors = [];
-  const opened = await openPage(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, { beforeGoto: watchErrors(errors) });
+  const opened = await measure("page-open", () => openPage(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, { beforeGoto: watchErrors(errors), waitUntil: fastFixture ? "load" : "networkidle" }));
   try {
     const trigger = opened.page.locator("[data-a11y-trigger]");
     try {
-      await trigger.first().waitFor({ state: "attached", timeout: 5000 });
+      await measure("trigger-ready", () => trigger.first().waitFor({ state: "attached", timeout: 5000 }));
     } catch {
       return { gap: `The fixture didn't render an element with data-a11y-trigger${errors.length ? `: ${errors[0]}` : "."}` };
     }
     const count = await trigger.count();
     if (count !== 1) return { gap: `The fixture must mark exactly one data-a11y-trigger. It marked ${num(count)}.` };
     if (errors.length) return { gap: `The fixture logged errors when it mounted: ${errors[0]}` };
+    if (fastFixture) await measure("fonts-ready", () => opened.page.evaluate(async () => { await document.fonts.ready; }));
 
     if (archetype === "live-region" && (await trigger.first().evaluate((el) => el.matches("[data-a11y-root]")))) {
       return { gap: "The fixture marks the same element as the trigger and the message. A live-region fixture needs a control that makes the message appear (data-a11y-trigger) and the message itself (data-a11y-root)." };
@@ -179,62 +183,64 @@ async function auditFixturePage({ browser, url, archetype, plan, libA11y, target
       let failure = null;
       if (index > 0) {
         try {
-          if (archetype === "tooltip") await trigger.first().focus();
-          else await trigger.first().click();
-          await opened.page.waitForFunction(
-            (needsText) => {
-              const root = document.querySelector("[data-a11y-root]");
-              const shown = root && /** @type {HTMLElement} */ (root).getClientRects().length > 0;
-              // A live region can be on the page and empty until the trigger fills it, so wait for the message itself.
-              if (needsText) return Boolean(shown && ((root.textContent ?? "").trim() || root.getAttribute("aria-label") || root.getAttribute("aria-labelledby")));
-              return shown || document.querySelector('[data-a11y-trigger][aria-expanded="true"]') !== null;
-            },
-            archetype === "live-region",
-            { timeout: 3000 },
-          );
+          await measure(`activate:${state}`, async () => {
+            if (archetype === "tooltip") await trigger.first().focus();
+            else await trigger.first().click();
+            await opened.page.waitForFunction(
+              (needsText) => {
+                const root = document.querySelector("[data-a11y-root]");
+                const shown = root && /** @type {HTMLElement} */ (root).getClientRects().length > 0;
+                // A live region can be on the page and empty until the trigger fills it, so wait for the message itself.
+                if (needsText) return Boolean(shown && ((root.textContent ?? "").trim() || root.getAttribute("aria-label") || root.getAttribute("aria-labelledby")));
+                return shown || document.querySelector('[data-a11y-trigger][aria-expanded="true"]') !== null;
+              },
+              archetype === "live-region",
+              { timeout: 3000 },
+            );
+          });
         } catch {
           failure = `The ${state} state never appeared after activating the trigger. A fixture's data-a11y-root has to show up when the ${archetype} opens.`;
         }
       }
-      await settleAnimations(opened.page);
+      await measure(`settle:${state}`, () => settleAnimations(opened.page, { finishFinite: fastFixture }));
       /** @type {TargetResult["archetypes"][string]["configs"][number]["tiers"]} */
       const tiers = {};
       for (const tier of plan.options.tiers) {
         if (tier === "interactions" || tier === "computed" || tier === "conditions") continue;
-        if (tier === "vsr") tiers.vsr = failure ? { status: "skipped", simulated: true, reason: failure } : await runVsr(opened.page, { scope: "body", state }).catch(failedVsr);
+        if (tier === "vsr") tiers.vsr = failure ? { status: "skipped", simulated: true, reason: failure } : await measure(`vsr:${state}`, () => runVsr(opened.page, { scope: "body", state }).catch(failedVsr));
         else if (failure) tiers.rules = { status: "failed", reason: failure, engines: Object.fromEntries(plan.options.engines.map((e) => [e, { status: "failed", reason: failure }])) };
         else {
-          tiers.rules = await runRules(opened.page, { engines: plan.options.engines, wcag: plan.options.wcag, level: plan.options.level, scope: index === 0 ? "#root" : ["#root", "[data-a11y-root]"] });
+          tiers.rules = await measure(`rules:${state}`, () => runRules(opened.page, { engines: plan.options.engines, wcag: plan.options.wcag, level: plan.options.level, scope: index === 0 ? "#root" : ["#root", "[data-a11y-root]"] }));
         }
-        if (tier === "rules") await captureRuleScreenshots(opened.page, tiers.rules, { enabled: plan.options.screenshots, outputDir, target: targetId, context: `${archetype}-${libA11y}-${state}` });
+        if (tier === "rules" && plan.options.screenshots) await measure(`screenshots:${state}`, () => captureRuleScreenshots(opened.page, tiers.rules, { enabled: true, outputDir, target: targetId, context: `${archetype}-${libA11y}-${state}` }));
       }
       configs.push({ libA11y: /** @type {FixtureConfig["libA11y"]} */ (libA11y), state, tiers });
       if (errors.length) return { gap: `The fixture logged errors in the ${state} state: ${errors[0]}` };
     }
     const hidden = notTestableEntries(await closedShadowHosts(opened.page));
     // The checks open their own fresh pages, so run them after this page's rules results are in.
-    if (plan.options.tiers.includes("interactions")) configs[0].tiers.interactions = await runInteractions(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, archetype);
-    if (plan.options.tiers.includes("computed")) configs[0].tiers.computed = await runComputed(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, archetype);
-    if (plan.options.tiers.includes("conditions")) configs[0].tiers.conditions = await runConditions(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, archetype);
+    if (plan.options.tiers.includes("interactions")) configs[0].tiers.interactions = await measure("interactions", () => runInteractions(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, archetype, { fastFixture, interactionConcurrency }));
+    if (plan.options.tiers.includes("computed")) configs[0].tiers.computed = await measure("computed", () => runComputed(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, archetype, { fastFixture }));
+    if (plan.options.tiers.includes("conditions")) configs[0].tiers.conditions = await measure("conditions", () => runConditions(browser, libA11y === "n/a" ? url : `${url}?libA11y=${libA11y}`, archetype, { fastFixture }));
     return { configs, hidden };
   } finally {
-    await opened.close();
+    await measure("cleanup", () => opened.close());
   }
 }
 
 /**
  * Audit one fixture. A library that ships opt-in accessibility features runs once for each `--lib-a11y` value, and each result carries its label.
- * @param {{ browser: import("playwright-core").Browser, url: string, archetype: string, plan: Plan, toggle: boolean, targetId: string, outputDir: string }} options
+ * @param {{ browser: import("playwright-core").Browser, url: string, archetype: string, plan: Plan, toggle: boolean, targetId: string, outputDir: string, fastFixture: boolean, interactionConcurrency: number, timed: PhaseTimer }} options
  * @returns {Promise<{ gap: string } | { configs: FixtureConfig[], hidden: string[] }>}
  */
-async function auditFixture({ browser, url, archetype, plan, toggle, targetId, outputDir }) {
+async function auditFixture({ browser, url, archetype, plan, toggle, targetId, outputDir, fastFixture, interactionConcurrency, timed }) {
   const values = toggle ? plan.options.libA11y : ["n/a"];
   /** @type {FixtureConfig[]} */
   const configs = [];
   /** @type {string[]} */
   const hidden = [];
   for (const libA11y of values) {
-    const outcome = await auditFixturePage({ browser, url, archetype, plan, libA11y, targetId, outputDir });
+    const outcome = await auditFixturePage({ browser, url, archetype, plan, libA11y, targetId, outputDir, fastFixture, interactionConcurrency, timed });
     if ("gap" in outcome) return { gap: toggle ? `With library accessibility ${libA11y}: ${outcome.gap}` : outcome.gap };
     configs.push(...outcome.configs);
     hidden.push(...outcome.hidden);
@@ -245,11 +251,20 @@ async function auditFixture({ browser, url, archetype, plan, toggle, targetId, o
 /**
  * Audit an npm package: install it on its own, find what it exports, and audit each archetype that has a fixture.
  * An archetype without a usable fixture is a gap with a reason, never a pass.
- * @param {{ browser: import("playwright-core").Browser, planTarget: Plan["targets"][number], plan: Plan, cwd: string, outputDir: string, install?: typeof installPackage }} options
+ * @param {{ browser: import("playwright-core").Browser, planTarget: Plan["targets"][number], plan: Plan, cwd: string, outputDir: string, install?: typeof installPackage, fastFixture?: boolean, interactionConcurrency?: number, onFixturePhase?: import("../commands/common.js").Io["onFixturePhase"] }} options
  * @returns {Promise<{ result: TargetResult, mapping: TargetMapping | null, files?: Record<string, string> }>}
  */
-export async function auditNpm({ browser, planTarget, plan, cwd, outputDir, install = installPackage }) {
+export async function auditNpm({ browser, planTarget, plan, cwd, outputDir, install = installPackage, fastFixture = false, interactionConcurrency = 1, onFixturePhase }) {
   install ??= installPackage;
+  /** @template T @param {string} phase @param {() => Promise<T>} task @returns {Promise<T>} */
+  const timed = async (phase, task) => {
+    const started = performance.now();
+    try {
+      return await task();
+    } finally {
+      onFixturePhase?.({ target: planTarget.id, phase, elapsedMs: performance.now() - started });
+    }
+  };
   /** @type {Omit<TargetResult, "status">} */
   const base = { id: planTarget.id, reason: null, archetypes: {}, summary: { engines: {}, gaps: [], notTestable: [] }, warnings: [] };
   const resolved = planTarget.resolved ?? {};
@@ -273,7 +288,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, outputDir, inst
     const sourcePath = resolved.sourcePath;
     const localSource = (sourceType === "directory" || sourceType === "tarball") && typeof sourcePath === "string" ? { sourceType: /** @type {"directory" | "tarball"} */ (sourceType), sourcePath } : undefined;
     if (resolved.sourcePath && !localSource) throw new Error(`The saved plan has an invalid local source for ${resolved.name}.`);
-    const installed = await install({ dir: workDir, name: resolved.name, version: resolved.version, flavor, ...(localSource ? { source: localSource } : {}), ...(localCompanions.length ? { companions: localCompanions } : {}) });
+    const installed = await timed("install", () => install({ dir: workDir, name: resolved.name, version: resolved.version, flavor, ...(localSource ? { source: localSource } : {}), ...(localCompanions.length ? { companions: localCompanions } : {}) }));
     const warnings = /** @type {string[]} */ ([...installed.warnings]);
     // What fixtures and templates import: the package, or the sub-path of it that was asked for.
     let importSpec = resolved.subpath ? `${resolved.name}/${resolved.subpath}` : resolved.name;
@@ -308,7 +323,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, outputDir, inst
     let context = adapterForKind(planTarget.kind)?.inspect?.(workDir, listed) ?? {};
 
     // Plain HTML has no exports or elements to list. What it loads came from the target itself.
-    let found = flavor === "html" ? { exports: [], tags: [], facts: {} } : await discover({ browser, workDir, flavor: flavor === "unknown" ? "wc" : flavor, pkg: importSpec, buildDir, warnings });
+    let found = flavor === "html" ? { exports: [], tags: [], facts: {} } : await timed("discover", () => discover({ browser, workDir, flavor: flavor === "unknown" ? "wc" : flavor, pkg: importSpec, buildDir, warnings, fastFixture }));
     if (flavor === "unknown") {
       if (found.tags.length > 0) flavor = "wc";
       else if (installed.react && found.exports.some((e) => /^[A-Z]/.test(e.name))) flavor = "react";
@@ -400,7 +415,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, outputDir, inst
       let generationTried = false;
       // Nothing authored and no template: build candidates from what the package exports, and keep one only if it works.
       if (!fixture && !user.fixture && plan.options.generate !== false && GENERATABLE.has(archetype) && !(entry.status === "no-match" && flavor === "wc")) {
-        const generated = await generateFixture({ browser, adapter, archetype, entry, found, explicit: Boolean(user.export), pkg: importSpec, tmp, workDir, buildDir, context, getServer, bundle: (options) => bundleWithPeers(options, warnings) });
+        const generated = await timed(`generate:${archetype}`, () => generateFixture({ browser, adapter, archetype, entry, found, explicit: Boolean(user.export), pkg: importSpec, tmp, workDir, buildDir, context, getServer, bundle: (options) => bundleWithPeers(options, warnings) }));
         attempts = generated.attempts;
         generationTried = attempts.length > 0;
         if (generated.ok && generated.winner) {
@@ -432,7 +447,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, outputDir, inst
       mkdirSync(join(tmp, "entries"), { recursive: true });
       writeFileSync(entryFile, adapter.entry(fixture, importSpec, context));
       try {
-        await bundleWithPeers({ entries: { [archetype]: entryFile }, outdir: buildDir, workDir, framework: adapter }, warnings);
+        await timed(`bundle:${archetype}`, () => bundleWithPeers({ entries: { [archetype]: entryFile }, outdir: buildDir, workDir, framework: adapter }, warnings));
         runnable[archetype] = `/${archetype}.html`;
         sources[archetype] = source;
       } catch (error) {
@@ -447,7 +462,7 @@ export async function auditNpm({ browser, planTarget, plan, cwd, outputDir, inst
       const live = await serveStatic(buildDir);
       servers.push(live);
       for (const [archetype, path] of Object.entries(runnable)) {
-        const outcome = await auditFixture({ browser, url: `${live.origin}${path}`, archetype, plan, toggle: mapping[archetype].libA11y === true, targetId: planTarget.id, outputDir }).catch((error) => ({ gap: firstLine(error) }));
+        const outcome = await timed(`audit:${archetype}`, () => auditFixture({ browser, url: `${live.origin}${path}`, archetype, plan, toggle: mapping[archetype].libA11y === true, targetId: planTarget.id, outputDir, fastFixture, interactionConcurrency, timed })).catch((error) => ({ gap: firstLine(error) }));
         const fixtureInfo = sources[archetype];
         if ("gap" in outcome) {
           archetypes[archetype] = { status: "gap", reason: outcome.gap, configs: [], ...(fixtureInfo?.attempts?.length ? { fixture: { source: "none", attempts: fixtureInfo.attempts } } : {}) };

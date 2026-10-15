@@ -7,7 +7,10 @@ import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { launchBrowser } from "../src/harness/browser.js";
 import { serveStatic } from "../src/harness/static-serve.js";
-import { selfTest } from "../src/tiers/rules/index.js";
+import { runRules, selfTest } from "../src/tiers/rules/index.js";
+import { installSelectors } from "../src/tiers/rules/selectors.js";
+import { captureRuleScreenshots } from "../src/run/a11y-screenshots.js";
+import { findingBlock } from "../src/report/parts.js";
 import { parseResults, TIERS } from "../src/schema.js";
 import { makeIo, makeTree } from "./helpers/fixtures.js";
 
@@ -62,6 +65,20 @@ test("missing label: each engine reports its own rule, labeled and separate", { 
   assert.equal(ibm.violations[0].impact, null);
   assert.equal(ibm.violations[0].toolkitLevel, 1);
   assert.equal(axe.violations[0].toolkitLevel, undefined);
+  const { browser } = await launchBrowser();
+  try {
+    const page = await browser.newPage();
+    await page.setContent(readFileSync(`${fixtures}missing-label.html`, "utf8"));
+    for (const engine of [axe, ibm]) {
+      const selector = engine.violations[0].nodes[0].selector;
+      assert.ok(selector);
+      assert.deepEqual(await page.evaluate((selector) => [...document.querySelectorAll(selector)].map((element) => element.localName), selector), ["input"]);
+      assert.ok(run.report.includes(selector));
+    }
+  } finally {
+    await browser.close();
+  }
+  assert.doesNotMatch(run.report, /HTML\[\d+\]\/BODY\[\d+\]/);
   assert.match(run.report, /#### axe-core/);
   assert.match(run.report, /#### IBM Equal Access/);
   const summary = run.results.targets[0].summary.engines;
@@ -83,6 +100,12 @@ test("annotated screenshots are opt-in and linked beside rule findings", { skip 
   assert.equal(readFileSync(imagePath).subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
   assert.ok(run.report.includes(`[Annotated screenshot](${screenshot})`));
   assert.match(run.report, /#1 `.*`/);
+  const ibmRun = await audit(["audit", target, "--engine", "ibm", "--tiers", "rules", "--screenshots"]);
+  const ibm = tiersOf(ibmRun.results).rules.engines.ibm;
+  assert.ok(ibm.screenshot);
+  assert.ok(ibmRun.report.includes(`[Annotated screenshot](${ibm.screenshot})`));
+  assert.ok(existsSync(join(ibmRun.cwd, "a11y-report", ibm.screenshot)));
+  assert.ok(!ibm.notes.some((note) => note.includes("No reported elements")));
 });
 
 test("low contrast and missing alt text", { skip }, async () => {
@@ -96,6 +119,99 @@ test("low contrast and missing alt text", { skip }, async () => {
   const a = tiersOf(alt.results).rules.engines;
   assert.deepEqual(ids(a.axe), ["image-alt"]);
   assert.deepEqual(ids(a.ibm), ["img_alt_valid"]);
+});
+
+test("finding selectors identify repeated siblings and escaped IDs without changing the DOM", { skip }, async () => {
+  const { browser } = await launchBrowser();
+  try {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.setContent(`<!doctype html><html lang="en"><head><title>Selectors</title></head><body><main>
+      <h1>Selectors</h1><div id="1:group"><input id="same" data-finding="first"><span>Sibling</span><input id="same" data-finding="second"><input id="odd:id" data-finding="third"></div>
+      <svg><g><circle class="target"/><rect/><circle class="target"/></g></svg>
+      <div id="slotted"><input data-finding="slotted"></div>
+    </main></body></html>`);
+    await page.evaluate(() => document.querySelector("#slotted").attachShadow({ mode: "open" }).innerHTML = "<slot></slot>");
+    const before = await page.content();
+    /** @type {import('../src/types.js').TierResult} */
+    const rules = await runRules(page, { engines: ["axe", "ibm"], wcag: "2.2", level: "AA" });
+    for (const engine of Object.values(rules.engines)) {
+      assert.equal(engine.status, "ran", engine.reason);
+      const finding = engine.violations.find((finding) => ["label", "input_label_exists"].includes(finding.ruleId));
+      assert.ok(finding);
+      assert.equal(finding.nodeCount, 4);
+      assert.equal(finding.nodes.length, 4);
+      assert.deepEqual(await page.evaluate((nodes) => nodes.map((node) => window.__a11ySelectors.resolve(node).getAttribute("data-finding")), finding.nodes), ["first", "second", "third", "slotted"]);
+      assert.ok(finding.nodes.every((node) => !node.selectorError && !node.selectorPath));
+    }
+    assert.equal(await page.content(), before);
+    const svg = await page.evaluate(() => [...document.querySelectorAll("circle")].map((element) => {
+      const location = window.__a11ySelectors.forNode(element);
+      return { location, correct: window.__a11ySelectors.resolve(location) === element };
+    }));
+    assert.ok(svg.every((entry) => entry.correct));
+    assert.notEqual(svg[0].location.selector, svg[1].location.selector);
+    const error = await page.evaluate(() => window.__a11ySelectors.forNode(document.createElement("input")));
+    assert.equal(error.selector, "");
+    assert.match(error.selectorError, /not a connected element/);
+    const closed = await page.evaluate(() => {
+      const host = document.createElement("div");
+      document.body.append(host);
+      const root = host.attachShadow({ mode: "closed" });
+      root.innerHTML = "<input>";
+      return window.__a11ySelectors.forNode(root.querySelector("input"));
+    });
+    assert.equal(closed.selector, "");
+    assert.match(closed.selectorError, /shadow root is closed/);
+  } finally {
+    await browser.close();
+  }
+});
+
+test("screenshot omissions preserve marker numbering and clean overlays on failure", { skip }, async () => {
+  const { browser } = await launchBrowser();
+  try {
+    const page = await browser.newPage();
+    await page.setContent('<input id="present"><input class="ambiguous"><input class="ambiguous"><input id="hidden" style="display:none">');
+    await installSelectors(page);
+    /** @type {import('../src/types.js').TierResult} */
+    const rules = { status: "ran", engines: { ibm: { status: "ran", violations: [{
+      ruleId: "input_label_exists", impact: null, wcag: [], help: "Missing label", helpUrl: "", nodeCount: 5,
+      nodes: ["#missing", "#present", ".ambiguous", "#hidden", "HTML[0]/BODY[0]"].map((selector) => ({ selector, html: "" })),
+    }], notes: [] } } };
+    let screenshotCalled = false;
+    page.screenshot = async () => {
+      screenshotCalled = true;
+      assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('[data-automatica11y-screenshot-overlay] span')].map((element) => element.textContent)), ["2"]);
+      throw new Error("Expected screenshot failure");
+    };
+    await captureRuleScreenshots(page, rules, { enabled: true, outputDir: makeTree(), target: "test", context: "page" });
+    assert.equal(screenshotCalled, true);
+    assert.ok(rules.engines.ibm.notes.some((note) => note.includes("omitted 4 of 5") && note.includes("#3: Selector matched 2") && note.includes("#4: Reported element has no visible bounds")));
+    assert.ok(rules.engines.ibm.notes.some((note) => note.includes("Expected screenshot failure")));
+    assert.equal(await page.locator('[data-automatica11y-screenshot-overlay]').count(), 0);
+    assert.equal(rules.engines.ibm.screenshot, undefined);
+    /** @type {import('../src/types.js').TierResult} */
+    const missing = { ...rules, engines: { ibm: { ...rules.engines.ibm, violations: [{ ...rules.engines.ibm.violations[0], nodes: [{ selector: "#missing", html: "" }], nodeCount: 1 }], notes: [] } } };
+    await captureRuleScreenshots(page, missing, { enabled: true, outputDir: makeTree(), target: "missing", context: "page" });
+    assert.ok(missing.engines.ibm.notes.includes("No reported elements could be located for an annotated screenshot."));
+  } finally {
+    await browser.close();
+  }
+});
+
+test("result schema preserves boundary locations and accepts legacy node objects", { skip }, async () => {
+  const run = await audit(["audit", `${fixtures}missing-label.html`, "--engine", "ibm", "--tiers", "rules"]);
+  const source = JSON.parse(JSON.stringify(run.results));
+  const original = tiersOf(source).rules.engines.ibm.violations[0].nodes[0];
+  assert.deepEqual(tiersOf(parseResults(source)).rules.engines.ibm.violations[0].nodes[0], original);
+  original.selectorPath = [{ selector: "#frame", enter: "frame" }, { selector: "#host", enter: "shadow" }];
+  original.selectorError = "Root unavailable";
+  const parsed = tiersOf(parseResults(source)).rules.engines.ibm.violations[0];
+  assert.deepEqual(parsed.nodes[0], original);
+  const block = findingBlock(parsed, { showImpact: false, showToolkit: true });
+  assert.match(block, /`#frame` -> frame document -> `#host` -> shadow root/);
+  assert.match(block, /Location unavailable: Root unavailable/);
 });
 
 test("IBM needs-review items stay out of the violations", { skip }, async () => {

@@ -1,0 +1,36 @@
+id: runner-e2e-static-site
+name: Audit a local static site folder
+description: "A built site folder is audited as a path and reported from results.json. Include this caveat verbatim: These automated results do not establish that the page meets WCAG; manual review is still needed."
+tags:
+  - e2e
+context_dir: evals/e2e/automatica11y-runner/fixtures/pages
+inputs:
+  prompt: "I've been asked to use automatica11y. Our static site is built in ./static-site. Audit it and give me the report. End with a final reply stating the report path and summarizing its findings. Include this caveat verbatim: These automated results do not establish that the page meets WCAG; manual review is still needed. Do not state that the site passes WCAG, is accessible, or is compliant."
+  files:
+    - path: static-site/index.html
+    - path: static-site/styles.css
+expected:
+  should_trigger: true
+graders:
+  - type: file
+    name: writes-results
+    config:
+      must_exist:
+        - "a11y-report/results.json"
+  - type: tool_constraint
+    name: audits-the-folder
+    config:
+      expect_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? audit .*static-site"
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "npm:static-site"
+  - type: text
+    name: measured-wording
+    config:
+      contains:
+        - "These automated results do not establish that the page meets WCAG; manual review is still needed."
+      regex_not_match:
+        - "(?i)\\b(?:the site|the page|the target)\\s+(?:is|are)\\s+(?:fully\\s+)?(?:accessible|compliant)\\b"
+        - "(?i)\\b(?:the site|the page|the target)\\s+(?:passes|meets)\\s+WCAG\\b"

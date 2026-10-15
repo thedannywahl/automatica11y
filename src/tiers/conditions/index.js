@@ -14,12 +14,13 @@ const TIMEOUT_MS = 60_000;
  * @param {import("playwright-core").Browser} browser
  * @param {string} url
  * @param {string} archetype An archetype name for a fixture, or "page" for a whole page.
+ * @param {{ fastFixture?: boolean }} [options]
  */
-export async function runConditions(browser, url, archetype) {
+export async function runConditions(browser, url, archetype, { fastFixture = false } = {}) {
   const checks = conditionChecksFor(archetype);
   const results = [];
   for (let start = 0; start < checks.length; start += 3) {
-    results.push(...await Promise.all(checks.slice(start, start + 3).map((check) => runCheck(browser, url, check, { kits: [installHelpers, installMeasure, installConditions], needsTrigger: archetype !== "page", timeoutMs: TIMEOUT_MS, waitUntil: archetype === "page" ? "networkidle" : "load" }))));
+    results.push(...await Promise.all(checks.slice(start, start + 3).map((check) => runCheck(browser, url, check, { kits: [installHelpers, installMeasure, installConditions], needsTrigger: archetype !== "page", timeoutMs: TIMEOUT_MS, waitUntil: archetype === "page" ? "networkidle" : "load", fastFixture: fastFixture && check.name !== "reduced-motion-respected" }))));
   }
   return { status: "ran", checks: results };
 }

@@ -22,6 +22,16 @@ Checks in the interactions, computed, and conditions tiers report one of these:
 
 axe-core and IBM Equal Access findings are listed under their own names, and their counts are never added together. axe-core's `impact` and IBM's Toolkit level are different scales and aren't converted into each other. Computed checks and conditions checks are reported on their own as well, because they are automatica11y's own measurements.
 
+## Finding selectors.
+
+Both engines provide a CSS `selector` for each stored finding node in `results.json`, and the report shows the same location. Ordinary document selectors can be used with `document.querySelector(selector)`. IBM's indexed DOM display paths are replaced with selectors generated from its reported elements.
+
+For open shadow roots and same-origin frames, a node also has `selectorPath`: an ordered array of `{ selector, enter }` steps. Starting at the audited document, query each step's selector, then enter its `shadowRoot` when `enter` is `"shadow"`, or its `contentDocument` when `enter` is `"frame"`. Query the node's final `selector` within the resulting root. The report labels these boundaries explicitly; a single document-level query cannot cross them.
+
+Selectors identify elements at audit time, not after arbitrary page changes. A location that cannot be resolved has `selectorError`, which the report shows without discarding the finding. Closed shadow roots remain not testable; cross-origin frame traversal is unsupported.
+
+Optional annotated screenshots use these same locations. Notes identify nodes omitted because their locations are unresolved or have no visible bounds, including partial omissions. Marker numbers follow the stored violation nodes, so an omitted node can leave a gap in the numbering.
+
 ## CI outcome.
 
 When a CI policy is enabled, the report includes its outcome and lists coverage gaps, review findings, and non-rule check failures separately. `results.json` exposes the same information under `outcome`, alongside the independent engine threshold results in `failCheck`.

@@ -22,7 +22,7 @@ export function makeFakeBrowser(version = "200.0.4567.89") {
   return path;
 }
 
-/** Collect what the CLI writes. */
+/** Collect CLI output. fastFixture and interactionConcurrency are explicit test-only options for reviewed fixtures. */
 /** @param {Partial<import("../../src/commands/common.js").Io>} [overrides] */
 export function makeIo(overrides = {}) {
   const out = { stdout: "", stderr: "" };

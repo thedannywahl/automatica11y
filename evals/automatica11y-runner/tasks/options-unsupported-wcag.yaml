@@ -1,0 +1,33 @@
+id: runner-options-unsupported-wcag
+name: An unsupported WCAG version is named, not substituted
+description: WCAG 3.0 isn't supported, so the runner names it, lists the supported versions, and asks which to use.
+tags:
+  - options
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit https://example.com against WCAG 3.0."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: lists-supported-versions
+    config:
+      contains:
+        - "2.0"
+        - "2.1"
+        - "2.2"
+      regex_match:
+        - "(?i)(unsupported|not supported|isn't supported|doesn't support|does not support|only .*2\\.0.*2\\.1.*2\\.2|not one of)"
+      not_contains:
+        - "--wcag 3"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

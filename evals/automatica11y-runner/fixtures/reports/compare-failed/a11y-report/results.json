@@ -1,0 +1,570 @@
+{
+  "schema": 1,
+  "planRef": "plan.json",
+  "runAt": "2026-10-14T19:07:05.243Z",
+  "tools": {
+    "node": "24.22.0",
+    "automatica11y": "0.9.0",
+    "axe-core": "4.14.0",
+    "ibm-checker-engine": "4.0.34",
+    "playwright-core": "1.64.0",
+    "esbuild": "0.28.2",
+    "guidepup-vsr": "0.33.0",
+    "chromium": "155.0.8059.80"
+  },
+  "targets": [
+    {
+      "id": "home",
+      "status": "ran",
+      "reason": null,
+      "archetypes": {
+        "page": {
+          "status": "ran",
+          "configs": [
+            {
+              "libA11y": "n/a",
+              "tiers": {
+                "rules": {
+                  "status": "ran",
+                  "reason": null,
+                  "engines": {
+                    "axe": {
+                      "status": "ran",
+                      "version": "4.14.0",
+                      "config": {
+                        "tags": [
+                          "wcag2a",
+                          "wcag2aa",
+                          "wcag21a",
+                          "wcag21aa",
+                          "wcag22aa"
+                        ]
+                      },
+                      "violations": [],
+                      "incomplete": [],
+                      "passesCount": 15,
+                      "notes": []
+                    },
+                    "ibm": {
+                      "status": "ran",
+                      "version": "4.0.34",
+                      "config": {
+                        "ruleset": "WCAG_2_2",
+                        "levels": [
+                          "A",
+                          "AA"
+                        ]
+                      },
+                      "violations": [],
+                      "incomplete": [
+                        {
+                          "ruleId": "style_color_misuse",
+                          "impact": null,
+                          "toolkitLevel": 2,
+                          "kind": "potential",
+                          "wcag": [
+                            "1.4.1"
+                          ],
+                          "help": "Verify color is not used as the only visual means of conveying information",
+                          "helpUrl": "https://able.ibm.com/rules/archives/latest/doc/en-US/style_color_misuse.html",
+                          "nodeCount": 1,
+                          "nodes": [
+                            {
+                              "selector": "html:nth-of-type(1) > body:nth-of-type(1) > main:nth-of-type(1) > p:nth-of-type(1)",
+                              "html": "<p style=\"color:#222;background:#fff\">"
+                            }
+                          ]
+                        },
+                        {
+                          "ruleId": "style_highcontrast_visible",
+                          "impact": null,
+                          "toolkitLevel": 1,
+                          "kind": "manual",
+                          "wcag": [
+                            "1.1.1",
+                            "1.3.2",
+                            "1.4.11"
+                          ],
+                          "help": "Confirm Windows high contrast mode is supported when using CSS to include, position or alter non-decorative content",
+                          "helpUrl": "https://able.ibm.com/rules/archives/latest/doc/en-US/style_highcontrast_visible.html",
+                          "nodeCount": 1,
+                          "nodes": [
+                            {
+                              "selector": "html:nth-of-type(1) > body:nth-of-type(1) > main:nth-of-type(1) > form:nth-of-type(1) > button:nth-of-type(1)",
+                              "html": "<button style=\"min-width:44px;min-height:44px\" type=\"submit\">"
+                            }
+                          ]
+                        }
+                      ],
+                      "passesCount": 42,
+                      "notes": []
+                    }
+                  }
+                },
+                "interactions": {
+                  "status": "not-applicable",
+                  "reason": "Interaction checks need an archetype fixture with trigger and root hooks. Page and Storybook targets don't have them."
+                },
+                "computed": {
+                  "status": "not-applicable",
+                  "reason": "Computed checks need an archetype fixture with a trigger hook. Page and Storybook targets don't have one."
+                },
+                "conditions": {
+                  "status": "ran",
+                  "checks": [
+                    {
+                      "name": "reduced-motion-respected",
+                      "criteria": [
+                        "2.3.3",
+                        "2.2.2"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "No animations or transitions were running at load or after the trigger was pressed, so there's nothing to reduce. Motion driven by JavaScript timers isn't visible to this check."
+                    },
+                    {
+                      "name": "dark-mode-contrast",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-color-scheme: dark, so it doesn't adapt to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "more-contrast-respected",
+                      "criteria": [
+                        "1.4.3",
+                        "1.4.6"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-contrast: more, so it doesn't respond to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "less-contrast-stays-readable",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-contrast: less, so it doesn't respond to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "reduced-transparency-respected",
+                      "criteria": [
+                        "1.4.3",
+                        "1.4.11"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "No surface that holds text is see-through (no translucent background and no backdrop filter), so there's nothing to reduce. Empty overlays aren't counted."
+                    },
+                    {
+                      "name": "forced-colors-focus-visible",
+                      "criteria": [
+                        "1.4.11",
+                        "2.4.7"
+                      ],
+                      "result": "pass",
+                      "detail": "With forced colors on, the focus indicator is visible: 344 of 688 changed pixels reach 3:1 against their unfocused color.",
+                      "method": "pixels",
+                      "measurements": [
+                        {
+                          "changedPixels": 688,
+                          "pixelsAtLeast3to1": 344,
+                          "perimeterPixels": 348,
+                          "forcedColorOptOuts": 0
+                        }
+                      ]
+                    },
+                    {
+                      "name": "reflow-at-320px",
+                      "criteria": [
+                        "1.4.10"
+                      ],
+                      "result": "pass",
+                      "detail": "In a 320px window, nothing reaches past the right edge and the page doesn't scroll sideways.",
+                      "measurements": [
+                        {
+                          "viewportWidth": 320,
+                          "scrollWidth": 320,
+                          "overflowingElements": 0
+                        }
+                      ]
+                    },
+                    {
+                      "name": "text-spacing-no-clipping",
+                      "criteria": [
+                        "1.4.12"
+                      ],
+                      "result": "pass",
+                      "detail": "With line height 1.5, letter spacing 0.12em, word spacing 0.16em, and paragraph spacing 2em, no element cut off its text (nine elements checked). Overlapping text isn't checked.",
+                      "measurements": [
+                        {
+                          "elementsChecked": 9,
+                          "clipped": 0
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "vsr": {
+                  "status": "ran",
+                  "simulated": true,
+                  "version": "0.33.0",
+                  "log": [
+                    {
+                      "state": null,
+                      "announcements": [
+                        "document",
+                        "main",
+                        "heading, Clean page, level 1",
+                        "image, Company logo",
+                        "form",
+                        "Name",
+                        "textbox, Name",
+                        "button, Save",
+                        "end of form",
+                        "paragraph",
+                        "Readable text.",
+                        "end of paragraph",
+                        "link, About us",
+                        "end of main",
+                        "end of document"
+                      ],
+                      "reachedEnd": true,
+                      "truncated": false
+                    }
+                  ],
+                  "flags": [],
+                  "notTestable": [],
+                  "notes": []
+                }
+              }
+            }
+          ]
+        }
+      },
+      "summary": {
+        "engines": {
+          "axe": {
+            "status": "ran",
+            "violations": 0,
+            "needsReview": 0,
+            "violationsByImpact": {
+              "critical": 0,
+              "serious": 0,
+              "moderate": 0,
+              "minor": 0
+            }
+          },
+          "ibm": {
+            "status": "ran",
+            "violations": 0,
+            "needsReview": 2,
+            "violationsByToolkitLevel": {
+              "1": 0,
+              "2": 0,
+              "3": 0,
+              "4": 0
+            }
+          }
+        },
+        "gaps": [],
+        "notTestable": [],
+        "conditions": {
+          "pass": 3,
+          "fail": 0,
+          "undetermined": 0,
+          "notApplicable": 5,
+          "error": 0
+        },
+        "vsr": {
+          "walks": 1,
+          "flagged": 0
+        }
+      },
+      "warnings": []
+    },
+    {
+      "id": "about",
+      "status": "ran",
+      "reason": null,
+      "archetypes": {
+        "page": {
+          "status": "ran",
+          "configs": [
+            {
+              "libA11y": "n/a",
+              "tiers": {
+                "rules": {
+                  "status": "ran",
+                  "reason": null,
+                  "engines": {
+                    "axe": {
+                      "status": "ran",
+                      "version": "4.14.0",
+                      "config": {
+                        "tags": [
+                          "wcag2a",
+                          "wcag2aa",
+                          "wcag21a",
+                          "wcag21aa",
+                          "wcag22aa"
+                        ]
+                      },
+                      "violations": [
+                        {
+                          "ruleId": "image-alt",
+                          "impact": "critical",
+                          "wcag": [
+                            "1.1.1"
+                          ],
+                          "tags": [
+                            "wcag2a",
+                            "wcag111"
+                          ],
+                          "help": "Images must have alternative text",
+                          "helpUrl": "https://dequeuniversity.com/rules/axe/4.14/image-alt?application=playwright",
+                          "nodeCount": 1,
+                          "nodes": [
+                            {
+                              "selector": "img",
+                              "html": "<img src=\"logo.png\">"
+                            }
+                          ]
+                        }
+                      ],
+                      "incomplete": [],
+                      "passesCount": 6,
+                      "notes": []
+                    },
+                    "ibm": {
+                      "status": "ran",
+                      "version": "4.0.34",
+                      "config": {
+                        "ruleset": "WCAG_2_2",
+                        "levels": [
+                          "A",
+                          "AA"
+                        ]
+                      },
+                      "violations": [
+                        {
+                          "ruleId": "img_alt_valid",
+                          "impact": null,
+                          "toolkitLevel": 1,
+                          "wcag": [
+                            "1.1.1"
+                          ],
+                          "help": "The image has neither an accessible name nor is marked as decorative or redundant",
+                          "helpUrl": "https://able.ibm.com/rules/archives/latest/doc/en-US/img_alt_valid.html",
+                          "nodeCount": 1,
+                          "nodes": [
+                            {
+                              "selector": "html:nth-of-type(1) > body:nth-of-type(1) > main:nth-of-type(1) > img:nth-of-type(1)",
+                              "html": "<img src=\"logo.png\">"
+                            }
+                          ]
+                        }
+                      ],
+                      "incomplete": [],
+                      "passesCount": 17,
+                      "notes": []
+                    }
+                  }
+                },
+                "interactions": {
+                  "status": "not-applicable",
+                  "reason": "Interaction checks need an archetype fixture with trigger and root hooks. Page and Storybook targets don't have them."
+                },
+                "computed": {
+                  "status": "not-applicable",
+                  "reason": "Computed checks need an archetype fixture with a trigger hook. Page and Storybook targets don't have one."
+                },
+                "conditions": {
+                  "status": "ran",
+                  "checks": [
+                    {
+                      "name": "reduced-motion-respected",
+                      "criteria": [
+                        "2.3.3",
+                        "2.2.2"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "No animations or transitions were running at load or after the trigger was pressed, so there's nothing to reduce. Motion driven by JavaScript timers isn't visible to this check."
+                    },
+                    {
+                      "name": "dark-mode-contrast",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-color-scheme: dark, so it doesn't adapt to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "more-contrast-respected",
+                      "criteria": [
+                        "1.4.3",
+                        "1.4.6"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-contrast: more, so it doesn't respond to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "less-contrast-stays-readable",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-contrast: less, so it doesn't respond to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "reduced-transparency-respected",
+                      "criteria": [
+                        "1.4.3",
+                        "1.4.11"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "No surface that holds text is see-through (no translucent background and no backdrop filter), so there's nothing to reduce. Empty overlays aren't counted."
+                    },
+                    {
+                      "name": "forced-colors-focus-visible",
+                      "criteria": [
+                        "1.4.11",
+                        "2.4.7"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "Nothing on the page takes keyboard focus, so there's no focus indicator to check."
+                    },
+                    {
+                      "name": "reflow-at-320px",
+                      "criteria": [
+                        "1.4.10"
+                      ],
+                      "result": "pass",
+                      "detail": "In a 320px window, nothing reaches past the right edge and the page doesn't scroll sideways.",
+                      "measurements": [
+                        {
+                          "viewportWidth": 320,
+                          "scrollWidth": 320,
+                          "overflowingElements": 0
+                        }
+                      ]
+                    },
+                    {
+                      "name": "text-spacing-no-clipping",
+                      "criteria": [
+                        "1.4.12"
+                      ],
+                      "result": "pass",
+                      "detail": "With line height 1.5, letter spacing 0.12em, word spacing 0.16em, and paragraph spacing 2em, no element cut off its text (three elements checked). Overlapping text isn't checked.",
+                      "measurements": [
+                        {
+                          "elementsChecked": 3,
+                          "clipped": 0
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "vsr": {
+                  "status": "ran",
+                  "simulated": true,
+                  "version": "0.33.0",
+                  "log": [
+                    {
+                      "state": null,
+                      "announcements": [
+                        "document",
+                        "main",
+                        "heading, Missing alt text, level 1",
+                        "image",
+                        "end of main",
+                        "end of document"
+                      ],
+                      "reachedEnd": true,
+                      "truncated": false
+                    }
+                  ],
+                  "flags": [
+                    {
+                      "type": "unnamed-control",
+                      "phrase": "image",
+                      "index": 3,
+                      "state": null
+                    }
+                  ],
+                  "notTestable": [],
+                  "notes": []
+                }
+              }
+            }
+          ]
+        }
+      },
+      "summary": {
+        "engines": {
+          "axe": {
+            "status": "ran",
+            "violations": 1,
+            "needsReview": 0,
+            "violationsByImpact": {
+              "critical": 1,
+              "serious": 0,
+              "moderate": 0,
+              "minor": 0
+            }
+          },
+          "ibm": {
+            "status": "ran",
+            "violations": 1,
+            "needsReview": 0,
+            "violationsByToolkitLevel": {
+              "1": 1,
+              "2": 0,
+              "3": 0,
+              "4": 0
+            }
+          }
+        },
+        "gaps": [],
+        "notTestable": [],
+        "conditions": {
+          "pass": 2,
+          "fail": 0,
+          "undetermined": 0,
+          "notApplicable": 6,
+          "error": 0
+        },
+        "vsr": {
+          "walks": 1,
+          "flagged": 1
+        }
+      },
+      "warnings": []
+    },
+    {
+      "id": "offline",
+      "status": "failed",
+      "reason": "The URL didn't respond: fetch failed",
+      "archetypes": {},
+      "summary": {
+        "engines": {},
+        "gaps": [],
+        "notTestable": []
+      },
+      "warnings": []
+    }
+  ],
+  "failCheck": null,
+  "outcome": {
+    "status": "passed",
+    "coverage": [
+      "offline: failed: The URL didn't respond: fetch failed"
+    ],
+    "review": [
+      "home/page/0/ibm: style_color_misuse",
+      "home/page/0/ibm: style_highcontrast_visible",
+      "about/page/0/vsr: image"
+    ],
+    "checks": []
+  },
+  "warnings": []
+}

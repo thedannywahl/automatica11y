@@ -1,5 +1,7 @@
 import { VIEWPORT } from "../../harness/browser.js";
 import { openPage } from "../../harness/url.js";
+import { settleAnimations } from "../../harness/settle.js";
+import { mapPool } from "../../run/pool.js";
 import { ARCHETYPE_CHECKS, COMMON } from "./archetypes.js";
 import { installHelpers } from "./helpers.js";
 
@@ -9,10 +11,12 @@ const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 /**
  * Everything a check can do, bound to one fresh page.
+ * fastFixture is only for reviewed repository fixtures. Explicit observation windows always retain their duration.
  * @param {import("../../types.js").Page} page
+ * @param {{ fastFixture?: boolean }} [options]
  * @returns {import("../../types.js").CheckContext}
  */
-export function makeContext(page) {
+export function makeContext(page, { fastFixture = false } = {}) {
   /** @type {import("../../types.js").CheckContext} */
   const ctx = {
     page,
@@ -20,6 +24,13 @@ export function makeContext(page) {
     snap: () => page.evaluate(() => window.__a11y.snapshot()),
     items: (selector) => page.evaluate((s) => window.__a11y.items(s), selector),
     async settle(ms = 60) {
+      if (fastFixture) {
+        await settleAnimations(page, { finishFinite: true });
+        return;
+      }
+      await ctx.observe(ms);
+    },
+    async observe(ms) {
       await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
       await sleep(ms);
     },
@@ -76,29 +87,35 @@ export function makeContext(page) {
  * @param {import("../../types.js").Browser} browser
  * @param {string} url
  * @param {import("../../types.js").Check} check
- * @param {{ timeoutMs?: number, kits?: Array<() => void>, needsTrigger?: boolean, waitUntil?: "load" | "networkidle" }} [options]
+ * @param {{ timeoutMs?: number, kits?: Array<() => void>, needsTrigger?: boolean, waitUntil?: "load" | "networkidle", fastFixture?: boolean }} [options]
  * @returns {Promise<import("../../types.js").CheckResult>}
  */
-export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_MS, kits = [installHelpers], needsTrigger = true, waitUntil = /** @type {"load" | "networkidle"} */ ("load") } = {}) {
+export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_MS, kits = [installHelpers], needsTrigger = true, waitUntil = /** @type {"load" | "networkidle"} */ ("load"), fastFixture = false } = {}) {
   /** @type {Awaited<ReturnType<typeof openPage>> | null} */
   let opened = null;
   /** @type {Array<Awaited<ReturnType<typeof openPage>>>} */
   const variants = [];
   /** @type {ReturnType<typeof setTimeout> | undefined} */
   let timeout;
+  let finished = false;
   /** @param {import("../../types.js").Page} page */
   const beforeGoto = async (page) => { for (const kit of kits) await page.addInitScript(kit); };
   try {
     opened = await openPage(browser, url, { beforeGoto, waitUntil });
-    const ctx = makeContext(opened.page);
+    const ctx = makeContext(opened.page, { fastFixture });
     /**
      * Open the same page again with other browser settings (reduced motion, dark mode, a narrow window), and get a context for it.
      * It closes with the check.
      */
     ctx.variant = async (options) => {
+      if (finished) throw new Error("The check finished before its variant could open.");
       const other = await openPage(browser, url, { ...options, beforeGoto, waitUntil });
+      if (finished) {
+        await other.close();
+        throw new Error("The check finished while its variant was opening.");
+      }
       variants.push(other);
-      return makeContext(other.page);
+      return makeContext(other.page, { fastFixture });
     };
     if (needsTrigger) await ctx.trigger.waitFor({ state: "attached", timeout: 3000 });
     const outcome = await Promise.race([
@@ -109,6 +126,7 @@ export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_
   } catch (error) {
     return { name: check.name, criteria: check.criteria, result: "error", detail: `The check couldn't finish: ${(error instanceof Error ? error.message : String(error)).split("\n")[0]}` };
   } finally {
+    finished = true;
     clearTimeout(timeout);
     await opened?.close();
     for (const other of variants) await other.close();
@@ -121,12 +139,13 @@ export async function runCheck(browser, url, check, { timeoutMs = CHECK_TIMEOUT_
  * @param {import("playwright-core").Browser} browser
  * @param {string} url
  * @param {string} archetype
+ * @param {{ fastFixture?: boolean, interactionConcurrency?: number }} [options]
  */
-export async function runInteractions(browser, url, archetype) {
+export async function runInteractions(browser, url, archetype, { fastFixture = false, interactionConcurrency = 1 } = {}) {
+  if (![1, 2].includes(interactionConcurrency)) throw new Error("interactionConcurrency must be 1 or 2.");
   if (archetype === "chart") return { status: "not-applicable", reason: "No interaction checks are defined for the chart archetype." };
   const checks = [...COMMON, ...(ARCHETYPE_CHECKS[archetype] ?? [])];
-  const results = [];
-  for (const check of checks) results.push(await runCheck(browser, url, check));
+  const results = await mapPool(checks, interactionConcurrency, (check) => runCheck(browser, url, check, { fastFixture }));
   return { status: "ran", checks: results };
 }
 

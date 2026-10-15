@@ -1,0 +1,22 @@
+id: runner-alt-text-authoring
+name: Alt text authoring leaves runner idle
+description: Writing alt text is authoring, not testing, so the runner stays idle.
+tags:
+  - alt-text-authoring
+inputs:
+  prompt: "Write alt text for a product photo of red canvas sneakers on a white background."
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: avoids-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: negative
+      threshold: 0.6
+  - type: text
+    name: runs-nothing
+    config:
+      not_contains:
+        - "automatica11y"
+        - "npx --yes"
