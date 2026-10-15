@@ -213,6 +213,31 @@ test("release policy permits only generated version bookkeeping", () => {
   assert.throws(() => validateVersionDiff(changes, altered, "base", "head"), /only change the manifest version/);
 });
 
+test("release policy permits exact generated eval updates and rejects unrelated edits", () => {
+  const manifest = { name: "automatica11y", version: "0.9.0" };
+  const version = "0.10.0";
+  const skillPath = "skills/automatica11y-runner/SKILL.md";
+  const skill = updateRunnerSkillVersion(readFileSync(join(root, skillPath), "utf8"), manifest.version);
+  const yaml = 'command_mocks:\n  - args: ["--yes", "automatica11y@latest", "--version"]\n    stdout: "0.9.0\\n"\n';
+  const evalPaths = ["evals/automatica11y-runner/tasks/preflight-doctor-install-yes.yaml", "evals/automatica11y-runner/wazaEval.yaml", "evals/e2e/automatica11y-runner/wazaEval.yaml"];
+  const guidePath = "evals/automatica11y-runner/mocks/guide-skill.md";
+  /** @type {Record<string, string>} */
+  const before = { "package.json": JSON.stringify(manifest), "package-lock.json": JSON.stringify({ version: manifest.version, packages: { "": manifest } }), [skillPath]: skill, [guidePath]: skill, ...Object.fromEntries(evalPaths.map((path) => [path, yaml])) };
+  /** @type {Record<string, string>} */
+  const after = { ...before, "package.json": JSON.stringify({ ...manifest, version }), "package-lock.json": JSON.stringify({ version, packages: { "": { ...manifest, version } } }), [skillPath]: updateRunnerSkillVersion(skill, version), [guidePath]: updateRunnerSkillVersion(skill, version), ...Object.fromEntries(evalPaths.map((path) => [path, updateEvalVersions(yaml, version)])) };
+  const changes = ["package.json", "package-lock.json", "CHANGELOG.md", skillPath, guidePath, ...evalPaths].map((path) => ({ status: "M", path }));
+  const read = (/** @type {string} */ ref, /** @type {string} */ path) => (ref === "base" ? before : after)[path];
+  validateVersionDiff(changes, read, "base", "head");
+  for (const path of [guidePath, ...evalPaths]) {
+    const altered = (/** @type {string} */ ref, /** @type {string} */ file) => read(ref, file) + (ref === "head" && file === path ? "\n# unrelated change\n" : "");
+    assert.throws(() => validateVersionDiff(changes, altered, "base", "head"), /only synchronize eval versions/);
+    for (const status of ["A", "D", "T"]) {
+      assert.throws(() => validateVersionDiff(changes.map((change) => change.path === path ? { ...change, status } : change), read, "base", "head"), /only modify existing eval/);
+    }
+  }
+  assert.throws(() => validateVersionDiff([...changes, { status: "M", path: "evals/automatica11y-runner/mocks/other.md" }], read, "base", "head"), /Unexpected release PR file/);
+});
+
 test("docs deploy only trusted released commits or explicit manual sources", () => {
   const sha = "a".repeat(40);
   const run = { repository: "owner/repo", headRepository: "owner/repo", branch: "main", event: "push", conclusion: "success", sha };

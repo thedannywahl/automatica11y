@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath } from "node:url";
-import { updateRunnerSkillVersion } from "./sync-release-version.js";
+import { updateEvalVersions, updateRunnerSkillVersion } from "./sync-release-version.js";
 
 const releaseTitle = "chore: release packages";
 const runtimeFields = ["name", "version", "description", "license", "type", "main", "module", "types", "exports", "imports", "bin", "files", "engines", "dependencies", "optionalDependencies", "peerDependencies", "peerDependenciesMeta", "overrides", "publishConfig", "sideEffects"];
@@ -57,6 +57,12 @@ export function validateVersionDiff(changes, read, base, head) {
   for (const { status, path } of changes) {
     if (/^\.changeset\/(?!README\.md$)[^/]+\.md$/.test(path)) {
       assert.equal(status, "D", "Release PR may only consume Changesets.");
+    } else if (/^evals\/.+\/(?:[^/]+\.yaml|guide-skill\.md)$/.test(path)) {
+      assert.equal(status, "M", "Release PR may only modify existing eval version fixtures.");
+      const expected = path.endsWith(".yaml")
+        ? updateEvalVersions(read(base, path), after.version)
+        : updateRunnerSkillVersion(read(base, "skills/automatica11y-runner/SKILL.md"), after.version);
+      assert.equal(read(head, path), expected, "Release PR may only synchronize eval versions: " + path);
     } else {
       assert.ok(["package.json", "package-lock.json", "CHANGELOG.md", "skills/automatica11y-runner/SKILL.md"].includes(path), "Unexpected release PR file: " + path);
     }
@@ -91,7 +97,7 @@ function main() {
   const changes = Array.from({ length: entries.length / 2 }, (_, index) => ({ status: entries[index * 2], path: entries[index * 2 + 1] }));
   if (isVersionPullRequest({ repository: event.repository.full_name, headRepository: pr.head.repo?.full_name, head: pr.head.ref, base: pr.base.ref, actor: pr.user.login, title: pr.title }, process.env.RELEASE_ACTOR)) {
     validateVersionDiff(changes, read, base, head);
-    console.log("Authenticated generated version PR: manifest, lockfile and skill are aligned.");
+    console.log("Authenticated generated version PR: manifest, lockfile, skill and eval versions are aligned.");
     return;
   }
   const before = JSON.parse(read(base, "package.json"));
