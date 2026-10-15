@@ -28,12 +28,18 @@ Add it to your CI pipeline:
 automatica11y ci ./dist
 ```
 
+For a local package, map its name to the built output:
+
+```bash
+automatica11y ci ui=npm:@scope/ui --local-package @scope/ui=./packages/ui/dist
+```
+
 Or use the [GitHub Action](docs/github-action.md) on an Ubuntu runner after building your site:
 
 ```yaml
 - uses: thedannywahl/automatica11y@main
-	with:
-		targets: ./dist
+  with:
+    targets: ./dist
 ```
 
 Pin a reviewed commit containing the Action for production. The Action installs the tool and Chromium, writes a job summary, and uploads reports even when a CI gate fails. A shared `.automatica11y.yml` config controls audit options, failure policies, and optional local server startup.
