@@ -47,9 +47,11 @@ const PAGES = {
   "icon-weak": ["button", N, F, P],
 };
 
+const FAST_FIXTURES = new Set(["good", "hover-low", "focus-weak", "focus-ring-child"]);
+
 for (const [page, [archetype, text, boundary, focus]] of Object.entries(PAGES)) {
   test(`${page}: each computed check gives its known result`, { skip, timeout: 120_000 }, async () => {
-    const result = await runComputed(session.browser, `${server.origin}/${page}.html`, archetype);
+    const result = await runComputed(session.browser, `${server.origin}/${page}.html`, archetype, { fastFixture: FAST_FIXTURES.has(page) });
     assert.equal(result.status, "ran");
     const actual = Object.fromEntries(result.checks.map((c) => [c.name, c.result]));
     assert.deepEqual(actual, { "text-contrast-by-state": text, "boundary-contrast": boundary, "focus-indicator-contrast": focus }, JSON.stringify(result.checks.map((c) => `${c.name}: ${c.detail}`), null, 1));
@@ -59,6 +61,15 @@ for (const [page, [archetype, text, boundary, focus]] of Object.entries(PAGES)) 
     }
   });
 }
+
+test("fastFixture preserves computed measurements and pixel-based focus results", { skip, timeout: 120_000 }, async () => {
+  for (const name of FAST_FIXTURES) {
+    const url = `${server.origin}/${name}.html`;
+    const normal = await runComputed(session.browser, url, "button");
+    const fast = await runComputed(session.browser, url, "button", { fastFixture: true });
+    assert.deepEqual(fast, normal, name);
+  }
+});
 
 /** Live-region pages: the computed tier measures the message that appears, not the trigger. */
 /** @type {Record<string, string>} */

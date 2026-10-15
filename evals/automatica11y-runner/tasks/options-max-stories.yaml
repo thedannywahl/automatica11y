@@ -1,0 +1,28 @@
+id: runner-options-max-stories
+name: A story cap becomes --max-stories
+description: The user caps a large Storybook, so the command carries --max-stories 50.
+tags:
+  - options
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit our Storybook at https://storybook.example.com. It's huge, so cap it at 50 stories. Show me the exact command, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: sets-max-stories
+    config:
+      contains:
+        - "https://storybook.example.com"
+        - "--max-stories 50"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

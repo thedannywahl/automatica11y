@@ -1,0 +1,43 @@
+id: runner-preflight-doctor-old-node
+name: Old Node relays the fix and installs nothing
+description: When doctor reports Node older than 22, the runner relays the fix and stops without installing or configuring anything itself.
+tags:
+  - preflight
+inputs:
+  prompt: "I've been asked to use automatica11y. Audit https://example.com for accessibility."
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "automatica11y@latest", "--version"]
+        stdout: "0.10.0\n"
+      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
+        fixture: mocks/guide-skill.md
+      - args: ["--yes", "automatica11y@latest", "doctor"]
+        fixture: mocks/doctor-old-node.txt
+        exit_code: 3
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: relays-node-fix
+    config:
+      contains:
+        - "Node 22"
+        - "nodejs.org"
+  - type: tool_constraint
+    name: installs-nothing
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "nvm |volta |fnm |brew |\\bn install|install-browser|automatica11y@latest (audit|compare)"

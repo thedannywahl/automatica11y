@@ -1,0 +1,28 @@
+id: runner-options-no-generate
+name: Authored fixtures only becomes --no-generate
+description: The user wants no generated fixtures, so the command carries --no-generate.
+tags:
+  - options
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit the npm package @headlessui/react using only fixtures I write and the built-in templates. Don't let the tool generate any fixtures itself. Show me the exact command, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: sets-no-generate
+    config:
+      contains:
+        - "npm:@headlessui/react"
+        - "--no-generate"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

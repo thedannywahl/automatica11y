@@ -1,0 +1,1023 @@
+{
+  "schema": 1,
+  "planRef": "plan.json",
+  "runAt": "2026-10-14T19:11:05.356Z",
+  "tools": {
+    "node": "24.22.0",
+    "automatica11y": "0.9.0",
+    "axe-core": "4.14.0",
+    "ibm-checker-engine": "4.0.34",
+    "playwright-core": "1.64.0",
+    "esbuild": "0.28.2",
+    "guidepup-vsr": "0.33.0",
+    "chromium": "155.0.8059.80"
+  },
+  "targets": [
+    {
+      "id": "a11y-eval-widgets",
+      "status": "ran",
+      "reason": null,
+      "archetypes": {
+        "dialog": {
+          "status": "ran",
+          "fixture": {
+            "source": "generated",
+            "recipe": "dialog-compound",
+            "summary": "a root, a trigger, and a content part that opens on its own",
+            "used": [
+              "DialogTrigger",
+              "DialogContent",
+              "DialogTitle",
+              "DialogClose"
+            ],
+            "file": "generated/a11y-eval-widgets/dialog.jsx",
+            "attempts": [
+              {
+                "recipe": "dialog-compound",
+                "summary": "a root, a trigger, and a content part that opens on its own",
+                "ok": true,
+                "reason": null
+              }
+            ]
+          },
+          "configs": [
+            {
+              "libA11y": "n/a",
+              "state": "closed",
+              "tiers": {
+                "rules": {
+                  "status": "ran",
+                  "reason": null,
+                  "engines": {
+                    "axe": {
+                      "status": "ran",
+                      "version": "4.14.0",
+                      "config": {
+                        "tags": [
+                          "wcag2a",
+                          "wcag2aa",
+                          "wcag21a",
+                          "wcag21aa",
+                          "wcag22aa"
+                        ],
+                        "scope": "#root"
+                      },
+                      "violations": [],
+                      "incomplete": [],
+                      "passesCount": 9,
+                      "notes": []
+                    },
+                    "ibm": {
+                      "status": "ran",
+                      "version": "4.0.34",
+                      "config": {
+                        "ruleset": "WCAG_2_2",
+                        "levels": [
+                          "A",
+                          "AA"
+                        ],
+                        "scope": "#root"
+                      },
+                      "violations": [],
+                      "incomplete": [],
+                      "passesCount": 16,
+                      "notes": []
+                    }
+                  }
+                },
+                "vsr": {
+                  "status": "ran",
+                  "simulated": true,
+                  "version": "0.33.0",
+                  "log": [
+                    {
+                      "state": "closed",
+                      "announcements": [
+                        "document",
+                        "main",
+                        "button, Open dialog, not expanded, has popup dialog",
+                        "end of main",
+                        "end of document"
+                      ],
+                      "reachedEnd": true,
+                      "truncated": false
+                    }
+                  ],
+                  "flags": [],
+                  "notTestable": [],
+                  "notes": []
+                },
+                "interactions": {
+                  "status": "ran",
+                  "checks": [
+                    {
+                      "name": "trigger-reachable-by-tab",
+                      "criteria": [
+                        "2.1.1"
+                      ],
+                      "result": "pass",
+                      "detail": "Tab reached the trigger after 1 press."
+                    },
+                    {
+                      "name": "focus-indicator-visible",
+                      "criteria": [
+                        "2.4.7"
+                      ],
+                      "result": "pass",
+                      "detail": "Computed style changed on focus: the element: outline.",
+                      "method": "computed-style"
+                    },
+                    {
+                      "name": "no-focus-trap",
+                      "criteria": [
+                        "2.1.2"
+                      ],
+                      "result": "pass",
+                      "detail": "Focus moved on after 1 more Tab press."
+                    },
+                    {
+                      "name": "focus-moves-into-dialog",
+                      "criteria": [
+                        "2.4.3"
+                      ],
+                      "result": "fail",
+                      "detail": "Focus stayed outside the dialog, on button \"Open dialog\"."
+                    },
+                    {
+                      "name": "tab-stays-inside-dialog",
+                      "criteria": [
+                        "2.4.3",
+                        "2.1.2"
+                      ],
+                      "result": "fail",
+                      "detail": "Focus left the dialog after 2 Tab presses, onto nothing (the page body)."
+                    },
+                    {
+                      "name": "escape-closes",
+                      "criteria": [
+                        "2.1.1"
+                      ],
+                      "result": "fail",
+                      "detail": "The dialog stayed open after Escape."
+                    },
+                    {
+                      "name": "focus-returns-to-trigger",
+                      "criteria": [
+                        "2.4.3"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "Escape didn't close the dialog, so focus return wasn't checked."
+                    }
+                  ]
+                },
+                "computed": {
+                  "status": "ran",
+                  "checks": [
+                    {
+                      "name": "text-contrast-by-state",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "pass",
+                      "detail": "The lowest is 18.26:1 in rest (needs 4.5:1). Measured in rest, hover, keyboard focus, pressed.",
+                      "measurements": [
+                        {
+                          "state": "rest",
+                          "text": "Open dialog",
+                          "ratio": 18.26,
+                          "required": 4.5
+                        },
+                        {
+                          "state": "hover",
+                          "text": "Open dialog",
+                          "ratio": 18.26,
+                          "required": 4.5
+                        },
+                        {
+                          "state": "keyboard focus",
+                          "text": "Open dialog",
+                          "ratio": 18.26,
+                          "required": 4.5
+                        },
+                        {
+                          "state": "pressed",
+                          "text": "Open dialog",
+                          "ratio": 18.26,
+                          "required": 4.5
+                        }
+                      ]
+                    },
+                    {
+                      "name": "boundary-contrast",
+                      "criteria": [
+                        "1.4.11"
+                      ],
+                      "result": "pass",
+                      "detail": "The strongest mark is its top border, at 21:1 (needs 3:1).",
+                      "measurements": [
+                        {
+                          "part": "fill",
+                          "ratio": 1.14
+                        },
+                        {
+                          "part": "top border",
+                          "ratio": 21
+                        },
+                        {
+                          "part": "right border",
+                          "ratio": 21
+                        },
+                        {
+                          "part": "bottom border",
+                          "ratio": 21
+                        },
+                        {
+                          "part": "left border",
+                          "ratio": 21
+                        }
+                      ]
+                    },
+                    {
+                      "name": "focus-indicator-contrast",
+                      "criteria": [
+                        "1.4.11",
+                        "2.4.13"
+                      ],
+                      "result": "pass",
+                      "detail": "The outline has 5.98:1 against what's next to it (needs 3:1). It's 1px thick, and WCAG 2.4.13 Focus Appearance (level AAA) asks for at least 2px.",
+                      "method": "computed-style",
+                      "measurements": [
+                        {
+                          "indicator": "outline",
+                          "ratio": 5.98,
+                          "widthPx": 1
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "conditions": {
+                  "status": "ran",
+                  "checks": [
+                    {
+                      "name": "reduced-motion-respected",
+                      "criteria": [
+                        "2.3.3",
+                        "2.2.2"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "No animations or transitions were running at load or after the trigger was pressed, so there's nothing to reduce. Motion driven by JavaScript timers isn't visible to this check."
+                    },
+                    {
+                      "name": "dark-mode-contrast",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-color-scheme: dark, so it doesn't adapt to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "more-contrast-respected",
+                      "criteria": [
+                        "1.4.3",
+                        "1.4.6"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-contrast: more, so it doesn't respond to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "less-contrast-stays-readable",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-contrast: less, so it doesn't respond to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "reduced-transparency-respected",
+                      "criteria": [
+                        "1.4.3",
+                        "1.4.11"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "No surface that holds text is see-through (no translucent background and no backdrop filter), so there's nothing to reduce. Empty overlays aren't counted."
+                    },
+                    {
+                      "name": "forced-colors-focus-visible",
+                      "criteria": [
+                        "1.4.11",
+                        "2.4.7"
+                      ],
+                      "result": "pass",
+                      "detail": "With forced colors on, the focus indicator is visible: 214 of 424 changed pixels reach 3:1 against their unfocused color.",
+                      "method": "pixels",
+                      "measurements": [
+                        {
+                          "changedPixels": 424,
+                          "pixelsAtLeast3to1": 214,
+                          "perimeterPixels": 218,
+                          "forcedColorOptOuts": 0
+                        }
+                      ]
+                    },
+                    {
+                      "name": "reflow-at-320px",
+                      "criteria": [
+                        "1.4.10"
+                      ],
+                      "result": "pass",
+                      "detail": "In a 320px window, nothing reaches past the right edge and the page doesn't scroll sideways. The div fits (8px to 312px).",
+                      "measurements": [
+                        {
+                          "viewportWidth": 320,
+                          "scrollWidth": 320,
+                          "overflowingElements": 0
+                        }
+                      ]
+                    },
+                    {
+                      "name": "text-spacing-no-clipping",
+                      "criteria": [
+                        "1.4.12"
+                      ],
+                      "result": "pass",
+                      "detail": "With line height 1.5, letter spacing 0.12em, word spacing 0.16em, and paragraph spacing 2em, no element cut off its text (eight elements checked). Overlapping text isn't checked.",
+                      "measurements": [
+                        {
+                          "elementsChecked": 8,
+                          "clipped": 0
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "libA11y": "n/a",
+              "state": "open",
+              "tiers": {
+                "rules": {
+                  "status": "ran",
+                  "reason": null,
+                  "engines": {
+                    "axe": {
+                      "status": "ran",
+                      "version": "4.14.0",
+                      "config": {
+                        "tags": [
+                          "wcag2a",
+                          "wcag2aa",
+                          "wcag21a",
+                          "wcag21aa",
+                          "wcag22aa"
+                        ],
+                        "scope": [
+                          "#root",
+                          "[data-a11y-root]"
+                        ]
+                      },
+                      "violations": [],
+                      "incomplete": [],
+                      "passesCount": 12,
+                      "notes": []
+                    },
+                    "ibm": {
+                      "status": "ran",
+                      "version": "4.0.34",
+                      "config": {
+                        "ruleset": "WCAG_2_2",
+                        "levels": [
+                          "A",
+                          "AA"
+                        ],
+                        "scope": [
+                          "#root",
+                          "[data-a11y-root]"
+                        ]
+                      },
+                      "violations": [],
+                      "incomplete": [],
+                      "passesCount": 23,
+                      "notes": []
+                    }
+                  }
+                },
+                "vsr": {
+                  "status": "ran",
+                  "simulated": true,
+                  "version": "0.33.0",
+                  "log": [
+                    {
+                      "state": "open",
+                      "announcements": [
+                        "document",
+                        "main",
+                        "button, Open dialog, expanded, has popup dialog",
+                        "dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal",
+                        "dialog, modal",
+                        "heading, Edit profile, level 2",
+                        "paragraph",
+                        "Update your details.",
+                        "end of paragraph",
+                        "button, Close",
+                        "end of dialog, modal"
+                      ],
+                      "reachedEnd": false,
+                      "truncated": true
+                    }
+                  ],
+                  "flags": [],
+                  "notTestable": [],
+                  "notes": [
+                    "The walk stopped after 150 steps, before it came back around to the start."
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "tabs": {
+          "status": "ran",
+          "fixture": {
+            "source": "authored"
+          },
+          "configs": [
+            {
+              "libA11y": "n/a",
+              "state": "initial",
+              "tiers": {
+                "rules": {
+                  "status": "ran",
+                  "reason": null,
+                  "engines": {
+                    "axe": {
+                      "status": "ran",
+                      "version": "4.14.0",
+                      "config": {
+                        "tags": [
+                          "wcag2a",
+                          "wcag2aa",
+                          "wcag21a",
+                          "wcag21aa",
+                          "wcag22aa"
+                        ],
+                        "scope": "#root"
+                      },
+                      "violations": [],
+                      "incomplete": [],
+                      "passesCount": 15,
+                      "notes": []
+                    },
+                    "ibm": {
+                      "status": "ran",
+                      "version": "4.0.34",
+                      "config": {
+                        "ruleset": "WCAG_2_2",
+                        "levels": [
+                          "A",
+                          "AA"
+                        ],
+                        "scope": "#root"
+                      },
+                      "violations": [
+                        {
+                          "ruleId": "target_spacing_sufficient",
+                          "impact": null,
+                          "toolkitLevel": 3,
+                          "wcag": [
+                            "2.5.8"
+                          ],
+                          "help": "Undersized target \"button\" does not have sufficient spacing of 12 CSS pixels from another target \"button\"",
+                          "helpUrl": "https://able.ibm.com/rules/archives/latest/doc/en-US/target_spacing_sufficient.html",
+                          "nodeCount": 1,
+                          "nodes": [
+                            {
+                              "selector": "#widgets-tab-1",
+                              "html": "<button tabindex=\"-1\" aria-controls=\"widgets-panel-1\" aria-selected=\"false\" id=\"widgets-tab-1\" role=\"tab\" type=\"button\">"
+                            }
+                          ]
+                        }
+                      ],
+                      "incomplete": [
+                        {
+                          "ruleId": "aria_keyboard_handler_exists",
+                          "impact": null,
+                          "toolkitLevel": 1,
+                          "kind": "potential",
+                          "wcag": [
+                            "2.1.1"
+                          ],
+                          "help": "Verify the <div> element with \"tablist\" role has keyboard access",
+                          "helpUrl": "https://able.ibm.com/rules/archives/latest/doc/en-US/aria_keyboard_handler_exists.html",
+                          "nodeCount": 1,
+                          "nodes": [
+                            {
+                              "selector": "#root > div:nth-of-type(1) > div:nth-of-type(1)",
+                              "html": "<div data-a11y-root=\"\" aria-label=\"Account settings\" role=\"tablist\">"
+                            }
+                          ]
+                        }
+                      ],
+                      "passesCount": 24,
+                      "notes": []
+                    }
+                  }
+                },
+                "vsr": {
+                  "status": "ran",
+                  "simulated": true,
+                  "version": "0.33.0",
+                  "log": [
+                    {
+                      "state": "initial",
+                      "announcements": [
+                        "document",
+                        "main",
+                        "tablist, Account settings, orientated horizontally",
+                        "tab, Profile, selected, 1 control, position 1, set size 2",
+                        "tab, Security, not selected, 1 control, position 2, set size 2",
+                        "end of tablist, Account settings, orientated horizontally",
+                        "tabpanel, Profile",
+                        "paragraph",
+                        "Profile settings",
+                        "end of paragraph",
+                        "end of tabpanel, Profile",
+                        "end of main",
+                        "end of document"
+                      ],
+                      "reachedEnd": true,
+                      "truncated": false
+                    }
+                  ],
+                  "flags": [],
+                  "notTestable": [],
+                  "notes": []
+                },
+                "interactions": {
+                  "status": "ran",
+                  "checks": [
+                    {
+                      "name": "trigger-reachable-by-tab",
+                      "criteria": [
+                        "2.1.1"
+                      ],
+                      "result": "pass",
+                      "detail": "Tab reached the trigger after 1 press."
+                    },
+                    {
+                      "name": "focus-indicator-visible",
+                      "criteria": [
+                        "2.4.7"
+                      ],
+                      "result": "pass",
+                      "detail": "Computed style changed on focus: the element: outline.",
+                      "method": "computed-style"
+                    },
+                    {
+                      "name": "no-focus-trap",
+                      "criteria": [
+                        "2.1.2"
+                      ],
+                      "result": "pass",
+                      "detail": "Focus moved on after 1 more Tab press."
+                    },
+                    {
+                      "name": "arrow-keys-move-between-tabs",
+                      "criteria": [
+                        "2.1.1"
+                      ],
+                      "result": "pass",
+                      "detail": "ArrowRight and ArrowLeft moved focus between tabs."
+                    },
+                    {
+                      "name": "home-and-end-work",
+                      "criteria": [
+                        "2.1.1"
+                      ],
+                      "result": "pass",
+                      "detail": "Home moved to the first tab and End to the last."
+                    },
+                    {
+                      "name": "selected-state-exposed",
+                      "criteria": [
+                        "4.1.2"
+                      ],
+                      "result": "pass",
+                      "detail": "Every tab has aria-selected, and exactly one is true."
+                    }
+                  ]
+                },
+                "computed": {
+                  "status": "ran",
+                  "checks": [
+                    {
+                      "name": "text-contrast-by-state",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "pass",
+                      "detail": "The lowest is 18.26:1 in rest (needs 4.5:1). Measured in rest, hover, keyboard focus, pressed.",
+                      "measurements": [
+                        {
+                          "state": "rest",
+                          "text": "Profile",
+                          "ratio": 18.26,
+                          "required": 4.5
+                        },
+                        {
+                          "state": "hover",
+                          "text": "Profile",
+                          "ratio": 18.26,
+                          "required": 4.5
+                        },
+                        {
+                          "state": "keyboard focus",
+                          "text": "Profile",
+                          "ratio": 18.26,
+                          "required": 4.5
+                        },
+                        {
+                          "state": "pressed",
+                          "text": "Profile",
+                          "ratio": 18.26,
+                          "required": 4.5
+                        }
+                      ]
+                    },
+                    {
+                      "name": "boundary-contrast",
+                      "criteria": [
+                        "1.4.11"
+                      ],
+                      "result": "pass",
+                      "detail": "The strongest mark is its top border, at 21:1 (needs 3:1).",
+                      "measurements": [
+                        {
+                          "part": "fill",
+                          "ratio": 1.14
+                        },
+                        {
+                          "part": "top border",
+                          "ratio": 21
+                        },
+                        {
+                          "part": "right border",
+                          "ratio": 21
+                        },
+                        {
+                          "part": "bottom border",
+                          "ratio": 21
+                        },
+                        {
+                          "part": "left border",
+                          "ratio": 21
+                        }
+                      ]
+                    },
+                    {
+                      "name": "focus-indicator-contrast",
+                      "criteria": [
+                        "1.4.11",
+                        "2.4.13"
+                      ],
+                      "result": "pass",
+                      "detail": "The outline has 5.98:1 against what's next to it (needs 3:1). It's 1px thick, and WCAG 2.4.13 Focus Appearance (level AAA) asks for at least 2px.",
+                      "method": "computed-style",
+                      "measurements": [
+                        {
+                          "indicator": "outline",
+                          "ratio": 5.98,
+                          "widthPx": 1
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "conditions": {
+                  "status": "ran",
+                  "checks": [
+                    {
+                      "name": "reduced-motion-respected",
+                      "criteria": [
+                        "2.3.3",
+                        "2.2.2"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "No animations or transitions were running at load or after the trigger was pressed, so there's nothing to reduce. Motion driven by JavaScript timers isn't visible to this check."
+                    },
+                    {
+                      "name": "dark-mode-contrast",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-color-scheme: dark, so it doesn't adapt to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "more-contrast-respected",
+                      "criteria": [
+                        "1.4.3",
+                        "1.4.6"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-contrast: more, so it doesn't respond to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "less-contrast-stays-readable",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-contrast: less, so it doesn't respond to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "reduced-transparency-respected",
+                      "criteria": [
+                        "1.4.3",
+                        "1.4.11"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "No surface that holds text is see-through (no translucent background and no backdrop filter), so there's nothing to reduce. Empty overlays aren't counted."
+                    },
+                    {
+                      "name": "forced-colors-focus-visible",
+                      "criteria": [
+                        "1.4.11",
+                        "2.4.7"
+                      ],
+                      "result": "pass",
+                      "detail": "With forced colors on, the focus indicator is visible: 146 of 288 changed pixels reach 3:1 against their unfocused color.",
+                      "method": "pixels",
+                      "measurements": [
+                        {
+                          "changedPixels": 288,
+                          "pixelsAtLeast3to1": 146,
+                          "perimeterPixels": 150,
+                          "forcedColorOptOuts": 0
+                        }
+                      ]
+                    },
+                    {
+                      "name": "reflow-at-320px",
+                      "criteria": [
+                        "1.4.10"
+                      ],
+                      "result": "pass",
+                      "detail": "In a 320px window, nothing reaches past the right edge and the page doesn't scroll sideways. The div fits (8px to 312px).",
+                      "measurements": [
+                        {
+                          "viewportWidth": 320,
+                          "scrollWidth": 320,
+                          "overflowingElements": 0
+                        }
+                      ]
+                    },
+                    {
+                      "name": "text-spacing-no-clipping",
+                      "criteria": [
+                        "1.4.12"
+                      ],
+                      "result": "pass",
+                      "detail": "With line height 1.5, letter spacing 0.12em, word spacing 0.16em, and paragraph spacing 2em, no element cut off its text (11 elements checked). Overlapping text isn't checked.",
+                      "measurements": [
+                        {
+                          "elementsChecked": 11,
+                          "clipped": 0
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      },
+      "npm": {
+        "name": "@a11y-eval/widgets",
+        "subpath": null,
+        "version": "1.0.0",
+        "flavor": "react",
+        "framework": "React",
+        "react": "19.2.0",
+        "reactDom": "19.2.0",
+        "vue": null,
+        "angular": null,
+        "svelte": null,
+        "tags": []
+      },
+      "summary": {
+        "engines": {
+          "axe": {
+            "status": "ran",
+            "violations": 0,
+            "needsReview": 0,
+            "violationsByImpact": {
+              "critical": 0,
+              "serious": 0,
+              "moderate": 0,
+              "minor": 0
+            }
+          },
+          "ibm": {
+            "status": "ran",
+            "violations": 1,
+            "needsReview": 1,
+            "violationsByToolkitLevel": {
+              "1": 0,
+              "2": 0,
+              "3": 1,
+              "4": 0
+            }
+          }
+        },
+        "gaps": [],
+        "notTestable": [],
+        "interactions": {
+          "pass": 9,
+          "fail": 3,
+          "notApplicable": 1,
+          "error": 0
+        },
+        "computed": {
+          "pass": 6,
+          "fail": 0,
+          "undetermined": 0,
+          "notApplicable": 0,
+          "error": 0
+        },
+        "conditions": {
+          "pass": 6,
+          "fail": 0,
+          "undetermined": 0,
+          "notApplicable": 10,
+          "error": 0
+        },
+        "vsr": {
+          "walks": 3,
+          "flagged": 0
+        }
+      },
+      "warnings": []
+    }
+  ],
+  "failCheck": null,
+  "outcome": {
+    "status": "passed",
+    "coverage": [
+      "a11y-eval-widgets/dialog/1/interactions: missing requested tier",
+      "a11y-eval-widgets/dialog/1/computed: missing requested tier",
+      "a11y-eval-widgets/dialog/1/conditions: missing requested tier"
+    ],
+    "review": [
+      "a11y-eval-widgets/tabs/0/ibm: aria_keyboard_handler_exists"
+    ],
+    "checks": [
+      "a11y-eval-widgets/dialog/0/interactions/focus-moves-into-dialog: Focus stayed outside the dialog, on button \"Open dialog\".",
+      "a11y-eval-widgets/dialog/0/interactions/tab-stays-inside-dialog: Focus left the dialog after 2 Tab presses, onto nothing (the page body).",
+      "a11y-eval-widgets/dialog/0/interactions/escape-closes: The dialog stayed open after Escape."
+    ]
+  },
+  "warnings": []
+}

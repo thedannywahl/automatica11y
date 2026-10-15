@@ -1,0 +1,66 @@
+id: runner-e2e-npm-local
+name: Audit a packed local package and write the fixture it needs
+description: The runner makes one initial audit, writes only a documented tabs fixture when mapping requires one, reruns once, and ends with a concise summary.
+tags:
+  - e2e
+  - e2e-npm
+context_dir: evals/e2e/automatica11y-runner/fixtures/npm-local
+inputs:
+  prompt: "I've been asked to use automatica11y. Our React library @a11y-eval/widgets isn't published yet. Use the supplied tarball and README. Run one initial audit of dialog and tabs as widgets=npm:@a11y-eval/widgets with --local-package @a11y-eval/widgets=./a11y-eval-widgets-1.0.0.tgz --archetypes dialog,tabs --tiers rules,interactions --out a11y-report. Read widgets-README.md once for documented fixture props. Do not write a fixture or rerun yet. Read a11y-report/mapping.json, report each requested archetype's actual status, then stop and wait."
+  files:
+    - path: a11y-eval-widgets-1.0.0.tgz
+    - path: widgets-README.md
+  follow_up_prompts:
+    - "Continue from the first audit's mapping and the README you already read; do not reread it. If tabs is needs-fixture, write only fixtures/widgets/tabs.jsx using its documented listProps and tabProps, put data-a11y-trigger on the tab and data-a11y-root on the tab list, then rerun the identical audit command exactly once. Do not create menu, combobox, or tooltip fixtures. If tabs is not needs-fixture, do not invent a fixture or rerun. After checking the resulting artifacts, stop and wait for the final-summary prompt."
+    - "Now end with a concise final summary. State a11y-report/report.md and a11y-report/results.json, each archetype's actual result, and whether fixtures/widgets/tabs.jsx was written. Name the dialog recipe only if the mapping/report names it. Call generated dialog evidence lower evidence than the authored tabs fixture; keep axe-core and IBM results separate, report interactions separately, and end with the required method note. Do not run commands, write files, or start another audit. If an artifact or result is unavailable, say so."
+expected:
+  should_trigger: true
+graders:
+  - type: tool_constraint
+    name: uses-local-package
+    config:
+      expect_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? audit .*npm:@a11y-eval/widgets.*--local-package @a11y-eval/widgets=(\\./)?a11y-eval-widgets-1\\.0\\.0\\.tgz|automatica11y(@latest)? audit .*--local-package @a11y-eval/widgets=(\\./)?a11y-eval-widgets-1\\.0\\.0\\.tgz.*npm:@a11y-eval/widgets"
+        - tool: "bash|shell"
+          command_pattern: "--archetypes (dialog,tabs|tabs,dialog)"
+        - tool: "bash|shell"
+          command_pattern: "--tiers rules,interactions"
+  - type: file
+    name: writes-only-the-needed-fixture
+    config:
+      must_exist:
+        - "a11y-report/mapping.json"
+        - "a11y-report/results.json"
+        - "a11y-report/report.md"
+        - "fixtures/widgets/tabs.jsx"
+      must_not_exist:
+        - "fixtures/widgets/menu.jsx"
+        - "fixtures/widgets/combobox.jsx"
+        - "fixtures/widgets/tooltip.jsx"
+      content_patterns:
+        - path: "fixtures/widgets/tabs.jsx"
+          must_match:
+            - "from \"@a11y-eval/widgets\"|from '@a11y-eval/widgets'"
+            - "data-a11y-trigger"
+            - "data-a11y-root"
+            - "tabProps|listProps"
+  - type: text
+    name: reports-both-archetypes
+    config:
+      contains:
+        - "dialog"
+        - "tabs"
+        - "dialog-compound"
+      regex_match:
+        - "(?i)generated"
+        - "(?i)authored"
+      regex_not_match:
+        - "(?i)\\b(is|are|was|be|fully) accessible\\b"
+        - "(?i)\\bcompliant\\b"
+  - type: prompt
+    name: follows-fixture-and-report-rules
+    config:
+      prompt: |
+        You are grading the final reply of an agent that audited a packed React component library with automatica11y, labelled widgets. On the first run, the tool generated a dialog fixture and marked tabs as needs-fixture. The agent was expected to write fixtures/widgets/tabs.jsx from the package README (using the documented listProps and tabProps to place data-a11y-root and data-a11y-trigger), rerun the same command, and report. If the final reply is missing, fail rather than assuming the report was communicated.
+        Pass only if: it tells the user the fixture file exists and where; results from the generated dialog fixture are named with their recipe and called lower evidence than the authored tabs fixture; axe-core and IBM Equal Access findings are separate and never added together; interaction checks are reported apart from the rule engines; nothing is called accessible or compliant; and it ends with a method note.

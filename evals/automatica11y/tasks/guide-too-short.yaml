@@ -1,0 +1,49 @@
+id: bootstrap-guide-too-short
+name: A guide with no usable output stops the skill
+description: The guide exits 0 but prints fewer than 20 lines, so the skill reports that it produced no usable output and stops without continuing on partial instructions.
+tags:
+  - guide-failure
+inputs:
+  prompt: "Run an accessibility audit on https://example.com with automatica11y and tell me the results."
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
+        fixture: mocks/guide-short.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
+        fixture: mocks/guide-short.md
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+  - name: node
+    responses:
+      - args: ["--version"]
+        stdout: "v24.22.0\n"
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-automatica11y-skill
+    config:
+      skill_path: "skills/automatica11y/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: reports-unusable-guide
+    config:
+      contains:
+        - "guide skill"
+      regex_match:
+        - "(?i)(no usable|not usable|isn't usable|wasn't usable|usable output|unusable|too short|too little text|incomplete|fewer than 20|far short of (the )?20|no output|empty|returned nothing|non-blank lines|can't treat[^\\n]*as usable)"
+      regex_not_match:
+        - "(?i)no automated violations found"
+        - "(?i)\\bviolations?\\b.*\\b(found|detected)\\b"
+        - "(?i)\\b\\d+\\s+(violations?|findings?|issues?)\\b"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare|doctor)"

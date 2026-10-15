@@ -93,9 +93,11 @@ const PAGES = {
   "live-region-bad-dismiss-focus": ["live-region", { ...common(P, P, P), ...live(P, P, P, P, P, P, F) }],
 };
 
+const FAST_FIXTURES = new Set(["button-good", "button-bad", "dialog-good", "dialog-bad"]);
+
 for (const [page, [archetype, expected]] of Object.entries(PAGES)) {
   test(`${page}: every check gives its known result`, { skip, timeout: 120_000 }, async () => {
-    const result = await runInteractions(session.browser, `${server.origin}/${page}.html`, archetype);
+    const result = await runInteractions(session.browser, `${server.origin}/${page}.html`, archetype, { fastFixture: FAST_FIXTURES.has(page) });
     assert.equal(result.status, "ran");
     const actual = Object.fromEntries(result.checks.map((c) => [c.name, c.result]));
     assert.deepEqual(actual, expected, JSON.stringify(result.checks.map((c) => `${c.name}: ${c.detail}`), null, 1));
@@ -127,6 +129,201 @@ test("a check that throws reports an error, never a pass or a fail", { skip }, a
   assert.deepEqual([result.name, result.result], ["boom", "error"]);
   assert.match(result.detail, /The check couldn't finish: something broke/);
   assert.doesNotMatch(result.detail, /stack/);
+});
+
+test("fastFixture propagates to variants and preserves observation timers and delayed focus", { skip }, async () => {
+  /** @type {import("../src/types.js").Check} */
+  const check = {
+    name: "fast-fixture-context",
+    criteria: [],
+    async run(ctx) {
+      for (const context of [ctx, await ctx.variant({ colorScheme: "dark" })]) {
+        await context.page.evaluate(() => {
+          const trigger = document.querySelector("[data-a11y-trigger]");
+          trigger.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 30_000, fill: "forwards" });
+        });
+        await context.settle();
+        assert.ok(await context.page.evaluate(() => document.getAnimations().every((animation) => animation.playState === "finished")));
+        await context.page.evaluate(() => {
+          const trigger = /** @type {HTMLElement} */ (document.querySelector("[data-a11y-trigger]"));
+          trigger.blur();
+          setTimeout(() => trigger.focus(), 100);
+        });
+        assert.ok(await context.waitFor((snapshot) => snapshot.activeIsTrigger));
+        await context.page.evaluate(() => {
+          const trigger = document.querySelector("[data-a11y-trigger]");
+          setTimeout(() => trigger.setAttribute("data-observed", "true"), 100);
+        });
+        await context.observe(150);
+        assert.equal(await context.trigger.getAttribute("data-observed"), "true");
+      }
+      return { result: "pass", detail: "Variants finish animations while timers and delayed focus remain observable." };
+    },
+  };
+  const initial = session.browser.contexts().length;
+  const result = await runCheck(session.browser, `${server.origin}/button-good.html`, check, { fastFixture: true });
+  assert.equal(result.result, "pass", result.detail);
+  assert.equal(session.browser.contexts().length, initial);
+});
+
+test("fastFixture preserves complete interaction results for representative good and bad fixtures", { skip }, async () => {
+  for (const name of ["button-good", "button-bad", "dialog-good", "dialog-bad", "live-region-bad-focus"]) {
+    const [archetype] = PAGES[name];
+    const url = `${server.origin}/${name}.html`;
+    const normal = await runInteractions(session.browser, url, archetype);
+    const fast = await runInteractions(session.browser, url, archetype, { fastFixture: true });
+    assert.deepEqual(fast, normal, name);
+  }
+});
+
+test("fastFixture preserves focused pixels at the static button checkpoint", { skip }, async () => {
+  /** @type {Buffer[]} */
+  const captures = [];
+  /** @type {import("../src/types.js").Check} */
+  const check = {
+    name: "visual-settle-parity",
+    criteria: [],
+    async run(ctx) {
+      await ctx.page.evaluate(async () => { await document.fonts.ready; });
+      await ctx.focus();
+      const box = await ctx.trigger.boundingBox();
+      captures.push(await ctx.page.screenshot({ clip: ctx.clipAround(box), animations: "allow" }));
+      return { result: "pass", detail: "Captured the focused button after its settling checkpoint." };
+    },
+  };
+  for (const fastFixture of [false, true]) {
+    const result = await runCheck(session.browser, `${server.origin}/button-good.html`, check, { fastFixture });
+    assert.equal(result.result, "pass", result.detail);
+  }
+  assert.ok(captures[0].equals(captures[1]), "normal and fast settling produce identical focused pixels");
+});
+
+test("interaction pool rejects invalid limits rather than omitting checks", async () => {
+  for (const interactionConcurrency of [0, -1, 1.5, 3, NaN, Infinity]) {
+    await assert.rejects(runInteractions(null, "http://unused/", "button", { interactionConcurrency }), /must be 1 or 2/);
+  }
+});
+
+test("interaction pool defaults to serial execution", { skip }, async (context) => {
+  let active = 0;
+  let peak = 0;
+  for (const check of [...COMMON, ...ARCHETYPE_CHECKS.button]) {
+    context.mock.method(check, "run", async () => {
+      active += 1;
+      peak = Math.max(peak, active);
+      await new Promise((resolve) => setImmediate(resolve));
+      active -= 1;
+      return { result: "pass", detail: "Completed isolated serial work." };
+    });
+  }
+  const result = await runInteractions(session.browser, `${server.origin}/button-good.html`, "button");
+  assert.ok(result.checks.every((check) => check.result === "pass"));
+  assert.equal(peak, 1);
+});
+
+test("interaction pool timeout does not leak a variant that finishes opening late", { skip }, async (context) => {
+  const browser = session.browser;
+  const initial = browser.contexts().length;
+  const newContext = browser.newContext.bind(browser);
+  let calls = 0;
+  let release = () => {};
+  /** @type {Promise<void>} */
+  const opening = new Promise((resolve) => { release = resolve; });
+  let complete = () => {};
+  /** @type {Promise<void>} */
+  const completed = new Promise((resolve) => { complete = resolve; });
+  context.mock.method(browser, "newContext", async (/** @type {Parameters<typeof browser.newContext>[0]} */ options) => {
+    const opened = await newContext(options);
+    calls += 1;
+    if (calls === 2) await opening;
+    return opened;
+  });
+  /** @type {import("../src/types.js").Check} */
+  const check = {
+    name: "late-variant",
+    criteria: [],
+    async run(ctx) {
+      try {
+        await ctx.variant({ colorScheme: "dark" });
+        return { result: "pass", detail: "Variant opened." };
+      } finally {
+        complete();
+      }
+    },
+  };
+  const result = await runCheck(browser, `${server.origin}/button-good.html`, check, { timeoutMs: 200 });
+  assert.equal(result.result, "error", result.detail);
+  assert.match(result.detail, /took longer/);
+  release();
+  await completed;
+  const remaining = browser.contexts().length;
+  for (const opened of browser.contexts().slice(initial)) await opened.close();
+  assert.equal(remaining, initial, "late variant closes even after its check timed out");
+});
+
+test("interaction pool bounds jobs and variant contexts, orders results, and continues after errors", { skip }, async (context) => {
+  const browser = session.browser;
+  const parent = await browser.newContext();
+  context.after(() => parent.close());
+  const initial = browser.contexts().length;
+  const newContext = browser.newContext.bind(browser);
+  let activeContexts = 0;
+  let peakContexts = 0;
+  context.mock.method(browser, "newContext", async (/** @type {Parameters<typeof browser.newContext>[0]} */ options) => {
+    const opened = await newContext(options);
+    activeContexts += 1;
+    peakContexts = Math.max(peakContexts, activeContexts);
+    opened.once("close", () => { activeContexts -= 1; });
+    return opened;
+  });
+  let activeJobs = 0;
+  let peakJobs = 0;
+  let release = () => {};
+  /** @type {Promise<void>} */
+  const first = new Promise((resolve) => { release = resolve; });
+  const checks = [...COMMON, ...ARCHETYPE_CHECKS.button];
+  for (const [index, check] of checks.entries()) {
+    context.mock.method(check, "run", async (/** @type {import("../src/types.js").CheckContext} */ ctx) => {
+      activeJobs += 1;
+      peakJobs = Math.max(peakJobs, activeJobs);
+      try {
+        await ctx.variant({ colorScheme: "dark" });
+        if (index === 0) await first;
+        if (index === 1) release();
+        if (index === 2) throw new Error("deliberate check failure");
+        return { result: "pass", detail: `Completed check ${index}.` };
+      } finally {
+        activeJobs -= 1;
+      }
+    });
+  }
+  const result = await runInteractions(browser, `${server.origin}/button-good.html`, "button", { interactionConcurrency: 2, fastFixture: true });
+  assert.equal(peakJobs, 2);
+  assert.ok(peakContexts > 2 && peakContexts <= 4, `variant contexts remain bounded: ${peakContexts}`);
+  assert.deepEqual(result.checks.map((check) => check.name), checks.map((check) => check.name));
+  assert.equal(result.checks[2].result, "error");
+  assert.match(result.checks[2].detail, /deliberate check failure/);
+  assert.equal(result.checks[4].result, "pass");
+  assert.equal(activeContexts, 0);
+  assert.equal(browser.contexts().length, initial);
+});
+
+test("interaction pool closes missing-page contexts and returns every error in order", { skip }, async () => {
+  const initial = session.browser.contexts().length;
+  const result = await runInteractions(session.browser, `${server.origin}/missing.html`, "button", { interactionConcurrency: 2 });
+  assert.deepEqual(result.checks.map((check) => check.name), [...COMMON, ...ARCHETYPE_CHECKS.button].map((check) => check.name));
+  assert.ok(result.checks.every((check) => check.result === "error" && check.detail.includes("HTTP 404")));
+  assert.equal(session.browser.contexts().length, initial);
+});
+
+test("interaction pool preserves complete serial results for good and bad fixtures", { skip }, async () => {
+  for (const name of ["button-good", "button-bad", "dialog-good", "dialog-bad", "menu-good", "live-region-bad-focus"]) {
+    const [archetype] = PAGES[name];
+    const url = `${server.origin}/${name}.html`;
+    const serial = await runInteractions(session.browser, url, archetype, { fastFixture: true });
+    const concurrent = await runInteractions(session.browser, url, archetype, { fastFixture: true, interactionConcurrency: 2 });
+    assert.deepEqual(concurrent, serial, name);
+  }
 });
 
 test("a check that hangs times out as an error", { skip }, async () => {

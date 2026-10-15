@@ -16,7 +16,8 @@ export { EXIT };
 export class UsageError extends Error {}
 
 /**
- * @typedef {{ stdout: { write(text: string): unknown }, stderr: { write(text: string): unknown }, cwd: string, env: NodeJS.ProcessEnv, fetch?: import("../plan/classify.js").FetchLike, npmView?: (spec: string) => Promise<unknown>, installPackage?: typeof import("../harness/npm-install.js").installPackage, platform?: NodeJS.Platform, installBrowser?: typeof import("../env/browser.js").installBrowser }} Io
+ * Fixture phase timings are nested wall times: do not add child durations to their parent aggregate.
+ * @typedef {{ stdout: { write(text: string): unknown }, stderr: { write(text: string): unknown }, cwd: string, env: NodeJS.ProcessEnv, fetch?: import("../plan/classify.js").FetchLike, npmView?: (spec: string) => Promise<unknown>, installPackage?: typeof import("../harness/npm-install.js").installPackage, platform?: NodeJS.Platform, installBrowser?: typeof import("../env/browser.js").installBrowser, fastFixture?: boolean, interactionConcurrency?: number, onFixturePhase?: (event: { target: string, phase: string, elapsedMs: number }) => void }} Io
  */
 
 const OPTION_DEFS = /** @type {const} */ ({
@@ -249,7 +250,7 @@ export async function executePlan(plan, { planOnly, savedPlanPath }, io) {
 
   if (plan.targets.every((t) => t.status === "failed")) {
     io.stderr.write("Every target failed to resolve.\n");
-    return EXIT.ALL_TARGETS_FAILED;
+    return planOnly ? EXIT.ALL_TARGETS_FAILED : runPlan(plan, io);
   }
   if (planOnly) return EXIT.OK;
 

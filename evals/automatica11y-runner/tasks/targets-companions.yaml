@@ -1,0 +1,29 @@
+id: runner-targets-companions
+name: Packages that work together become one target
+description: A component package and its script companion join with a comma, primary first, into one target.
+tags:
+  - targets
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit @acme/components. It only works together with its script package @acme/interactions, so test them as one library. Show me the exact command, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: joins-companions
+    config:
+      contains:
+        - "npm:@acme/components,@acme/interactions"
+      regex_not_match:
+        - "automatica11y(@latest)? compare"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

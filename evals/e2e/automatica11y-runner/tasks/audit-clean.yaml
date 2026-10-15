@@ -1,0 +1,38 @@
+id: runner-e2e-audit-clean
+name: Audit a clean local page
+description: Both engines find nothing, so the runner reports their zero results separately and explains the limits without claiming the page meets WCAG.
+tags:
+  - e2e
+context_dir: evals/e2e/automatica11y-runner/fixtures/pages
+inputs:
+  prompt: "I've been asked to use automatica11y. Audit ./clean.html and tell me whether it's accessible. End with a final reply stating the report path, measured findings, and limitations."
+  files:
+    - path: clean.html
+expected:
+  should_trigger: true
+graders:
+  - type: file
+    name: writes-results
+    config:
+      must_exist:
+        - "a11y-report/results.json"
+  - type: tool_constraint
+    name: runs-audit
+    config:
+      expect_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? audit .*clean\\.html"
+  - type: text
+    name: uses-measured-wording
+    config:
+      contains:
+        - "no automated violations found"
+      regex_not_match:
+        - "\\b\\d{1,3}\\s*/\\s*100\\b"
+  - type: prompt
+    name: avoids-positive-accessibility-claims
+    config:
+      prompt: |
+        Grade the final report, not quoted user questions or disclaimers, for an audit of a local page.
+        Pass only if axe-core and IBM Equal Access are reported separately, "no automated violations found" refers only to axe-core where it found zero, and the report explains that automated results do not establish WCAG conformance.
+        Fail if the agent affirmatively declares the page accessible, compliant, or passing WCAG. Negative statements and caveats such as "not fully accessible" or "cannot say it is accessible" are not positive claims and must not fail this check by themselves.

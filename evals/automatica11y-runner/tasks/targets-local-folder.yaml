@@ -1,0 +1,32 @@
+id: runner-targets-local-folder
+name: A built site folder is a path target
+description: A local build folder is audited as a path, not as an npm package.
+tags:
+  - targets
+inputs:
+  prompt: "I've already checked the automatica11y guide. Our static site builds to ./dist. Audit it. Show me the exact command, but don't run the audit."
+  files:
+    - path: dist/index.html
+      content: "<!doctype html><html><body></body></html>"
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: uses-path
+    config:
+      regex_match:
+        - "audit\\s+([\\w-]+=)?\\./dist\\b"
+      not_contains:
+        - "npm:dist"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

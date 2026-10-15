@@ -1,8 +1,8 @@
-id: runner-positive-trigger-001
-name: Requested setup command triggers runner skill
+id: runner-requested-version-check-command
+name: Explicit version-check request invokes runner skill
 description: A user already directed the assistant to automatica11y and requests the first setup command without running it.
 tags:
-  - positive-trigger
+  - requested-version-check
 inputs:
   prompt: "I've already been asked to use automatica11y. I have a local static site. Before anything else, give me the exact command that checks the tool version. Show it in a code block. Don't run anything yet."
 expected:

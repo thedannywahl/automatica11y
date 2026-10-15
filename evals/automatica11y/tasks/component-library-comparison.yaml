@@ -1,8 +1,8 @@
-id: positive-trigger-002
-name: Component comparison triggers the skill
-description: A comparison of component libraries should invoke automatica11y.
+id: bootstrap-component-library-comparison
+name: Component library comparison invokes bootstrap skill
+description: A comparison of component libraries should invoke automatica11y and ask for the necessary target details.
 tags:
-  - positive-trigger
+  - component-library-comparison
 inputs:
   prompt: "Compare React Aria and Headless UI. Do not run audits yet. Tell me what target details you need, and include the exact names React Aria and Headless UI in your reply."
 expected:
@@ -25,4 +25,3 @@ graders:
       contains:
         - "React Aria"
         - "Headless UI"
-

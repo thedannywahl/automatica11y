@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { readPackageVersion } from "../../env/versions.js";
+import { installSelectors } from "./selectors.js";
 
 const require = createRequire(import.meta.url);
 /** @type {string | null} */
@@ -17,7 +18,7 @@ const LEVEL_ORDER = { A: 1, AA: 2 };
 
 /**
  * What this file uses of the IBM engine's checker, which runs inside the page.
- * @typedef {{ rulesets: Array<{ id: string, checkpoints: Array<{ num: string, wcagLevel: string, rules: Array<{ id: string, toolkitLevel: number }> }> }>, check(root: Node, ids: string[]): Promise<{ results: Array<{ ruleId: string, value: string[], message: string, snippet?: string, path?: { dom?: string } }> }> }} AceChecker
+ * @typedef {{ rulesets: Array<{ id: string, checkpoints: Array<{ num: string, wcagLevel: string, rules: Array<{ id: string, toolkitLevel: number }> }> }>, check(root: Node, ids: string[]): Promise<{ results: Array<{ ruleId: string, value: string[], message: string, node?: Node, snippet?: string, path?: { dom?: string } }> }> }} AceChecker
  */
 
 /** @param {string} ruleId */
@@ -25,14 +26,14 @@ export const helpUrl = (ruleId) => `https://able.ibm.com/rules/archives/latest/d
 
 /**
  * Group raw IBM results into findings, one per rule and kind, with the first few nodes.
- * @param {Array<{ ruleId: string, message: string, value: string[], dom?: string, snippet?: string }>} items
+ * @param {Array<{ ruleId: string, message: string, value: string[], location: ReturnType<Window['__a11ySelectors']['forNode']>, snippet?: string }>} items
  * @param {Map<string, { wcag: string[], toolkitLevel: number | null }>} ruleInfo
  * @param {(item: { value: string[] }) => string} kindOf
  * @param {number} maxNodes
  * @param {boolean} withKind
  */
 function group(items, ruleInfo, kindOf, maxNodes, withKind) {
-  /** @type {Map<string, { ruleId: string, impact: null, toolkitLevel: number | null, wcag: string[], kind?: import("../../types.js").Finding["kind"], help: string, helpUrl: string, nodeCount: number, nodes: Array<{ selector: string, html: string }> }>} */
+  /** @type {Map<string, import("../../types.js").Finding>} */
   const groups = new Map();
   for (const item of items) {
     const kind = kindOf(item);
@@ -54,7 +55,7 @@ function group(items, ruleInfo, kindOf, maxNodes, withKind) {
       groups.set(key, entry);
     }
     entry.nodeCount += 1;
-    if (entry.nodes.length < maxNodes) entry.nodes.push({ selector: item.dom ?? "", html: String(item.snippet ?? "").slice(0, 300) });
+    if (entry.nodes.length < maxNodes) entry.nodes.push({ ...item.location, html: String(item.snippet ?? "").slice(0, 300) });
   }
   return [...groups.values()].sort((a, b) => a.ruleId.localeCompare(b.ruleId));
 }
@@ -71,6 +72,7 @@ export async function runIbm(page, { wcag, level, maxNodes = 5, scope = null }) 
   const ruleset = `WCAG_${wcag.replace(".", "_")}`;
   const maxLevel = LEVEL_ORDER[level] ?? LEVEL_ORDER.AA;
   await page.evaluate(loadAce());
+  await installSelectors(page);
   const scopes = [scope ?? []].flat();
   const raw = await page.evaluate(async ({ id, scopes }) => {
     // @ts-ignore ace.js defines window.ace in the page.
@@ -92,7 +94,7 @@ export async function runIbm(page, { wcag, level, maxNodes = 5, scope = null }) 
           const key = `${r.ruleId}|${r.path?.dom}|${r.value.join()}`;
           if (seen.has(key)) continue;
           seen.add(key);
-          found.push({ ruleId: r.ruleId, value: r.value, message: r.message, dom: r.path?.dom, snippet: r.snippet });
+          found.push({ ruleId: r.ruleId, value: r.value, message: r.message, location: window.__a11ySelectors.forNode(r.node), snippet: r.snippet });
         }
       }
     }

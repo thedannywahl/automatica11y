@@ -10,11 +10,12 @@ import { installMeasure } from "./measure-kit.js";
  * @param {import("playwright-core").Browser} browser
  * @param {string} url
  * @param {string} archetype
+ * @param {{ fastFixture?: boolean }} [options]
  */
-export async function runComputed(browser, url, archetype) {
+export async function runComputed(browser, url, archetype, { fastFixture = false } = {}) {
   if (archetype === "chart") return { status: "not-applicable", reason: "The chart archetype has no trigger to measure." };
   const results = [];
-  for (const check of computedChecksFor(archetype)) results.push(await runCheck(browser, url, check, { kits: [installHelpers, installMeasure] }));
+  for (const check of computedChecksFor(archetype)) results.push(await runCheck(browser, url, check, { kits: [installHelpers, installMeasure], fastFixture }));
   return { status: "ran", checks: results };
 }
 

@@ -1,0 +1,44 @@
+id: runner-preflight-doctor-no-browser
+name: Missing browser asks once before downloading Chromium
+description: When doctor exits 3 for a missing browser, the runner asks whether to download Chromium and doesn't install it unasked.
+tags:
+  - preflight
+inputs:
+  prompt: "I've been asked to use automatica11y. Audit https://example.com for accessibility."
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "automatica11y@latest", "--version"]
+        stdout: "0.10.0\n"
+      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
+        fixture: mocks/guide-skill.md
+      - args: ["--yes", "automatica11y@latest", "doctor"]
+        fixture: mocks/doctor-no-browser.txt
+        exit_code: 3
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: asks-about-chromium
+    config:
+      contains:
+        - "Chromium"
+      regex_match:
+        - "100\\s?MB"
+  - type: tool_constraint
+    name: installs-nothing-unasked
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "install-browser|playwright(-core)? install|automatica11y@latest (audit|compare)|brew install"

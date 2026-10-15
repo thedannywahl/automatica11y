@@ -1,0 +1,49 @@
+id: runner-report-clean
+name: Report from clean results stays measured
+description: When both engines report zero violations, the runner says "no automated violations found" per engine and never calls the page accessible.
+tags:
+  - report
+inputs:
+  prompt: "I've been asked to use automatica11y. I already ran npx --yes automatica11y@latest audit ./clean.html and the output is in ./a11y-report. Is the page accessible? Write up the report from those results. Don't run the tool again."
+  context:
+    fixture: fixtures/reports/clean
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: uses-measured-wording
+    config:
+      contains:
+        - "no automated violations found"
+        - "axe-core"
+        - "IBM"
+      regex_not_match:
+        - "(?i)\\b(is|are|was|be|fully) accessible\\b"
+        - "(?i)\\bcompliant\\b"
+        - "(?i)passes WCAG"
+        - "\\b\\d{1,3}\\s*/\\s*100\\b"
+  - type: prompt
+    name: follows-report-rules
+    config:
+      prompt: |
+        You are grading an accessibility report written from automatica11y results. One page was audited and both axe-core and IBM Equal Access reported zero violations. The user asked whether the page is accessible.
+        Pass only if all of these hold:
+        1. The report says "no automated violations found" for each engine separately, and doesn't merge the engines.
+        2. It never says the page is accessible, compliant, or passes WCAG, and it explains that automated checks cover only part of WCAG.
+        3. Interactions and computed checks that didn't run are reported as not run or not applicable, not as passes.
+        4. Virtual screen reader output, if mentioned, is labelled simulated.
+        5. There is no single overall score.
+        6. It ends with a method note naming what a person still has to check.
+        Fail if any rule is broken.
+  - type: tool_constraint
+    name: does-not-rerun
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

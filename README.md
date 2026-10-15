@@ -58,7 +58,7 @@ Pick two component libraries, two versions of one component, or two sites, and `
 
 Point it at an npm package. It installs the package on its own, finds the components, builds the test fixtures it needs (React, Vue 3, Angular 22 and newer, Svelte 5 and newer, plain HTML, and web components), then opens the dialogs and menus and presses the keys.
 
-### It's' composable
+### It's composable
 
 Out of the box it looks at standard accessibility interactions and archetypes (buttons, links, dialogs, contrast, etc.) and you can bring your own simple fixtures for more complex components.
 
@@ -68,7 +68,7 @@ The tool prints its own instructions, so you can ask an agent "how accessible is
 
 ## What a result looks like
 
-automatica11y generates a machine-readable json findings report, and a human-readable markdown version. Here's an excerpt from a real run on the carousel in shadcn/ui:
+automatica11y generates a machine-readable json findings report, and a human-readable markdown version. Here's an excerpt from a real run on the carousel in `shadcn/ui`:
 
 | Check | Result | Detail |
 |---|---|---|
@@ -83,6 +83,16 @@ automatica11y generates a machine-readable json findings report, and a human-rea
 automatica11y is not an attestation or certification tool. Automated checks cover only part of WCAG. They can't judge whether alt text is meaningful, whether the reading order makes sense, or how real screen readers behave, and the screen reader it runs is simulated. A person has to check those.
 
 A report says "no automated violations found" where an engine found none, and never says "accessible." A gap, an error, or a result that isn't testable is a finding, not a pass.
+
+## Showcase
+
+Using `automatica11y`?  Add the badge to your README.
+
+[![automatica11y badge](https://img.shields.io/badge/automatica11y-E665B4?logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48ZyBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI%2BPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48cGF0aCBkPSJtNy41NyA5LjU2IDQuNDggMS40OSA0LjQ3LTEuNDlNMTIuMDUgMTEuMDV2Mi45OW0tMi4yNCA0LjQ4IDIuMjQtNC40OCAyLjIzIDQuNDgiLz48L2c%2BPGNpcmNsZSBjeD0iMTIiIGN5PSI2LjQ4NSIgcj0iMiIgZmlsbD0id2hpdGUiLz48L3N2Zz4%3D)](https://img.shields.io/badge/automatica11y-E665B4?logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48ZyBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI%2BPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48cGF0aCBkPSJtNy41NyA5LjU2IDQuNDggMS40OSA0LjQ3LTEuNDlNMTIuMDUgMTEuMDV2Mi45OW0tMi4yNCA0LjQ4IDIuMjQtNC40OCAyLjIzIDQuNDgiLz48L2c%2BPGNpcmNsZSBjeD0iMTIiIGN5PSI2LjQ4NSIgcj0iMiIgZmlsbD0id2hpdGUiLz48L3N2Zz4%3D)
+
+Or use the Github Actions variant (replace `:owner`, `:repo`, and `:workflow` with yours.)
+
+[![automatica11y CI status](https://img.shields.io/github/actions/workflow/status/thedannywahl/automatica11y/docs.yml?branch=main&label=automatica11y&labelColor=E665B4&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48ZyBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI%2BPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48cGF0aCBkPSJtNy41NyA5LjU2IDQuNDggMS40OSA0LjQ3LTEuNDlNMTIuMDUgMTEuMDV2Mi45OW0tMi4yNCA0LjQ4IDIuMjQtNC40OCAyLjIzIDQuNDgiLz48L2c%2BPGNpcmNsZSBjeD0iMTIiIGN5PSI2LjQ4NSIgcj0iMiIgZmlsbD0id2hpdGUiLz48L3N2Zz4%3D)](https://img.shields.io/github/actions/workflow/status/:owner/:repo/:workflow.yml?branch=main&label=automatica11y&labelColor=E665B4&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48ZyBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI%2BPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48cGF0aCBkPSJtNy41NyA5LjU2IDQuNDggMS40OSA0LjQ3LTEuNDlNMTIuMDUgMTEuMDV2Mi45OW0tMi4yNCA0LjQ4IDIuMjQtNC40OCAyLjIzIDQuNDgiLz48L2c%2BPGNpcmNsZSBjeD0iMTIiIGN5PSI2LjQ4NSIgcj0iMiIgZmlsbD0id2hpdGUiLz48L3N2Zz4%3D)
 
 ## License
 

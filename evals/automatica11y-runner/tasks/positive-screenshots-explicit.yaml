@@ -2,7 +2,7 @@ id: runner-positive-screenshots-explicit
 name: Explicit screenshot request enables captures
 description: An explicit request for annotated accessibility screenshots should add the screenshots option without asking again.
 tags:
-  - positive-trigger
+  - explicit-screenshot-request
 inputs:
   prompt: "I've already checked the automatica11y guide. Audit https://example.com and include annotated screenshots of rule violations. Show me the exact command, but don't run it."
 expected:

@@ -69,7 +69,7 @@ async function reachState(ctx, archetype) {
   if (!(await hasTrigger(ctx)) || NO_ACTIVATION.has(archetype)) return false;
   await ctx.focus();
   await ctx.press("Enter");
-  await ctx.settle(300);
+  await ctx.observe(300);
   return true;
 }
 
@@ -86,7 +86,7 @@ async function collectAnimations(ctx, archetype) {
   const take = async () => {
     for (const a of await ctx.page.evaluate(() => window.__a11yConditions.animations())) seen.set(`${a.kind}|${a.name}|${a.target}|${a.props.join()}|${a.duration}|${a.iterations}`, a);
   };
-  await ctx.settle(100);
+  await ctx.observe(100);
   await take();
   await sleep(150);
   await take();

@@ -41,7 +41,8 @@
  * @property {Locator} trigger
  * @property {() => Promise<PageSnapshot>} snap
  * @property {(selector: string) => Promise<PageItem[]>} items
- * @property {(ms?: number) => Promise<void>} settle
+ * @property {(ms?: number) => Promise<void>} settle Cosmetic settling, accelerated only in opted-in fixtures.
+ * @property {(ms: number) => Promise<void>} observe Rendering frames plus an observation window that is never shortened.
  * @property {(key: string) => Promise<void>} press
  * @property {() => Promise<void>} focus
  * @property {(predicate: (s: PageSnapshot) => boolean, ms?: number) => Promise<PageSnapshot | null>} waitFor

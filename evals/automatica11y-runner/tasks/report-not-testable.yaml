@@ -1,0 +1,45 @@
+id: runner-report-not-testable
+name: Not-testable results are a gap, not a clean result
+description: A canvas-only page the engines can't see is reported as not testable and a coverage gap, never as clean.
+tags:
+  - report
+inputs:
+  prompt: "I've been asked to use automatica11y. I already ran npx --yes automatica11y@latest audit ./canvas-only.html and the output is in ./a11y-report. Write up the report from those results. Don't run the tool again."
+  context:
+    fixture: fixtures/reports/not-testable
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: names-the-gap
+    config:
+      regex_match:
+        - "(?i)not[ -]testable"
+        - "(?i)canvas"
+        - "(?i)gap"
+      regex_not_match:
+        - "(?i)\\b(is|are|was|be|fully) accessible\\b"
+        - "(?i)\\bcompliant\\b"
+  - type: prompt
+    name: follows-report-rules
+    config:
+      prompt: |
+        You are grading an accessibility report written from automatica11y results. One page was audited. It is mainly a canvas with no text alternative, so axe-core and IBM Equal Access both recorded it as not testable.
+        Pass only if all of these hold:
+        1. The rule engine results are reported as not testable and as a coverage gap, never as clean, passing, or "no automated violations found".
+        2. The reason (a canvas with no alternative that the engines can't see) is stated plainly.
+        3. Any checks that did run, such as conditions or the simulated virtual screen reader, are reported in their own sections, with the screen reader labelled simulated.
+        4. The page is never called accessible or compliant, and there is no single score.
+        Fail if any rule is broken.
+  - type: tool_constraint
+    name: does-not-rerun
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

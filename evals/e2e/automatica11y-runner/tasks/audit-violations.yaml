@@ -1,0 +1,46 @@
+id: runner-e2e-audit-violations
+name: Audit a local page with violations
+description: The runner checks the version and setup, audits a local page, and writes the report from results.json.
+tags:
+  - e2e
+context_dir: evals/e2e/automatica11y-runner/fixtures/pages
+inputs:
+  prompt: "I've been asked to use automatica11y. Audit ./missing-alt.html and write me the report. End with a final reply stating the report path and summarizing its findings."
+  files:
+    - path: missing-alt.html
+expected:
+  should_trigger: true
+graders:
+  - type: file
+    name: writes-results
+    config:
+      must_exist:
+        - "a11y-report/results.json"
+        - "a11y-report/report.md"
+  - type: tool_constraint
+    name: checks-then-runs
+    config:
+      expect_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? --version"
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? doctor"
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? audit .*missing-alt\\.html"
+  - type: text
+    name: quotes-results
+    config:
+      contains:
+        - "image-alt"
+        - "img_alt_valid"
+        - "simulated"
+      regex_not_match:
+        - "(?i)\\b(is|are|was|be|fully|not) accessible\\b"
+        - "(?i)\\bcompliant\\b"
+        - "(?i)passes WCAG"
+  - type: prompt
+    name: follows-report-rules
+    config:
+      prompt: |
+        You are grading an accessibility report that an agent wrote after running automatica11y on one local page that has an image with no alt text.
+        Pass only if: the run date and tool versions come first; axe-core and IBM Equal Access findings are separate and never added together; violations, needs-review items, and passes are separate; "no automated violations found" isn't used for an engine that reported a violation; virtual screen reader output is labelled simulated; the page is never called accessible or compliant; there's no single score; and it ends with a method note on what automated tools can't catch.

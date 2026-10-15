@@ -1,0 +1,30 @@
+id: runner-options-lib-a11y
+name: Library accessibility features on becomes --lib-a11y on
+description: The user wants only the run with the library's opt-in accessibility features on.
+tags:
+  - options
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit the npm package @acme/charts with its opt-in accessibility features turned on only. Skip the run with them off. Show me the exact command, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: sets-lib-a11y
+    config:
+      contains:
+        - "npm:@acme/charts"
+        - "--lib-a11y on"
+      not_contains:
+        - "--lib-a11y on,off"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

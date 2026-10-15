@@ -1,8 +1,8 @@
-id: positive-trigger-001
-name: Page audit request triggers the skill
-description: A natural-language page accessibility question should invoke automatica11y.
+id: bootstrap-component-accessibility-question
+name: Component accessibility question invokes bootstrap skill
+description: Asking about a component's accessibility should invoke automatica11y and request the missing target.
 tags:
-  - positive-trigger
+  - component-accessibility-request
 inputs:
   prompt: "How accessible is the Radix Dialog component? Do not run an audit yet. First state the exact guide command you ran, then ask me which target I mean."
 expected:
@@ -19,4 +19,3 @@ graders:
     config:
       contains:
         - "guide skill"
-

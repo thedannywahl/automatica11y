@@ -1,5 +1,7 @@
 node_modules/
 a11y-report/
+!/evals/*/fixtures/reports/*/a11y-report/
+/evals/e2e/automatica11y-runner/fixtures/npm-local/
 *.tgz
 .DS_Store
 tmp/

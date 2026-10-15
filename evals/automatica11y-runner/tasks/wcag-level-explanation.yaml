@@ -1,0 +1,25 @@
+id: runner-wcag-level-explanation
+name: WCAG level explanation leaves runner idle
+description: Explain WCAG levels from general knowledge without invoking the runner.
+tags:
+  - wcag-level-explanation
+inputs:
+  prompt: "What do WCAG levels AA and AAA mean? Explain the difference in two sentences."
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: avoids-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: negative
+      threshold: 0.6
+  - type: text
+    name: runs-nothing
+    config:
+      contains:
+        - "AA"
+        - "AAA"
+      not_contains:
+        - "automatica11y"
+        - "npx --yes"

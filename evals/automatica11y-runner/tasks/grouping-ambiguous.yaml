@@ -1,0 +1,29 @@
+id: runner-grouping-ambiguous
+name: An unclear grouping is shown and confirmed
+description: "\"A, B and C\" from one organization could be grouped several ways, so the runner shows its best reading and asks before running."
+tags:
+  - grouping
+inputs:
+  prompt: "I've already checked the automatica11y guide. Compare @acme/core, @acme/react and @acme/elements."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: asks-to-confirm-grouping
+    config:
+      regex_match:
+        - "(?i)(\\?|confirm|which|do you want)"
+        - "(?i)(confirm|which|grouping|group)"
+        - "(?i)\\|\\s*label\\s*\\|"
+  - type: tool_constraint
+    name: runs-no-compare
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

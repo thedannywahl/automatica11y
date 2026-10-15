@@ -1,0 +1,217 @@
+{
+  "schema": 1,
+  "planRef": "plan.json",
+  "runAt": "2026-10-14T19:06:20.463Z",
+  "tools": {
+    "node": "24.22.0",
+    "automatica11y": "0.9.0",
+    "axe-core": "4.14.0",
+    "ibm-checker-engine": "4.0.34",
+    "playwright-core": "1.64.0",
+    "esbuild": "0.28.2",
+    "guidepup-vsr": "0.33.0",
+    "chromium": "155.0.8059.80"
+  },
+  "targets": [
+    {
+      "id": "canvas-only.html",
+      "status": "ran",
+      "reason": null,
+      "archetypes": {
+        "page": {
+          "status": "ran",
+          "configs": [
+            {
+              "libA11y": "n/a",
+              "tiers": {
+                "rules": {
+                  "status": "not-testable",
+                  "reason": "Canvas output exposes nothing to rule checks. The page or component is mainly a canvas with no text alternative, label, table, or SVG, so there was nothing to test.",
+                  "engines": {
+                    "axe": {
+                      "status": "not-testable",
+                      "reason": "Canvas output exposes nothing to rule checks. The page or component is mainly a canvas with no text alternative, label, table, or SVG, so there was nothing to test."
+                    },
+                    "ibm": {
+                      "status": "not-testable",
+                      "reason": "Canvas output exposes nothing to rule checks. The page or component is mainly a canvas with no text alternative, label, table, or SVG, so there was nothing to test."
+                    }
+                  }
+                },
+                "interactions": {
+                  "status": "not-applicable",
+                  "reason": "Interaction checks need an archetype fixture with trigger and root hooks. Page and Storybook targets don't have them."
+                },
+                "computed": {
+                  "status": "not-applicable",
+                  "reason": "Computed checks need an archetype fixture with a trigger hook. Page and Storybook targets don't have one."
+                },
+                "conditions": {
+                  "status": "ran",
+                  "checks": [
+                    {
+                      "name": "reduced-motion-respected",
+                      "criteria": [
+                        "2.3.3",
+                        "2.2.2"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "No animations or transitions were running at load or after the trigger was pressed, so there's nothing to reduce. Motion driven by JavaScript timers isn't visible to this check."
+                    },
+                    {
+                      "name": "dark-mode-contrast",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-color-scheme: dark, so it doesn't adapt to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "more-contrast-respected",
+                      "criteria": [
+                        "1.4.3",
+                        "1.4.6"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-contrast: more, so it doesn't respond to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "less-contrast-stays-readable",
+                      "criteria": [
+                        "1.4.3"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "The page looks the same under prefers-contrast: less, so it doesn't respond to it. A page isn't required to. Nothing was checked."
+                    },
+                    {
+                      "name": "reduced-transparency-respected",
+                      "criteria": [
+                        "1.4.3",
+                        "1.4.11"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "No surface that holds text is see-through (no translucent background and no backdrop filter), so there's nothing to reduce. Empty overlays aren't counted."
+                    },
+                    {
+                      "name": "forced-colors-focus-visible",
+                      "criteria": [
+                        "1.4.11",
+                        "2.4.7"
+                      ],
+                      "result": "not-applicable",
+                      "detail": "Nothing on the page takes keyboard focus, so there's no focus indicator to check."
+                    },
+                    {
+                      "name": "reflow-at-320px",
+                      "criteria": [
+                        "1.4.10"
+                      ],
+                      "result": "pass",
+                      "detail": "In a 320px window, nothing reaches past the right edge and the page doesn't scroll sideways.",
+                      "measurements": [
+                        {
+                          "viewportWidth": 320,
+                          "scrollWidth": 320,
+                          "overflowingElements": 0
+                        }
+                      ]
+                    },
+                    {
+                      "name": "text-spacing-no-clipping",
+                      "criteria": [
+                        "1.4.12"
+                      ],
+                      "result": "pass",
+                      "detail": "With line height 1.5, letter spacing 0.12em, word spacing 0.16em, and paragraph spacing 2em, no element cut off its text (four elements checked). Overlapping text isn't checked.",
+                      "measurements": [
+                        {
+                          "elementsChecked": 4,
+                          "clipped": 0
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "vsr": {
+                  "status": "ran",
+                  "simulated": true,
+                  "version": "0.33.0",
+                  "log": [
+                    {
+                      "state": null,
+                      "announcements": [
+                        "document",
+                        "main",
+                        "heading, Canvas only, level 1",
+                        "end of main",
+                        "end of document"
+                      ],
+                      "reachedEnd": true,
+                      "truncated": false
+                    }
+                  ],
+                  "flags": [],
+                  "notTestable": [],
+                  "notes": []
+                }
+              }
+            }
+          ]
+        }
+      },
+      "summary": {
+        "engines": {
+          "axe": {
+            "status": "not-testable",
+            "violations": 0,
+            "needsReview": 0,
+            "violationsByImpact": {
+              "critical": 0,
+              "serious": 0,
+              "moderate": 0,
+              "minor": 0
+            }
+          },
+          "ibm": {
+            "status": "not-testable",
+            "violations": 0,
+            "needsReview": 0,
+            "violationsByToolkitLevel": {
+              "1": 0,
+              "2": 0,
+              "3": 0,
+              "4": 0
+            }
+          }
+        },
+        "gaps": [],
+        "notTestable": [
+          "Canvas output exposes nothing to rule checks. The page or component is mainly a canvas with no text alternative, label, table, or SVG, so there was nothing to test."
+        ],
+        "conditions": {
+          "pass": 2,
+          "fail": 0,
+          "undetermined": 0,
+          "notApplicable": 6,
+          "error": 0
+        },
+        "vsr": {
+          "walks": 1,
+          "flagged": 0
+        }
+      },
+      "warnings": []
+    }
+  ],
+  "failCheck": null,
+  "outcome": {
+    "status": "passed",
+    "coverage": [
+      "canvas-only.html: Canvas output exposes nothing to rule checks. The page or component is mainly a canvas with no text alternative, label, table, or SVG, so there was nothing to test.",
+      "canvas-only.html/page/0/rules: Canvas output exposes nothing to rule checks. The page or component is mainly a canvas with no text alternative, label, table, or SVG, so there was nothing to test."
+    ],
+    "review": [],
+    "checks": []
+  },
+  "warnings": []
+}

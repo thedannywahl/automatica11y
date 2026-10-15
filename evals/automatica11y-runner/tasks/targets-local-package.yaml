@@ -1,0 +1,35 @@
+id: runner-targets-local-package
+name: Local builds and tarballs map with --local-package
+description: A packed tarball and a built folder become npm targets with one --local-package each.
+tags:
+  - targets
+inputs:
+  prompt: "I've already checked the automatica11y guide. I packed our library @acme/widgets into ./acme-widgets-2.0.0.tgz, and its stylesheet package @acme/widgets-css is built at ./packages/css/dist. They work together, and neither is published yet. Audit them. Show me the exact command, but don't run the audit."
+  files:
+    - path: acme-widgets-2.0.0.tgz
+      content: "Placeholder archive; this task only checks command construction."
+    - path: packages/css/dist/index.js
+      content: "export {};"
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: maps-local-packages
+    config:
+      contains:
+        - "npm:@acme/widgets,@acme/widgets-css"
+      regex_match:
+        - "--local-package @acme/widgets=(\\./)?acme-widgets-2\\.0\\.0\\.tgz"
+        - "--local-package @acme/widgets-css=(\\./)?packages/css/dist"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

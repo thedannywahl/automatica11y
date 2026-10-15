@@ -1,0 +1,44 @@
+id: runner-e2e-unreachable
+name: An unreachable target is reported, not guessed
+description: The URL fails during resolution (exit code 4), so the runner reports the reason from results.json and stops without inventing audit findings.
+tags:
+  - e2e
+inputs:
+  prompt: "I've been asked to use automatica11y. Audit http://127.0.0.1:9/ and report the outcome. This target is intentionally unreachable. If it fails, use the tool's recorded failure reason; don't create replacement results yourself. End with a final reply explaining the outcome and identifying any report the tool wrote."
+expected:
+  should_trigger: true
+graders:
+  - type: file
+    name: writes-failed-target-results
+    config:
+      must_exist:
+        - "a11y-report/plan.json"
+        - "a11y-report/results.json"
+        - "a11y-report/report.md"
+      content_patterns:
+        - path: "a11y-report/results.json"
+          must_match:
+            - '"status"\s*:\s*"failed"'
+            - '"reason"\s*:\s*"[^"\n]+"'
+            - '"archetypes"\s*:\s*\{\s*\}'
+  - type: tool_constraint
+    name: runs-audit
+    config:
+      expect_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? audit .*127\\.0\\.0\\.1:9"
+  - type: text
+    name: reports-the-failure
+    config:
+      regex_match:
+        - "(?i)(didn't respond|fetch failed|failed|couldn't be reached|unreachable)"
+      regex_not_match:
+        - "(?i)no automated violations found"
+        - "(?i)\\b(is|are|was|be|fully) accessible\\b"
+  - type: text
+    name: no-invented-results
+    config:
+      regex_not_match:
+        - "(?i)no automated violations found"
+        - "(?i)\\b\\d+\\s+(violations?|passed checks?)\\b"
+        - "\\b\\d{1,3}\\s*/\\s*100\\b"

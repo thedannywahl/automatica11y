@@ -1,0 +1,30 @@
+id: runner-options-engine
+name: One rule engine becomes --engine axe
+description: The user wants axe-core only, so the command carries --engine axe.
+tags:
+  - options
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit https://example.com with axe-core only, not IBM. Show me the exact command, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: sets-engine
+    config:
+      contains:
+        - "--engine axe"
+      not_contains:
+        - "--engine axe,ibm"
+        - "--engine ibm"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

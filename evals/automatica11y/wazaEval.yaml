@@ -1,6 +1,7 @@
 name: automatica11y-eval
-description: Auto-generated eval for automatica11y.
+description: Trigger, anti-trigger, and guide-failure evaluation for the automatica11y bootstrap skill. Failure tasks mock npx; the trigger tasks fetch the real guide.
 skill: automatica11y
+schemaVersion: "1.4"
 version: "1.0"
 config:
   trials_per_task: 1

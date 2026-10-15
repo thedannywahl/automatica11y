@@ -1,0 +1,29 @@
+id: runner-options-archetypes
+name: Named components become --archetypes
+description: The user cares about dialog and tabs only, so the command carries --archetypes with both.
+tags:
+  - options
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit the npm package react-aria-components, but only its dialog and tabs. Show me the exact command, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: sets-archetypes
+    config:
+      contains:
+        - "npm:react-aria-components"
+      regex_match:
+        - "--archetypes (dialog,tabs|tabs,dialog)\\b"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

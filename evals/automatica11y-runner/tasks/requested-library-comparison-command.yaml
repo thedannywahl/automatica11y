@@ -1,8 +1,8 @@
-id: runner-positive-trigger-002
-name: Requested comparison command triggers runner skill
+id: runner-requested-library-comparison-command
+name: Explicit library comparison request invokes runner skill
 description: A user already chose automatica11y and requests a component-library comparison command without running it.
 tags:
-  - positive-trigger
+  - requested-library-comparison
 inputs:
   prompt: "I was asked to use automatica11y to compare React Aria with Headless UI. Before running anything, show me the target grouping and exact command; don't run the audit yet."
 expected:

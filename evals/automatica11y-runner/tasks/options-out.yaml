@@ -1,0 +1,29 @@
+id: runner-options-out
+name: A named folder becomes --out
+description: The user names an output folder, so the command carries --out with it.
+tags:
+  - options
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit https://example.com and save the report in ./reports/home. Show me the exact command, but don't run the audit."
+  files:
+    - path: references/fixtures.md
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: sets-out
+    config:
+      regex_match:
+        - "--out (\\./)?reports/home\\b"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

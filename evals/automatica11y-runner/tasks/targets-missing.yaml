@@ -1,0 +1,28 @@
+id: runner-targets-missing
+name: No target asks for one
+description: A request that names no target makes the runner ask for one instead of picking it.
+tags:
+  - targets
+inputs:
+  prompt: "I've already checked the automatica11y guide. Run an accessibility audit at WCAG 2.2 AA."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: asks-for-a-target
+    config:
+      regex_match:
+        - "\\?"
+        - "(?i)(URL|Storybook|npm|package|page|site)"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

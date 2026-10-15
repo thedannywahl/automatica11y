@@ -1,0 +1,30 @@
+id: runner-options-level-aaa
+name: Level AAA sets --level and notes IBM's AA ceiling
+description: The user asks for AAA, so the command carries --level AAA and the answer says IBM Equal Access runs its AA rules.
+tags:
+  - options
+inputs:
+  prompt: "I've already checked the automatica11y guide. Audit https://example.com at conformance level AAA. Show me the exact command, but don't run the audit."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: sets-level-and-notes-ibm
+    config:
+      contains:
+        - "--level AAA"
+        - "IBM"
+      regex_match:
+        - "IBM[^.]*\\bAA\\b"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

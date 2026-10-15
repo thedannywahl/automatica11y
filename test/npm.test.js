@@ -43,10 +43,10 @@ const WC_DIALOG = `export default function mount(container) {
 
 /**
  * @param {string[]} args
- * @param {{ files?: Record<string, string>, cwd?: string, env?: NodeJS.ProcessEnv }} [options]
+ * @param {{ files?: Record<string, string>, cwd?: string, env?: NodeJS.ProcessEnv, fastFixture?: boolean, interactionConcurrency?: number, onFixturePhase?: import("../src/commands/common.js").Io["onFixturePhase"] }} [options]
  */
-async function run(args, { files = {}, cwd = makeTree(files), env = process.env } = {}) {
-  const { io, out } = makeIo({ cwd, env });
+async function run(args, { files = {}, cwd = makeTree(files), env = process.env, fastFixture = false, interactionConcurrency = 1, onFixturePhase } = {}) {
+  const { io, out } = makeIo({ cwd, env, fastFixture, interactionConcurrency, onFixturePhase });
   io.npmView = npmView;
   io.installPackage = installPackage;
   const code = await main(args, io);
@@ -75,6 +75,69 @@ const archetype = (run, name, index = 0) => run.results.targets[index].archetype
  * @param {string} engine
  */
 const violations = (config, engine) => config.tiers.rules.engines[engine].violations.map((v) => v.ruleId).sort();
+
+test("fastFixture preserves CLI package results across rules and all check tiers", { skip }, async () => {
+  const args = ["audit", "lib=npm:fake-ui", "--archetypes", "button", "--tiers", "rules,interactions,computed,conditions"];
+  const normal = await run(args);
+  const fast = await run(args, { fastFixture: true });
+  assert.equal(normal.code, 0, normal.stderr);
+  assert.equal(fast.code, normal.code, fast.stderr);
+  assert.deepEqual(fast.results.targets, normal.results.targets);
+  assert.equal(fast.plan.options.fastFixture, undefined);
+});
+
+test("fixture profiling records nested tiers and failed readiness without changing artifacts", { skip }, async (context) => {
+  /** @type {Array<{ target: string, phase: string, elapsedMs: number }>} */
+  const phases = [];
+  const result = await run(["audit", "lib=npm:fake-ui", "--archetypes", "button", "--tiers", "rules,interactions,computed,conditions"], { fastFixture: true, onFixturePhase: (event) => phases.push(event) });
+  assert.equal(result.code, 0, result.stderr);
+  for (const phase of ["page-open", "trigger-ready", "fonts-ready", "settle:initial", "rules:initial", "interactions", "computed", "conditions", "cleanup"]) {
+    assert.ok(phases.some((event) => event.phase === `fixture:button:n/a:${phase}`), phase);
+  }
+  assert.ok(phases.every((event) => event.target === "lib" && event.elapsedMs >= 0));
+  assert.ok(!phases.some((event) => /:vsr:|:screenshots:/.test(event.phase)));
+  assert.doesNotMatch(JSON.stringify({ plan: result.plan, results: result.results }), /onFixturePhase|elapsedMs/);
+  context.diagnostic(phases.filter((event) => event.phase.startsWith("fixture:")).map((event) => `${event.phase}=${Math.round(event.elapsedMs)}ms`).join(", "));
+  phases.length = 0;
+  const failed = await run(["audit", "lib=npm:fake-ui", "--archetypes", "button", "--tiers", "rules"], {
+    files: { "fixtures/lib/button.jsx": 'export default function Fixture() { return <p>No trigger</p>; }' },
+    fastFixture: true,
+    onFixturePhase: (event) => phases.push(event),
+  });
+  assert.equal(archetype(failed, "button").status, "gap");
+  assert.ok(phases.some((event) => event.phase === "fixture:button:n/a:trigger-ready"));
+  assert.ok(phases.some((event) => event.phase === "fixture:button:n/a:cleanup"));
+  assert.ok(!phases.some((event) => event.phase.endsWith(":conditions")));
+});
+
+test("interaction pool preserves CLI package results and stays out of saved artifacts", { skip }, async () => {
+  const args = ["audit", "lib=npm:fake-compound", "--archetypes", "dialog,menu", "--tiers", "rules,interactions,conditions"];
+  const serial = await run(args, { fastFixture: true });
+  const concurrent = await run(args, { fastFixture: true, interactionConcurrency: 2 });
+  assert.equal(serial.code, 0, serial.stderr);
+  assert.equal(concurrent.code, serial.code, concurrent.stderr);
+  assert.deepEqual(concurrent.results.targets, serial.results.targets);
+  assert.doesNotMatch(JSON.stringify({ plan: concurrent.plan, results: concurrent.results }), /interactionConcurrency/);
+});
+
+test("fastFixture preserves generated package states and waits for delayed authored fixtures", { skip, timeout: 120_000 }, async () => {
+  const args = ["audit", "lib=npm:fake-compound", "--archetypes", "dialog,accordion", "--tiers", "rules"];
+  const normal = await run(args);
+  const fast = await run(args, { fastFixture: true });
+  assert.equal(normal.code, 0, normal.stderr);
+  assert.equal(fast.code, normal.code, fast.stderr);
+  assert.deepEqual(fast.results.targets, normal.results.targets);
+  const files = { "fixtures/lib/button.jsx": `import { useEffect, useState } from "react";
+import { Button } from "fake-ui";
+export default function Fixture() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => { const timer = setTimeout(() => setReady(true), 150); return () => clearTimeout(timer); }, []);
+  return ready ? <Button data-a11y-trigger data-a11y-root>Delayed save</Button> : null;
+}` };
+  const delayed = await run(["audit", "lib=npm:fake-ui", "--archetypes", "button", "--tiers", "rules"], { files, fastFixture: true });
+  assert.equal(delayed.code, 0, delayed.stderr);
+  assert.equal(archetype(delayed, "button").status, "ran");
+});
 
 test("detectFlavor: React wins, then web components, then Vue, then other frameworks, then unknown", () => {
   assert.equal(detectFlavor({ peerDependencies: { react: "^18" } }).kind, "npm-react");

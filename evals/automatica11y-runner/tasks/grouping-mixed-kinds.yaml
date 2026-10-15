@@ -1,0 +1,31 @@
+id: runner-grouping-mixed-kinds
+name: A page beside a package warns that evidence differs
+description: Comparing a live page with an npm package uses compare and warns that the evidence isn't equivalent.
+tags:
+  - grouping
+inputs:
+  prompt: "I've already checked the automatica11y guide. Compare the accessibility of https://example.com with the npm package react-aria-components. Show me the exact command and anything I should know first, but don't run it."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-runner-skill
+    config:
+      skill_path: "skills/automatica11y-runner/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: warns-evidence-differs
+    config:
+      contains:
+        - "npm:react-aria-components"
+        - "https://example.com"
+      regex_match:
+        - "automatica11y(@latest)? compare"
+        - "(?i)(not|isn't|aren't) (directly )?(equivalent|comparable)"
+  - type: tool_constraint
+    name: runs-no-compare
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

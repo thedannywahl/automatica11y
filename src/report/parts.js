@@ -101,7 +101,14 @@ export function findingBlock(finding, { showImpact, showToolkit, markerStart = n
     plural(finding.nodeCount, "element"),
   ].filter(Boolean);
   const lines = [`- ${code(finding.ruleId)} (${meta.join("; ")}). ${esc(finding.help)} [Rule help](${finding.helpUrl})`];
-  for (const [index, node] of finding.nodes.entries()) lines.push(`  - ${markerStart === null ? "" : `#${markerStart + index} `}${code(node.selector)} ${node.html ? code(node.html) : ""}`.trimEnd());
+  for (const [index, node] of finding.nodes.entries()) {
+    const location = [
+      ...(node.selectorPath ?? []).map((step) => `${code(step.selector)} -> ${step.enter === "shadow" ? "shadow root" : "frame document"}`),
+      node.selector ? code(node.selector) : "",
+    ].filter(Boolean).join(" -> ");
+    const limitation = node.selectorError ? `Location unavailable: ${esc(node.selectorError)}` : "";
+    lines.push(`  - ${markerStart === null ? "" : `#${markerStart + index} `}${[location, limitation, node.html ? code(node.html) : ""].filter(Boolean).join(" ")}`.trimEnd());
+  }
   if (finding.nodeCount > finding.nodes.length) lines.push(`  - and ${num(finding.nodeCount - finding.nodes.length)} more`);
   return lines.join("\n");
 }

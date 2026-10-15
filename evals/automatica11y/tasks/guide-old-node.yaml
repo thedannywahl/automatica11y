@@ -1,0 +1,50 @@
+id: bootstrap-guide-old-node
+name: A failed guide on old Node says Node 22 is required
+description: "Guide-failure scenario: the guide fails and node --version reports v20, so the skill says Node.js 22 or newer is required and stops."
+tags:
+  - guide-failure
+inputs:
+  prompt: "Run an accessibility check on https://example.com with automatica11y."
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
+        stderr: "file:///Users/me/.npm/_npx/1a2b3c/node_modules/automatica11y/bin/automatica11y.js:3\nimport { main } from \"../src/cli.js\" with { type: \"json\" };\n                                   ^^^^\nSyntaxError: Unexpected identifier 'with'\n"
+        exit_code: 1
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
+        stderr: "SyntaxError: Unexpected identifier 'with'\n"
+        exit_code: 1
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+  - name: node
+    responses:
+      - args: ["--version"]
+        stdout: "v20.11.1\n"
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-automatica11y-skill
+    config:
+      skill_path: "skills/automatica11y/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: tool_constraint
+    name: checks-node-and-installs-nothing
+    config:
+      expect_tools:
+        - tool: "bash|shell"
+          command_pattern: "node (--version|-v)"
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "nvm |volta |fnm |brew |automatica11y(@latest)? (audit|compare|doctor)"
+  - type: text
+    name: says-node-22
+    config:
+      regex_match:
+        - "Node(\\.js)? 22"
+      regex_not_match:
+        - "(?i)no automated violations found"

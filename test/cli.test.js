@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { main } from "../src/cli.js";
-import { parsePlan } from "../src/schema.js";
+import { parsePlan, parseResults } from "../src/schema.js";
 import { STORYBOOK_INDEX, fakeFetch, makeFakeBrowser, makeIo, makeTree } from "./helpers/fixtures.js";
 
 const onUnix = process.platform !== "win32";
@@ -162,6 +162,49 @@ test("a real run with no browser exits 3 and prints the install command", async 
   const result = await run(["audit", "npm:react"], { env: { PATH: "", AUTOMATICA11Y_CHROME: "/does/not/exist" } });
   assert.equal(result.code, 3);
   assert.match(result.stderr, /npx playwright-core install --only-shell chromium/);
+});
+
+test("resolution failures write results and a report without a browser", async () => {
+  const cwd = makeTree({});
+  const result = await run(["compare", "first=./missing.html", "second=./also-missing.html", "--out", "./failed-report", "--fail-on-axe", "serious"], { cwd, env: { PATH: "", AUTOMATICA11Y_CHROME: "/does/not/exist" } });
+  assert.equal(result.code, 4, result.stderr);
+  const results = parseResults(JSON.parse(readFileSync(join(cwd, "failed-report", "results.json"), "utf8")));
+  assert.deepEqual(results.targets.map((target) => [target.id, target.status]), [["first", "failed"], ["second", "failed"]]);
+  for (const target of results.targets) {
+    assert.match(target.reason, /Path not found/);
+    assert.deepEqual(target.archetypes, {});
+    assert.deepEqual(target.summary.engines, {});
+  }
+  assert.equal(results.tools.chromium, null);
+  assert.equal(results.failCheck.tripped, false);
+  const report = readFileSync(join(cwd, "failed-report", "report.md"), "utf8");
+  assert.match(report, /missing\.html/);
+  assert.match(report, /also-missing\.html/);
+  assert.match(result.stdout, /Wrote .*results\.json/);
+  assert.match(result.stdout, /Wrote .*report\.md/);
+  const planOnly = await run(["audit", "./missing.html", "--plan", "--out", "./plan-only"], { cwd });
+  assert.equal(planOnly.code, 4);
+  assert.ok(existsSync(join(cwd, "plan-only", "plan.json")));
+  assert.equal(existsSync(join(cwd, "plan-only", "results.json")), false);
+  assert.equal(existsSync(join(cwd, "plan-only", "report.md")), false);
+});
+
+test("an unreachable URL and its saved plan write failed results in the default output", async () => {
+  const cwd = makeTree({});
+  const env = { PATH: "", AUTOMATICA11Y_CHROME: "/does/not/exist" };
+  const result = await run(["audit", "http://127.0.0.1:9/"], { cwd, env, fetch: async () => { throw new Error("connection refused"); } });
+  assert.equal(result.code, 4, result.stderr);
+  const resultsPath = join(cwd, "a11y-report", "results.json");
+  const results = parseResults(JSON.parse(readFileSync(resultsPath, "utf8")));
+  assert.equal(results.targets.length, 1);
+  assert.equal(results.targets[0].status, "failed");
+  assert.match(results.targets[0].reason, /The URL didn't respond: connection refused/);
+  assert.deepEqual(results.targets[0].archetypes, {});
+  assert.ok(existsSync(join(cwd, "a11y-report", "report.md")));
+  const rerun = await run(["run", "--plan", "a11y-report/plan.json"], { cwd, env });
+  assert.equal(rerun.code, 4, rerun.stderr);
+  const rerunResults = parseResults(JSON.parse(readFileSync(resultsPath, "utf8")));
+  assert.deepEqual(rerunResults.targets, results.targets);
 });
 
 test("a real run writes the plan first, even when the browser won't start", { skip: !onUnix }, async () => {
