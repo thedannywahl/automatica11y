@@ -31,9 +31,9 @@ One validation workflow owns the Node 22/24/26 matrix and calls the reusable Act
 
 Use `npm run changeset` for changes to shipped `src/`, `bin/`, Action behavior, packaged instructions, README/license, package runtime fields or production dependency locks. Docs, tests and development-only dependencies do not need a package bump. A real package patch/minor/major entry is required for shipped changes; an empty Changeset is insufficient. Do not hand-edit package versions in feature PRs.
 
-The standard Changesets action decides whether there are pending Changesets. Its `version-script` is the existing `npm run changeset:version`, which runs builtin versioning and synchronizes package-lock and runner-skill versions. There is no custom version-if-needed wrapper.
+The standard Changesets action decides whether there are pending Changesets. Its `version-script` is the existing `npm run changeset:version`, which runs builtin versioning and synchronizes package-lock, runner-skill and eval fixture versions. There is no custom version-if-needed wrapper.
 
-The reserved PR identity is the same repository, branch `changeset-release/main`, author `RELEASE_ACTOR`, base main and title `chore: release packages`. Its diff may contain only version/lock/changelog/skill updates and consumed Changeset deletions. Never manually reuse that identity for feature changes. Keep human review on feature PRs; do not weaken repository rules to force an automatic merge.
+The reserved PR identity is the same repository, branch `changeset-release/main`, author `RELEASE_ACTOR`, base main and title `chore: release packages`. Its diff may contain only version/lock/changelog/skill updates, exact generated version updates to existing eval YAML and guide-skill fixtures, and consumed Changeset deletions. The validator checks eval contents against the version-sync functions, not just a path allowlist. Never manually reuse that identity for feature changes. Keep human review on feature PRs; do not weaken repository rules to force an automatic merge.
 
 ## Validation and diagnostics
 
