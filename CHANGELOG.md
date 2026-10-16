@@ -1,5 +1,15 @@
 # automatica11y
 
+## 0.11.0
+
+### Minor Changes
+
+- d247d07: Save each default audit, comparison, CI run, or plan in a unique timestamped folder under a11y-report so earlier reports and their screenshots are preserved together. Explicit --out paths and YAML options.out continue to select an exact output directory.
+
+### Patch Changes
+
+- d247d07: Clarify runner version-check ordering, outdated-browser consent, and ambiguous target handling, including local Storybook folders without index.json. Align runner evaluation command mocks with the documented --prefer-online commands and keep mocked guides in sync.
+
 ## 0.10.1
 
 ### Patch Changes

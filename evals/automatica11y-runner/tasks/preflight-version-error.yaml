@@ -32,7 +32,7 @@ graders:
     config:
       contains:
         - "E404"
-        - "0.10.x"
+        - "0.11.x"
   - type: tool_constraint
     name: stops-before-doctor-and-audit
     config:
