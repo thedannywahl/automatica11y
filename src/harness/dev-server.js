@@ -46,7 +46,10 @@ export async function startDevServer(server, io) {
     const deadline = Date.now() + 2000;
     if (process.platform !== "win32" && child.pid) {
       while (Date.now() < deadline) {
-        try { process.kill(-child.pid, 0); } catch { break; }
+        try { process.kill(-child.pid, 0); } catch (error) {
+          if (error.code === "ESRCH") return;
+          throw error;
+        }
         await delay(50);
       }
       kill("SIGKILL");

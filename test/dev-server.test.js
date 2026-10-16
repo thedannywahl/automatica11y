@@ -26,6 +26,24 @@ test("managed server becomes ready and is cleaned up", async () => {
   await assert.rejects(fetch(url));
 });
 
+test("cleanup stops signaling once the process group is gone", { skip: process.platform === "win32" }, async (context) => {
+  const port = await unusedPort();
+  const cwd = makeTree({ "server.cjs": `require('node:http').createServer((req,res)=>res.end('ready')).listen(${port},'127.0.0.1')` });
+  const { io } = makeIo({ cwd, env: process.env });
+  const server = await startDevServer({ command: `"${process.execPath}" server.cjs`, url: `http://127.0.0.1:${port}`, timeoutSeconds: 5 }, io);
+  const originalKill = process.kill.bind(process);
+  const signals = [];
+  context.mock.method(process, "kill", (pid, signal) => {
+    signals.push(signal);
+    if (signal === 0) throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" });
+    if (signal === "SIGKILL") throw Object.assign(new Error("kill EPERM"), { code: "EPERM" });
+    return originalKill(pid, signal);
+  });
+  await server.close();
+  await server.close();
+  assert.deepEqual(signals, ["SIGTERM", 0]);
+});
+
 test("occupied readiness URL, early exit and timeout fail clearly", async () => {
   const port = await unusedPort();
   const url = `http://127.0.0.1:${port}`;

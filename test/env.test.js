@@ -38,6 +38,20 @@ test("a browser older than the minimum fails the environment check; a newer or u
   assert.ok(!fine.problems.some((p) => p.id === "browser-old"));
 });
 
+test("allowOldBrowser accepts only an outdated browser and preserves its warning", { skip: !onUnix }, async () => {
+  const env = { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser(`${minChromeMajor() - 1}.0.0.0`) };
+  const result = await checkEnvironment({ env, allowOldBrowser: true });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.problems, []);
+  assert.equal(result.warnings[0].id, "browser-old");
+  const oldNode = await checkEnvironment({ env, allowOldBrowser: true, nodeVersion: "21.0.0" });
+  assert.equal(oldNode.ok, false);
+  assert.equal(oldNode.problems[0].id, "node");
+  const missing = await checkEnvironment({ env: { AUTOMATICA11Y_CHROME: "/does/not/exist" }, allowOldBrowser: true });
+  assert.equal(missing.ok, false);
+  assert.equal(missing.problems[0].id, "browser");
+});
+
 test("a system browser that is too old gives way to a downloaded headless shell", { skip: !onUnix }, async () => {
   const bin = makeTree();
   const chrome = join(bin, "google-chrome");
