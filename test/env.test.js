@@ -32,7 +32,8 @@ test("a browser older than the minimum fails the environment check; a newer or u
   const old = await check(`${min - 1}.0.0.0`);
   const problem = old.problems.find((p) => p.id === "browser-old");
   assert.ok(problem);
-  assert.match(problem.fix, new RegExp(INSTALL_COMMAND));
+  assert.match(problem.fix, /--allow-old-browser/);
+  assert.match(problem.fix, /doctor --install-browser/);
   assert.equal(old.ok, false);
   const fine = await check(`${min}.0.0.0`);
   assert.ok(!fine.problems.some((p) => p.id === "browser-old"));

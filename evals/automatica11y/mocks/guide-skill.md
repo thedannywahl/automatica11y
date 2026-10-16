@@ -16,7 +16,7 @@ For the caveat, write "These automated results do not establish that the page me
 
 ## 1. Check the version
 
-Do sections 1 and 2 before you run an audit. A question to the user about a missing target or an unsupported setting (section 3) can come before or after them.
+Do sections 1 and 2 before you run an audit. A question to the user about a missing target or an unsupported setting (section 3) can come before or after them. Run this section's version check before any `doctor`, `audit`, or `compare` command. If section 3 says not to run anything until the user answers, ask first.
 
 This skill works with automatica11y **0.10.x**. Run:
 
@@ -38,7 +38,20 @@ Otherwise, run:
 npx --yes --prefer-online automatica11y@latest doctor
 ```
 
-Relay any fix it prints, then stop until the user has applied it. Exit code 3 means a problem with the environment: Node older than 22, no Chrome or Chromium, or a Chrome or Chromium more than two major versions behind the one Playwright ships. If the problem is the browser, ask the user once whether to download Chromium (about 100 MB). On a yes, run `npx --yes --prefer-online automatica11y@latest doctor --install-browser` and report what it prints. Don't install or configure anything else yourself. That logic lives in the tool.
+Exit code 3 means a problem with the environment: Node older than 22, no Chrome or Chromium, or a Chrome or Chromium more than two major versions behind the one Playwright ships. Relay the exact problem, then follow the matching row:
+
+| Detected state | User consent given | Allowed next action | Stop condition |
+|---|---|---|---|
+| Outdated browser | The user chooses this browser, chooses a download, or has not chosen yet. | If they choose the outdated browser, name it and its version, explain that results may be unreliable and the report header will flag it, then use `--allow-old-browser` on the audit or comparison and every rerun. Do not install anything. If they choose a download, follow “Download accepted.” If they have not chosen, present both choices: use this browser or download a current Chromium through Playwright (about 100 MB); do not default to downloading. | If neither choice is authorized, wait for the user's choice. |
+| No browser | The user accepts or declines a download. | If accepted, follow “Download accepted.” There is no outdated-browser fallback. | If declined, report that no browser is available and stop without running `doctor` again, auditing, or installing anything. |
+| Setup error | No additional consent applies. | Relay the exact problem and the fix. The outdated-browser option bypasses only the browser version check, never a missing browser, unsupported Node, launch failure, or failed rule-engine self-test. | Stop until the user applies the fix. |
+| Download accepted | The user explicitly agrees to download Chromium. | Run `npx --yes --prefer-online automatica11y@latest doctor --install-browser` once and report what it prints. If installation succeeds, continue. | If installation fails, follow “Download failed.” |
+| Download failed | The user has or has not explicitly authorized using an outdated browser. | If an outdated browser is still found and the user already explicitly authorized that fallback, use it with `--allow-old-browser`. Otherwise, report the exact error and offer that browser with `--allow-old-browser`; wait for consent. If no browser remains, report the error. Choosing a download alone is not consent to use an outdated browser. | If no browser remains, stop. |
+| Fallback declined | The user declines using the outdated browser. | None. | Stop without auditing. |
+
+Add `--allow-old-browser` only after explicit consent to use the outdated browser. Never add it by default.
+
+Do not try other installers, change network settings, or bypass sandbox restrictions. Don't install or configure anything else yourself. That logic lives in the tool.
 
 ## 3. Turn the request into a command
 
@@ -59,7 +72,9 @@ Use `audit` for one target and `compare` for two or more, even when they're diff
 | An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. To test one entry of a package, add a sub-path after the version: `npm:@scope/pkg/button` or `npm:@scope/pkg@1.2.3/button/v2`. The sub-path is what a person would import (`import ... from "@scope/pkg/button"`), and it has to be something the package exports. |
 | A local build or packed `.tgz` of a package | `npm:<name>` with `--local-package <name>=<path>`. The name is the `name` in the package's `package.json`. Add one `--local-package` for each package in the target that comes from disk. |
 
-A bare word such as `button` is a path: the folder or file `./button`. Always write an npm package with the `npm:` prefix. If a word could mean a package or a folder, ask the user which one before you run anything.
+If a local folder is given as a Storybook but has no `index.json`, ask the user for its URL or for a different target before running anything.
+
+If a word could mean a package or a folder, ask the user which one and do not run anything until they answer. Otherwise, use the path rule: A bare word such as `button` is a path: the folder or file `./button`. Always write an npm package with the `npm:` prefix.
 
 For a local packed package, read any README the user supplies and keep `--local-package <name>=<path>` on the initial audit and every rerun. Follow section 4: audit first, then use the documented props to write only requested fixtures marked `needs-fixture`. For React, write `fixtures/<target id>/<archetype>.jsx`, not `.html`, and rerun the same command.
 
@@ -85,6 +100,7 @@ Options you can set, and nothing else:
 | `--engine axe,ibm` | both | The user wants one rule engine. |
 | `--tiers rules,interactions,computed,conditions,vsr` | all five | The user wants fewer checks. |
 | `--screenshots` / `--no-screenshots` | off | The user explicitly requests annotated screenshots of rule violations, or disables screenshots configured in YAML. |
+| `--allow-old-browser` | off | The user explicitly agrees to use the outdated browser reported by `doctor`, including after a failed Chromium download. |
 | `--archetypes a,b` | all | The user cares about some components. Choose from button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, live-region, chart. |
 | `--lib-a11y on,off` | both | Only for libraries with opt-in accessibility features. |
 | `--mapping <file>` | none | You wrote or edited a mapping file. |
@@ -97,7 +113,7 @@ Options you can set, and nothing else:
 | `--fail-on-ibm <1\|2\|3>` | off | Gating on IBM Toolkit level. |
 | `--fail-mode any\|all` | `any` | How to combine the two fail flags. |
 
-Use the target and the settings the user already gave, and ask only for what's missing. Annotated screenshots are optional and off by default: use `--screenshots` when the user explicitly asks for them, and leave them off for ordinary audit requests. If the user mentions visual evidence without explicitly asking for screenshots, ask whether they want annotated screenshots. Don't enable them by default. Preserve any screenshot links from `report.md` next to the findings they support. If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one before you run anything. Don't pick a target for them.
+Use the target and the settings the user already gave, and ask only for what's missing. When deciding whether to ask, grouping confirmation takes precedence over “ask only for what's missing.” Ask one combined message when any of these is unresolved: the target, a grouping for multi-package targets, or an unsupported setting. Otherwise, run without asking. Annotated screenshots are optional and off by default: use `--screenshots` when the user explicitly asks for them, and leave them off for ordinary audit requests. If the user mentions screenshots, images, or a visual record of results without explicitly requesting annotated screenshots, ask whether they want annotated screenshots. Don't enable them by default. Preserve any screenshot links from `report.md` next to the findings they support. If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one before you run anything. Don't pick a target for them.
 
 Pass only the options in the table above, with the values it lists. If the user names a setting the tool doesn't have, or a value outside those lists (for example, WCAG 3.0), tell them which setting is unsupported, list the supported values, and ask which to use. Don't substitute a default or invent a value.
 
@@ -217,7 +233,7 @@ Use the caveat sentence above verbatim, and avoid positive accessibility verdict
 
 A title, run metadata, and settings may precede the coverage matrix; the matrix comes before the findings. When IBM Equal Access reports no violations but reports needs-review items, write "IBM Equal Access reported no violations in this run" and list the needs-review items in their own section. Do not use "no automated violations found" for IBM. Never say an engine "found nothing" when it reported needs-review items.
 
-1. Put the run date and tool versions first. Say that results are a snapshot.
+1. Put the run date and tool versions first. Say that results are a snapshot. When `results.json` contains an outdated-browser warning, keep it in the report header before coverage and findings, name the browser version, and say results may be unreliable. Preserve that warning in any separate summary; do not hide it in a footer or describe the browser as supported.
 2. For a comparison, say that every target used the same archetypes, WCAG version, level, and rules.
 3. Open with the coverage matrix (target by archetype by tier). Then give the findings.
 4. Keep violations, needs-review items, and passes in separate lists. Never merge them.
@@ -226,7 +242,7 @@ A title, run metadata, and settings may precede the coverage matrix; the matrix 
 7. Don't print a single score. If someone insists, pair any number with the coverage matrix and the automated-coverage caveat.
 8. Label virtual screen reader output **simulated**. Label library accessibility options **on** or **off** on every result that has one.
 9. Treat a gap, a not-testable result, an error, or a failed target as a finding. It never counts as a pass.
-10. If the comparison mixes component targets and page targets, open with a warning that the evidence isn't equivalent.
+10. If the comparison mixes npm package or Storybook targets with live URL or local page or site targets, open the report with a warning that the evidence isn't equivalent.
 11. Label every rule finding with its engine. Report axe-core and IBM Equal Access separately. Never add their counts together. Impact is axe-core's own label. IBM Toolkit level is IBM's staged adoption scale (1 is essential, high-impact requirements); report IBM's result even when it has zero violations, without saying "no automated violations found." Don't convert one scale into the other.
 12. Report computed checks (contrast measured from resolved styles) in their own section. Give the measured ratio next to the ratio the criterion needs, and name the state or the method. Never add them to axe-core or IBM counts. Treat `undetermined` as a gap, never as a pass. When a control has visible text and a pale edge, the result is `not-applicable`, because the text identifies the control. Say that, and leave it for a person to confirm.
 13. Report conditions checks (reduced motion, dark mode, more and less contrast, reduced transparency, forced colors, reflow at 320 pixels, text spacing) in their own section, with the numbers from `results.json`. Never add them to axe-core or IBM counts. "Not applicable" means the page doesn't use the feature, such as a page with no dark theme, so don't list it as a failure or a pass. Say what each check can't see: JavaScript-driven motion, overlapping text, and two-dimensional content that WCAG exempts from reflow.

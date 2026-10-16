@@ -8,9 +8,9 @@ inputs:
 command_mocks:
   - name: npx
     responses:
-      - args: ["--yes", "automatica11y@latest", "--version"]
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "--version"]
         stdout: "1.0.0\n"
-      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-skill.md
   - name: automatica11y
     responses:

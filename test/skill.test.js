@@ -123,6 +123,22 @@ test("bootstrap evals mock a single prefer-online guide command", () => {
   assert.ok(checked > 0, "the bootstrap guide mocks were checked");
 });
 
+test("runner evals mock the skill's prefer-online npx prefix", () => {
+  const suiteDir = join(root, "evals", "automatica11y-runner");
+  const files = ["wazaEval.yaml", ...readdirSync(join(suiteDir, "tasks")).filter((name) => name.endsWith(".yaml")).map((name) => join("tasks", name))];
+  let checked = 0;
+  for (const name of files) {
+    /** @type {{ command_mocks?: { name: string, responses: { args?: string[] }[] }[] }} */
+    const definition = parse(readFileSync(join(suiteDir, name), "utf8"));
+    const npx = definition.command_mocks?.find((command) => command.name === "npx");
+    for (const response of npx?.responses ?? []) {
+      assert.deepEqual(response.args?.slice(0, 3), ["--yes", "--prefer-online", "automatica11y@latest"], name);
+      checked += 1;
+    }
+  }
+  assert.ok(checked > 0, "the runner npx mocks were checked");
+});
+
 test("the runner skill says when to use it, and carries the steps", () => {
   const { name, description } = frontmatter(runner);
   assert.equal(name, "automatica11y-runner");
@@ -130,6 +146,25 @@ test("the runner skill says when to use it, and carries the steps", () => {
   assert.match(description, /Do not use for questions about WCAG levels, success criteria, or definitions, even if they mention audits or accessibility testing/);
   for (const step of ["Check the version", "Check the setup", "Turn the request into a command", "npm packages need fixtures", "Run, then read the results", "Write the report", "When a target can't be tested"]) {
     assert.ok(runner.includes(step), step);
+  }
+});
+
+test("the runner offers outdated-browser consent and download-failure fallback", () => {
+  for (const state of ["Outdated browser", "No browser", "Setup error", "Download accepted", "Download failed", "Fallback declined"]) {
+    assert.match(runner, new RegExp(`\\| ${state} \\|`), `${state} has a setup-table row`);
+  }
+  assert.match(runner, /report that no browser is available and stop without running `doctor` again, auditing, or installing anything/);
+  assert.match(runner, /If an outdated browser is still found and the user already explicitly authorized that fallback, use it with `--allow-old-browser`/);
+  assert.match(runner, /Choosing a download alone is not consent to use an outdated browser/);
+  assert.match(runner, /Fallback declined[\s\S]*Stop without auditing/);
+  assert.match(runner, /keep it in the report header before coverage and findings/);
+  const tasks = ["preflight-old-browser-choice.yaml", "preflight-old-browser-install-failed.yaml", "preflight-old-browser-install-declined.yaml"];
+  for (const name of tasks) {
+    const task = parse(read("evals", "automatica11y-runner", "tasks", name));
+    assert.ok(task.graders.some((grader) => grader.type === "prompt"), `${name} grades consent behavior`);
+    assert.ok(task.graders.some((grader) => grader.type === "tool_constraint"), `${name} constrains installs and audits`);
+    const responses = task.command_mocks.find((command) => command.name === "npx").responses;
+    assert.ok(responses.some((response) => response.fixture === "mocks/doctor-old-browser.txt" && response.exit_code === 3));
   }
 });
 
@@ -167,7 +202,7 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(runner, /\| `--no-generate` \| off \|/);
   assert.ok(runner.includes("| `--screenshots` / `--no-screenshots` | off |"));
   assert.match(runner, /use `--screenshots` when the user explicitly asks for them/);
-  assert.match(runner, /If the user mentions visual evidence without explicitly asking for screenshots, ask whether they want annotated screenshots\. Don't enable them by default/);
+  assert.match(runner, /If the user mentions screenshots, images, or a visual record of results without explicitly requesting annotated screenshots, ask whether they want annotated screenshots/);
   assert.match(runner, /Preserve any screenshot links from `report\.md` next to the findings they support/);
   assert.match(runner, /For a `no-match` archetype, write a fixture only if the library's documentation names a component, or a documented way, to make it/);
   assert.match(runner, /A target that failed while others ran still exits 0, and the failure is in the results/);

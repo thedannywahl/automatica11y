@@ -9,6 +9,8 @@ The [automatica11y](https://www.npmjs.com/package/automatica11y) npm package pro
   <li><span class="instui-icon -icon-googlechrome" aria-hidden="true"></span> A recent Chrome or Chromium (within two major versions of the one Playwright ships)</li>
 </ul>
 
+If `doctor` finds an outdated browser, you can use it with `audit` or `compare --allow-old-browser`, or download a current Chromium with `automatica11y doctor --install-browser`. If the download fails, the installed browser remains an option. Outdated-browser runs carry a warning in the report header and `results.json`: results may be unreliable and should be confirmed with a current browser. The flag does not bypass missing browsers, launch failures, or engine self-tests.
+
 ## Installation
 
 You can install `automatica11y` and run it as a linked node.js binary, or you can invoke it with your package manager's script runner.

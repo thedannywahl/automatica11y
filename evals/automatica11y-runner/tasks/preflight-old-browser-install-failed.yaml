@@ -1,0 +1,51 @@
+id: runner-preflight-old-browser-install-failed
+name: Failed Chromium download returns to the outdated browser option
+description: Download consent is not fallback consent; after ENOTFOUND the runner offers the installed browser and preserves screenshots.
+tags: [preflight]
+inputs:
+  prompt: "Use automatica11y to prepare an audit of https://instructure.ai/nutritionfacts with annotated screenshots. Show the final audit command after setup, but do not run the audit."
+  responder:
+    instructions: "When first offered an outdated browser or a Chromium download, choose to download Chromium. If the download fails and you are offered the outdated browser, explicitly agree to use it. Do not authorize any other setup route. Do not volunteer fallback consent before the failure."
+    max_followups: 4
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "--version"]
+        stdout: "0.10.1\n"
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
+        fixture: mocks/guide-skill.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor"]
+        fixture: mocks/doctor-old-browser.txt
+        exit_code: 3
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--install-browser"]
+        fixture: mocks/doctor-old-browser.txt
+        stderr: "The Chromium download failed.\ngetaddrinfo ENOTFOUND cdn.playwright.dev\n"
+        exit_code: 3
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "command not found: automatica11y\n"
+        exit_code: 127
+expected:
+  should_trigger: true
+graders:
+  - type: tool_constraint
+    name: uses-only-tool-owned-installation
+    config:
+      expect_tools:
+        - tool: "bash|shell"
+          command_pattern: "npx --yes --prefer-online automatica11y@latest doctor --install-browser"
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "playwright(-core)? install|brew install|apt(-get)? install|automatica11y@latest (audit|compare)"
+  - type: text
+    name: preserves-target-screenshots-and-consent-flag
+    config:
+      contains: ["--allow-old-browser", "--screenshots", "https://instructure.ai/nutritionfacts"]
+      regex_match:
+        - "(?i)outdated"
+  - type: prompt
+    name: recovers-with-explicit-consent
+    config:
+      prompt: |
+        Pass only if the agent reports the exact ENOTFOUND cdn.playwright.dev download error, then offers to continue with installed headless-shell 141 and waits for explicit fallback consent. After consent it shows an audit command retaining the original URL, --screenshots, and --allow-old-browser. It explains that the report header will warn about the outdated browser and unreliable results. It must not treat download consent as fallback consent, stop with only allowlisting/local-run advice, retry installation, change network settings, or claim results exist.

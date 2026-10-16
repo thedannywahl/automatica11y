@@ -267,11 +267,13 @@ export async function runPlan(plan, io) {
     io.stdout.write(`  Wrote ${resolve(outDir, "results.json")}\n  Wrote ${resolve(outDir, "report.md")}\n`);
     return EXIT.ALL_TARGETS_FAILED;
   }
-  const environment = await checkEnvironment({ env: io.env, platform: io.platform });
+  const environment = await checkEnvironment({ env: io.env, platform: io.platform, allowOldBrowser: plan.options.allowOldBrowser });
   if (!environment.ok) {
     for (const problem of environment.problems) io.stderr.write(`${problem.message}\n  Fix: ${problem.fix}\n`);
     return EXIT.ENVIRONMENT;
   }
+  const warnings = environment.warnings.map((problem) => `Outdated browser: ${problem.message} Results may be unreliable because browser features and automation support can differ. Rerun with a current browser to confirm.`);
+  for (const warning of warnings) io.stderr.write(`Warning: ${warning}\n`);
   let session;
   try {
     session = await launchBrowser({ env: io.env, platform: io.platform });
@@ -308,7 +310,7 @@ export async function runPlan(plan, io) {
       if ("npm" in result && result.npm) planTarget.kind = adapterFor(result.npm.flavor).kind;
     }
 
-    const results = writeResults(plan, targets, version, io);
+    const results = writeResults(plan, targets, version, io, warnings);
     const outDir = resolve(io.cwd, plan.options.out);
     for (const [relative, text] of Object.entries(generatedFiles)) {
       const file = resolve(outDir, relative);
@@ -342,8 +344,9 @@ export async function runPlan(plan, io) {
  * @param {TargetResult[]} targets
  * @param {string | null} chromium
  * @param {import("../commands/common.js").Io} io
+ * @param {string[]} [warnings]
  */
-function writeResults(plan, targets, chromium, io) {
+function writeResults(plan, targets, chromium, io, warnings = []) {
   const failCheck = evaluateFailCheck(targets, plan.options.fail);
   const results = parseResults({
     schema: 1,
@@ -353,7 +356,7 @@ function writeResults(plan, targets, chromium, io) {
     targets,
     failCheck,
     outcome: evaluateOutcome(targets, plan.options, failCheck),
-    warnings: [],
+    warnings,
   });
   const outDir = resolve(io.cwd, plan.options.out);
   mkdirSync(outDir, { recursive: true });

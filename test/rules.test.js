@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer, request } from "node:http";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -21,10 +21,10 @@ const skip = available ? false : "No Chrome or Chromium found";
 /**
  * Run the CLI against real fixtures and read back what it wrote.
  * @param {string[]} args
- * @param {{ cwd?: string }} [options]
+ * @param {{ cwd?: string, env?: NodeJS.ProcessEnv }} [options]
  */
-async function audit(args, { cwd = makeTree() } = {}) {
-  const { io, out } = makeIo({ cwd, env: process.env });
+async function audit(args, { cwd = makeTree(), env = process.env } = {}) {
+  const { io, out } = makeIo({ cwd, env });
   const code = await main(args, io);
   let results = null;
   let report = null;
@@ -54,6 +54,22 @@ test("clean page: neither engine reports violations, and the wording stays caref
   assert.match(run.report, /No automated violations found by axe-core/);
   assert.match(run.report, /No automated violations found by IBM Equal Access/);
   assert.doesNotMatch(run.report, /\b(is|are) (fully )?(accessible|compliant)\b/i);
+});
+
+test("outdated browser consent writes a warning in audit and comparison headers", { skip: skip || process.platform === "win32" }, async () => {
+  const cwd = makeTree({ "chrome": `#!/bin/sh\nif [ "$1" = "--version" ]; then\n  echo "Chromium 100.0.0.0"\nelse\n  exec '${available.path.replace(/'/g, "'\\''")}' "$@"\nfi\n` });
+  const executable = join(cwd, "chrome");
+  chmodSync(executable, 0o755);
+  const env = { ...process.env, AUTOMATICA11Y_CHROME: executable };
+  for (const targets of [["audit", `${fixtures}clean.html`], ["compare", `${fixtures}clean.html`, `${fixtures}missing-label.html`]]) {
+    const run = await audit([...targets, "--allow-old-browser", "--tiers", "rules"], { cwd, env });
+    assert.equal(run.code, 0, run.stderr);
+    assert.equal(run.results.warnings.length, 1);
+    assert.match(run.results.warnings[0], /Outdated browser:.*100\.0\.0\.0.*Results may be unreliable/);
+    assert.ok(run.report.indexOf(run.results.warnings[0]) < run.report.indexOf("## Coverage."));
+    assert.ok(run.report.includes(run.results.warnings[0]));
+    assert.match(run.stderr, /Warning: Outdated browser/);
+  }
 });
 
 test("missing label: each engine reports its own rule, labeled and separate", { skip }, async () => {

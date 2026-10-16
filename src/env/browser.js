@@ -192,8 +192,8 @@ export async function checkBrowser({ env = process.env, platform = process.platf
   if (browser && minMajor !== null && isTooOld(browser, minMajor)) {
     problems.push({
       id: "browser-old",
-      message: `${browser.kind} ${browser.version} is too old. automatica11y needs Chrome or Chromium ${minMajor} or newer.`,
-      fix: `Update Chrome, or run: ${INSTALL_COMMAND}`,
+      message: `${browser.kind} ${browser.version} is too old. The recommended minimum is Chrome or Chromium ${minMajor}.`,
+      fix: `Run the audit or comparison with --allow-old-browser to use this outdated browser with a report warning, or download Chromium with: automatica11y doctor --install-browser`,
     });
   }
   return { browser, problems };

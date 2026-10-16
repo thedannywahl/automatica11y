@@ -237,6 +237,20 @@ test("a real run writes the plan first, even when the browser won't start", { sk
   assert.equal(plan.tools.chromium, "200.0.4567.89");
 });
 
+test("an outdated browser needs explicit consent and still must launch", { skip: !onUnix }, async () => {
+  const env = { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser("100.0.1.2") };
+  const blocked = await run(["audit", "npm:react"], { env });
+  assert.equal(blocked.code, 3);
+  assert.match(blocked.stderr, /--allow-old-browser/);
+  assert.doesNotMatch(blocked.stderr, /Couldn't start/);
+  const allowed = await run(["audit", "npm:react", "--allow-old-browser"], { env });
+  assert.equal(allowed.code, 3);
+  assert.match(allowed.stderr, /Warning: Outdated browser:.*100\.0\.1\.2/);
+  assert.match(allowed.stderr, /Couldn't start the browser/);
+  const plan = parsePlan(JSON.parse(readFileSync(reportPath(allowed.cwd, "plan.json"), "utf8")));
+  assert.equal(plan.options.allowOldBrowser, true);
+});
+
 test("run --plan re-runs a saved plan and warns when versions differ", { skip: !onUnix }, async () => {
   const first = await run(["audit", "npm:react", "--plan"]);
   const planFile = reportPath(first.cwd, "plan.json");

@@ -91,6 +91,7 @@ export const PlanSchema = v.object({
     generate: v.optional(v.boolean(), true),
     /** Capture annotated screenshots for rule violations. */
     screenshots: v.optional(v.boolean(), false),
+    allowOldBrowser: v.optional(v.boolean(), false),
     out: v.string(),
     fail: v.nullable(FailConfigSchema),
     policy: v.optional(v.object({ incomplete: v.boolean(), review: v.boolean(), checks: v.boolean() }), { incomplete: false, review: false, checks: false }),

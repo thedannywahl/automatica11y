@@ -10,6 +10,7 @@
 | `--engine axe,ibm` | both | Which rule engines run. |
 | `--tiers rules,interactions,computed,conditions,vsr` | all | Which tiers run. |
 | `--screenshots` / `--no-screenshots` | off | Save annotated full-page screenshots for rule violations and link them from the report. YAML: `options.screenshots`. |
+| `--allow-old-browser` | off | Explicitly use an outdated Chrome or Chromium. Records a warning in `results.json` and the report header. Launch and engine self-tests must still succeed. |
 | `--archetypes a,b` | all | Limit npm and Storybook targets to these archetypes. |
 | `--lib-a11y on,off` | both | For libraries with opt-in accessibility features. See [Writing fixtures](writing-fixtures.md). |
 | `--mapping <file>` | none | A mapping file for npm targets. |
