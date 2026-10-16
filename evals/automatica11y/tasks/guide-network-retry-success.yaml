@@ -1,0 +1,49 @@
+id: bootstrap-guide-network-retry-success
+name: An approved network retry obtains usable guide output
+description: "Recovery continuation: the initial fetch and permission grant are supplied as context, not simulated permission events. The exact guide command must run once and return usable output."
+tags:
+  - network-recovery
+inputs:
+  prompt: |
+    Continue this same automatica11y accessibility request at the guide-recovery step.
+    The installed automatica11y command was already checked and is unavailable.
+    The initial command was exactly: npx --yes --prefer-online automatica11y@latest guide skill
+    It failed with: npm error code ENOTFOUND; getaddrinfo ENOTFOUND registry.npmjs.org
+    The environment's permission mechanism has now granted network access for that exact command. No network-approved retry has been used yet, and the guide has not been read.
+    Retry the exact command once. For this request, stop after reading the guide and tell me whether usable guide output was obtained; do not run setup, doctor, or an audit yet.
+command_mocks:
+  - name: npx
+    expect_calls: 1
+    responses:
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
+        fixture: mocks/guide-skill.md
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+  - name: node
+    responses:
+      - args: ["--version"]
+        stdout: "v24.22.0\n"
+expected:
+  should_trigger: true
+graders:
+  - type: text
+    name: reports-recovered-guide
+    config:
+      contains:
+        - "guide skill"
+      regex_match:
+        - "(?i)(usable|success|obtained|retrieved|read|loaded|fetched)"
+      regex_not_match:
+        - "(?i)(no automated violations found|\\b\\d+\\s+(violations|findings|issues)\\b)"
+  - type: tool_constraint
+    name: retries-exact-guide-command-without-running-setup
+    config:
+      expect_tools:
+        - tool: "bash|shell"
+          command_pattern: "npx --yes --prefer-online automatica11y@latest guide skill"
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare|doctor)"
