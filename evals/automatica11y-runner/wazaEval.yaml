@@ -22,7 +22,7 @@ command_mocks:
   - name: npx
     responses:
       - args: ["--yes", "automatica11y@latest", "--version"]
-        stdout: "0.10.0\n"
+        stdout: "0.10.1\n"
       - args: ["--yes", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-skill.md
       - args: ["--yes", "automatica11y@latest", "doctor"]

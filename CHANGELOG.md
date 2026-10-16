@@ -1,5 +1,14 @@
 # automatica11y
 
+## 0.10.1
+
+### Patch Changes
+
+- dea2ab3: Write results.json and report.md when every audit target fails to resolve, without requiring a browser. Failed targets retain their reasons and contain no invented audit findings. Keep --plan output plan-only and align agent guidance and the unreachable-target eval with the consistent failure artifacts.
+- dea2ab3: Add query selectors to reports for faster targeting by consumers. Replaces the IBM DOM reference in reports.
+- dea2ab3: The runner skill now covers local package folders and packed `.tgz` files with `--local-package`. The waza evaluations cover the setup checks, every option, target parsing, grouping, report writing, end-to-end runs against local pages and a packed package, and the bootstrap skill's guide failures.
+- dea2ab3: Optimize test fixtures for concurrency and and animation settling.  Speeds up test suite by ~13%.
+
 ## 0.10.0
 
 ### Minor Changes
