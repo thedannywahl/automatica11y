@@ -5,7 +5,7 @@ tags:
   - e2e
 context_dir: evals/e2e/automatica11y-runner/fixtures/pages
 inputs:
-  prompt: "I've been asked to use automatica11y. Audit ./clean.html and tell me whether it's accessible. End with a final reply stating the report path, measured findings, and limitations."
+  prompt: "I've been asked to use automatica11y. Audit ./clean.html with --out a11y-report and tell me whether it's accessible. End with a final reply stating the report path, measured findings, and limitations."
   files:
     - path: clean.html
 expected:

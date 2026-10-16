@@ -8,7 +8,7 @@ import { assetsOf, entry, isAsset } from "../src/frameworks/html.js";
 import { classifyTarget } from "../src/plan/classify.js";
 import { detectFlavor, resolveNpmTarget } from "../src/plan/resolve-npm.js";
 import { parseResults } from "../src/schema.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 import { installPackage, npmView } from "./helpers/npm-fakes.js";
 
 const { browser: available } = await findBrowser();
@@ -27,7 +27,7 @@ async function run(args, files = {}) {
   /** @param {string} file */
   const read = (file) => {
     try {
-      return readFileSync(join(cwd, "a11y-report", file), "utf8");
+      return readFileSync(reportPath(cwd, file), "utf8");
     } catch {
       return null;
     }

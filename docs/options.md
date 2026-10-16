@@ -18,7 +18,7 @@
 | `--no-generate` | off | Don't build fixtures for npm packages. Only authored fixtures and the `button` and `link` templates run. |
 | `--generate` | on | Enable generated fixtures, overriding YAML `generate: false`. |
 | `--max-stories <n>` | `200` | The Storybook story cap. The cap spreads over components. |
-| `--out <dir>` | `./a11y-report` | Where results go. |
+| `--out <dir>` | `./a11y-report/<unique-run>` | Where results go. Each default run gets its own timestamped folder. An explicit folder is used exactly as given. |
 | `--plan` | off | Classify the targets and write `plan.json`, then stop. Nothing installs and no browser launches. |
 | `--fail-on-axe <impact>` | off; `serious` in CI | Exit 1 if axe-core reports a violation at or above `minor`, `moderate`, `serious`, or `critical`. `none` disables the gate. |
 | `--fail-on-ibm <1\|2\|3\|none>` | off; `1` in CI | Exit 1 if IBM reports a violation at or below that Toolkit level. `none` disables the gate. |

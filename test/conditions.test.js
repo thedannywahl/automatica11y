@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { main } from "../src/cli.js";
 import { parseResults } from "../src/schema.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 import { findBrowser } from "../src/env/browser.js";
 import { launchBrowser } from "../src/harness/browser.js";
 import { serveStatic } from "../src/harness/static-serve.js";
@@ -152,8 +152,8 @@ async function audit(args) {
   const cwd = makeTree();
   const { io, out } = makeIo({ cwd, env: process.env });
   const code = await main(args, io);
-  const results = parseResults(JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8")));
-  return { code, results, report: readFileSync(join(cwd, "a11y-report", "report.md"), "utf8"), ...out };
+  const results = parseResults(JSON.parse(readFileSync(reportPath(cwd, "results.json"), "utf8")));
+  return { code, results, report: readFileSync(reportPath(cwd, "report.md"), "utf8"), ...out };
 }
 
 test("a page target runs the conditions tier, and the report and results carry it", { skip, timeout: 180_000 }, async () => {

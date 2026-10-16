@@ -9,7 +9,7 @@ import { detectFlavor } from "../src/plan/resolve-npm.js";
 import { entry as wcEntry } from "../src/frameworks/wc.js";
 import { candidateMapping } from "../src/plan/mapping.js";
 import { parseMappingFile, parseResults } from "../src/schema.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 import { installPackage, npmView } from "./helpers/npm-fakes.js";
 import { installPackage as realInstall, installOptionalPeers, declaredOptionalPeers, installExtraPackages } from "../src/harness/npm-install.js";
 import { bundleEntries, unresolvedPackages } from "../src/harness/bundle.js";
@@ -53,13 +53,13 @@ async function run(args, { files = {}, cwd = makeTree(files), env = process.env,
   /** @param {string} file */
   const read = (file) => {
     try {
-      return JSON.parse(readFileSync(join(cwd, "a11y-report", file), "utf8"));
+      return JSON.parse(readFileSync(reportPath(cwd, file), "utf8"));
     } catch {
       return null;
     }
   };
   const results = read("results.json");
-  return { code, ...out, cwd, results: results && parseResults(results), plan: read("plan.json"), mapping: read("mapping.json"), report: existsSync(join(cwd, "a11y-report", "report.md")) ? readFileSync(join(cwd, "a11y-report", "report.md"), "utf8") : null };
+  return { code, ...out, cwd, results: results && parseResults(results), plan: read("plan.json"), mapping: read("mapping.json"), report: existsSync(reportPath(cwd, "report.md")) ? readFileSync(reportPath(cwd, "report.md"), "utf8") : null };
 }
 
 /** @typedef {Awaited<ReturnType<typeof run>>} RunResult */
@@ -606,7 +606,7 @@ test("an install failure fails that target and the comparison goes on", { skip }
   const code = await main(["compare", "npm:flaky", "npm:closed-wc", "--archetypes", "button", "--tiers", "rules"], io);
   assert.equal(code, 0);
   /** @type {import("../src/types.js").Results} */
-  const results = JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8"));
+  const results = JSON.parse(readFileSync(reportPath(cwd, "results.json"), "utf8"));
   assert.deepEqual(results.targets.map((t) => t.status), ["failed", "ran"]);
   assert.match(results.targets[0].reason, /npm couldn't install flaky@1\.0\.0/);
 });

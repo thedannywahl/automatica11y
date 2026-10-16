@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { parseResults } from "../src/schema.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 import { installPackage, npmView } from "./helpers/npm-fakes.js";
 
 const { browser: available } = await findBrowser();
@@ -20,7 +20,7 @@ async function run(name, { fastFixture = false, interactionConcurrency = 1, arch
   io.npmView = npmView;
   io.installPackage = installPackage;
   const code = await main(["audit", `lib=npm:${name}`, "--archetypes", archetypes, "--tiers", "rules,interactions,conditions"], io);
-  const results = parseResults(JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8")));
+  const results = parseResults(JSON.parse(readFileSync(reportPath(cwd, "results.json"), "utf8")));
   return { code, results, phases, ...out };
 }
 

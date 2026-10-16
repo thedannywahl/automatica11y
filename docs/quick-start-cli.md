@@ -124,7 +124,7 @@ yarn dlx automatica11y audit ./path/to/file.html
 
 :::
 
-You can also use `check` as an alias for `audit`. The audit will generate a `plan.json`, `mappings.json`, and when it's complete it will save `results.json` (machine readable) and `report.md` (human readable) in `./a11y-report`.
+You can also use `check` as an alias for `audit`. The audit will generate a `plan.json`, `mapping.json` when needed, and when it's complete it will save `results.json` (machine readable) and `report.md` (human readable) in a unique timestamped folder under `./a11y-report`. Screenshots and other artifacts stay in that same run folder.
 
 To audit built packages in a workspace, build them first and map each npm package to its output directory:
 
@@ -203,4 +203,4 @@ yarn dlx automatica11y doctor
 
 :::
 
-Each run writes `report.md`, `results.json`, and `plan.json` to `./a11y-report` by default. [Read a report](/reports) to understand the results.
+Each run writes `report.md`, `results.json`, and `plan.json` to its own folder under `./a11y-report` by default, preserving earlier runs. The terminal prints the exact paths. An explicit `--out` folder is used directly and can overwrite an earlier run there. [Read a report](/reports) to understand the results.

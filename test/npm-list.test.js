@@ -8,7 +8,7 @@ import { findBrowser } from "../src/env/browser.js";
 import { classifyTarget } from "../src/plan/classify.js";
 import { resolveNpmTarget } from "../src/plan/resolve-npm.js";
 import { parseResults } from "../src/schema.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 import { installPackage, npmView } from "./helpers/npm-fakes.js";
 
 const { browser: available } = await findBrowser();
@@ -105,7 +105,7 @@ test("plan mode reports the resolved local package path and version", async () =
   const source = realpathSync(join(cwd, "local"));
   const code = await main(["audit", "ui=npm:fake-ui", "--plan", "--local-package", `fake-ui=${source}`], io);
   assert.equal(code, 0, out.stderr);
-  const plan = JSON.parse(readFileSync(join(cwd, "a11y-report", "plan.json"), "utf8"));
+  const plan = JSON.parse(readFileSync(reportPath(cwd, "plan.json"), "utf8"));
   assert.equal(plan.targets[0].resolved.sourcePath, source);
   assert.equal(plan.targets[0].resolved.version, "1.0.0");
   assert.match(out.stdout, new RegExp(`${source.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\)`));
@@ -125,12 +125,12 @@ test("a list installs every package into one folder, and the report and results 
   assert.equal(code, 0, out.stderr);
   assert.deepEqual(installs.map(([name]) => name), ["fake-ui", "plain-utils"]);
   assert.equal(new Set(installs.map(([, dir]) => dir)).size, 1, "one folder");
-  const results = parseResults(JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8")));
+  const results = parseResults(JSON.parse(readFileSync(reportPath(cwd, "results.json"), "utf8")));
   const npm = results.targets[0].npm;
   assert.deepEqual([npm.name, npm.flavor], ["fake-ui", "react"]);
   assert.deepEqual(npm.companions, [{ name: "plain-utils", subpath: null, version: "3.0.0" }]);
-  const plan = JSON.parse(readFileSync(join(cwd, "a11y-report", "plan.json"), "utf8"));
+  const plan = JSON.parse(readFileSync(reportPath(cwd, "plan.json"), "utf8"));
   assert.equal(plan.targets[0].companions[0].name, "plain-utils");
-  assert.match(readFileSync(join(cwd, "a11y-report", "report.md"), "utf8"), /Installed beside it, in the same folder: `plain-utils@3\.0\.0`\./);
+  assert.match(readFileSync(reportPath(cwd, "report.md"), "utf8"), /Installed beside it, in the same folder: `plain-utils@3\.0\.0`\./);
   assert.match(out.stdout, /fake-ui@1\.0\.0 with plain-utils@3\.0\.0/);
 });

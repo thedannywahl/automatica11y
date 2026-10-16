@@ -8,7 +8,7 @@ import { listStories, matchArchetypes, readIndex, selectStories, storyUrl } from
 import { serveStatic } from "../src/harness/static-serve.js";
 import { mapPool } from "../src/run/pool.js";
 import { parseResults } from "../src/schema.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 
 const sbDir = new URL("./fixtures/storybook-static/", import.meta.url).pathname;
 const { browser: available } = await findBrowser();
@@ -115,8 +115,8 @@ async function audit(args, cwd = makeTree()) {
   let results = null;
   let report = null;
   try {
-    results = parseResults(JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8")));
-    report = readFileSync(join(cwd, "a11y-report", "report.md"), "utf8");
+    results = parseResults(JSON.parse(readFileSync(reportPath(cwd, "results.json"), "utf8")));
+    report = readFileSync(reportPath(cwd, "report.md"), "utf8");
   } catch {
     // Early exits write no results.
   }
@@ -175,7 +175,7 @@ test("annotated screenshots are linked to their Storybook stories", { skip }, as
   assert.equal(new Set(screenshots.map(({ screenshot }) => screenshot)).size, screenshots.length);
   for (const { story: id, screenshot } of screenshots) {
     assert.match(screenshot, new RegExp(`^screenshots/${target.id}/story-${id}-axe\\.png$`));
-    assert.ok(existsSync(join(run.cwd, "a11y-report", screenshot)));
+    assert.ok(existsSync(reportPath(run.cwd, screenshot)));
     assert.ok(run.report.includes(`- \`${id}\`: [Screenshot](${screenshot})`));
   }
   assert.match(run.report, /#1 `button-name`/);

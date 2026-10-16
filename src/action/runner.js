@@ -121,7 +121,7 @@ export async function runAudit(inputs, env = process.env, { run = execute, insta
     }
     const cli = join(root, "bin/automatica11y.js");
     code = Number(await run(process.execPath, [cli, "doctor"], { cwd, env: runtimeEnv }));
-    if (code === 0) code = Number(await run(process.execPath, [cli, "ci", ...args], { cwd, env: runtimeEnv }));
+    if (code === 0) code = Number(await run(process.execPath, [cli, "ci", "--out", parsed.options.out, ...args], { cwd, env: runtimeEnv }));
   } catch (error) {
     if (error instanceof UsageError || code === 2) code = 2;
     else code = 3;

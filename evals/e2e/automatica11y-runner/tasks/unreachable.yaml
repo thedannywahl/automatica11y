@@ -4,7 +4,7 @@ description: The URL fails during resolution (exit code 4), so the runner report
 tags:
   - e2e
 inputs:
-  prompt: "I've been asked to use automatica11y. Audit http://127.0.0.1:9/ and report the outcome. This target is intentionally unreachable. If it fails, use the tool's recorded failure reason; don't create replacement results yourself. End with a final reply explaining the outcome and identifying any report the tool wrote."
+  prompt: "I've been asked to use automatica11y. Audit http://127.0.0.1:9/ with --out a11y-report and report the outcome. This target is intentionally unreachable. If it fails, use the tool's recorded failure reason; don't create replacement results yourself. End with a final reply explaining the outcome and identifying any report the tool wrote."
 expected:
   should_trigger: true
 graders:

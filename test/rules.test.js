@@ -12,7 +12,7 @@ import { installSelectors } from "../src/tiers/rules/selectors.js";
 import { captureRuleScreenshots } from "../src/run/a11y-screenshots.js";
 import { findingBlock } from "../src/report/parts.js";
 import { parseResults, TIERS } from "../src/schema.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 
 const fixtures = new URL("./fixtures/", import.meta.url).pathname;
 const { browser: available } = await findBrowser();
@@ -29,8 +29,8 @@ async function audit(args, { cwd = makeTree() } = {}) {
   let results = null;
   let report = null;
   try {
-    results = parseResults(JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8")));
-    report = readFileSync(join(cwd, "a11y-report", "report.md"), "utf8");
+    results = parseResults(JSON.parse(readFileSync(reportPath(cwd, "results.json"), "utf8")));
+    report = readFileSync(reportPath(cwd, "report.md"), "utf8");
   } catch {
     // A run that stops early writes neither file.
   }
@@ -95,7 +95,7 @@ test("annotated screenshots are opt-in and linked beside rule findings", { skip 
   const screenshot = tiersOf(run.results).rules.engines.axe.screenshot;
   assert.ok(screenshot);
   assert.match(screenshot, /^screenshots\/[a-z0-9_-]+\/page-axe\.png$/);
-  const imagePath = join(run.cwd, "a11y-report", screenshot);
+  const imagePath = reportPath(run.cwd, screenshot);
   assert.ok(existsSync(imagePath));
   assert.equal(readFileSync(imagePath).subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
   assert.ok(run.report.includes(`[Annotated screenshot](${screenshot})`));
@@ -104,8 +104,30 @@ test("annotated screenshots are opt-in and linked beside rule findings", { skip 
   const ibm = tiersOf(ibmRun.results).rules.engines.ibm;
   assert.ok(ibm.screenshot);
   assert.ok(ibmRun.report.includes(`[Annotated screenshot](${ibm.screenshot})`));
-  assert.ok(existsSync(join(ibmRun.cwd, "a11y-report", ibm.screenshot)));
+  assert.ok(existsSync(reportPath(ibmRun.cwd, ibm.screenshot)));
   assert.ok(!ibm.notes.some((note) => note.includes("No reported elements")));
+});
+
+test("default runs preserve each report and its screenshots together", { skip }, async () => {
+  const cwd = makeTree();
+  const first = await audit(["audit", `${fixtures}missing-label.html`, "--engine", "axe", "--tiers", "rules", "--screenshots"], { cwd });
+  assert.equal(first.code, 0, first.stderr);
+  const firstPlanPath = reportPath(cwd, "plan.json");
+  const firstReportPath = reportPath(cwd, "report.md");
+  const firstScreenshot = tiersOf(first.results).rules.engines.axe.screenshot;
+  assert.ok(firstScreenshot);
+  const firstImagePath = reportPath(cwd, firstScreenshot);
+  const firstImage = readFileSync(firstImagePath);
+  const second = await audit(["audit", `${fixtures}missing-alt.html`, "--engine", "axe", "--tiers", "rules", "--screenshots"], { cwd });
+  assert.equal(second.code, 0, second.stderr);
+  const secondScreenshot = tiersOf(second.results).rules.engines.axe.screenshot;
+  assert.ok(secondScreenshot);
+  assert.notEqual(reportPath(cwd, "plan.json"), firstPlanPath);
+  assert.deepEqual(readFileSync(firstImagePath), firstImage);
+  assert.equal(readFileSync(firstReportPath, "utf8"), first.report);
+  assert.ok(first.report.includes(`[Annotated screenshot](${firstScreenshot})`));
+  assert.ok(second.report.includes(`[Annotated screenshot](${secondScreenshot})`));
+  assert.ok(existsSync(reportPath(cwd, secondScreenshot)));
 });
 
 test("low contrast and missing alt text", { skip }, async () => {
@@ -295,14 +317,14 @@ test("a page that returns an error status fails that target and the rest still r
     // Classification would reject the 404 URL up front, so edit the saved plan to reach the run step.
     const cwd = makeTree();
     await audit(["compare", `${base}/ok`, `${base}/ok2`, "--tiers", "rules", "--plan"], { cwd });
-    const planFile = join(cwd, "a11y-report", "plan.json");
+    const planFile = reportPath(cwd, "plan.json");
     const plan = JSON.parse(readFileSync(planFile, "utf8"));
     plan.targets[1].resolved.url = `${base}/gone`;
     writeFileSync(planFile, JSON.stringify(plan));
     const { io } = makeIo({ cwd, env: process.env });
     assert.equal(await main(["run", "--plan", planFile], io), 0);
     /** @type {import("../src/types.js").Results} */
-    const results = JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8"));
+    const results = JSON.parse(readFileSync(reportPath(cwd, "results.json"), "utf8"));
     assert.deepEqual(results.targets.map((t) => t.status), ["ran", "failed"]);
     assert.match(results.targets[1].reason, /HTTP 404/);
   } finally {

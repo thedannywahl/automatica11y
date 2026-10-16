@@ -5,7 +5,7 @@ tags:
   - e2e
 context_dir: evals/e2e/automatica11y-runner/fixtures/pages
 inputs:
-  prompt: "I've been asked to use automatica11y. Our static site is built in ./static-site. Audit it and give me the report. End with a final reply stating the report path and summarizing its findings. Include this caveat verbatim: These automated results do not establish that the page meets WCAG; manual review is still needed. Do not state that the site passes WCAG, is accessible, or is compliant."
+  prompt: "I've been asked to use automatica11y. Our static site is built in ./static-site. Audit it with --out a11y-report and give me the report. End with a final reply stating the report path and summarizing its findings. Include this caveat verbatim: These automated results do not establish that the page meets WCAG; manual review is still needed. Do not state that the site passes WCAG, is accessible, or is compliant."
   files:
     - path: static-site/index.html
     - path: static-site/styles.css

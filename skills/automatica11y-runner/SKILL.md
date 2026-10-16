@@ -91,7 +91,7 @@ Options you can set, and nothing else:
 | `--no-generate` | off | The user wants only authored fixtures and the `button` and `link` templates, with no generated ones. |
 | `--max-stories <n>` | 200 | A large Storybook. |
 | `--local-package <name=path>` | none | The user points at a local package folder or a packed `.tgz`. Repeat it for each such package. |
-| `--out <dir>` | `./a11y-report` | The user names a folder. |
+| `--out <dir>` | `./a11y-report/<unique-run>` | The user names a folder; use that folder directly. |
 | `--plan` | off | You want to see how targets classify without running anything. |
 | `--fail-on-axe <impact>` | off | CI-style gating on axe impact (`minor`, `moderate`, `serious`, `critical`). |
 | `--fail-on-ibm <1\|2\|3>` | off | Gating on IBM Toolkit level. |
@@ -205,7 +205,7 @@ Run the command. Note the exit code:
 
 Then read `<out>/results.json`. It's the source for everything you write. Read `<out>/report.md` too. It's a complete report the tool wrote on its own.
 
-Without `--out`, these files are `./a11y-report/results.json` and `./a11y-report/report.md` in the working folder. A normal audit or comparison writes both files even when every target fails during resolution (exit code 4). Those targets are failed, not audited: their reasons are recorded without engine findings or passes. `--plan` writes only `plan.json` and never audit results. The tool writes these artifacts, not the agent. If an expected file is missing, report that gap and the command's error output; don't invent or create replacement results.
+Without `--out`, each invocation uses a unique timestamped folder under `./a11y-report` in the working folder. Read `results.json` and `report.md` from the exact paths printed by that command; its `plan.json`, screenshots, and other artifacts stay in the same run folder. Do not select a different run's report. An explicit `--out` folder is used directly. A normal audit or comparison writes both files even when every target fails during resolution (exit code 4). Those targets are failed, not audited: their reasons are recorded without engine findings or passes. `--plan` writes only `plan.json` and never audit results. The tool writes these artifacts, not the agent. If an expected file is missing, report that gap and the command's error output; don't invent or create replacement results.
 
 ## 6. Write the report
 

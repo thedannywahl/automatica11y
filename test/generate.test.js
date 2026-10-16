@@ -8,7 +8,7 @@ import { generateCandidates } from "../src/harness/generate/index.js";
 import { familyBases } from "../src/harness/generate/jsx.js";
 import { buildKit } from "../src/harness/generate/kit.js";
 import { parseResults } from "../src/schema.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 import { installPackage, npmView } from "./helpers/npm-fakes.js";
 
 const { browser: available } = await findBrowser();
@@ -24,7 +24,7 @@ async function run(args) {
   /** @param {string} file */
   const read = (file) => {
     try {
-      return readFileSync(join(cwd, "a11y-report", file), "utf8");
+      return readFileSync(reportPath(cwd, file), "utf8");
     } catch {
       return null;
     }
@@ -168,7 +168,7 @@ test("a library that never sets the role is a gap that says what was tried, and 
   assert.equal(dialog.fixture.source, "none");
   assert.ok(dialog.fixture.attempts.length >= 1 && dialog.fixture.attempts.every((a) => a.ok === false));
   assert.equal(result.mapping.lib.dialog.status, "needs-fixture");
-  assert.ok(!existsSync(join(result.cwd, "a11y-report", "generated", "lib", "dialog.jsx")), "nothing is written for a fixture that didn't work");
+  assert.ok(!existsSync(reportPath(result.cwd, "generated", "lib", "dialog.jsx")), "nothing is written for a fixture that didn't work");
 });
 
 test("--no-generate keeps to authored fixtures and templates", { skip, timeout: 120_000 }, async () => {
@@ -197,9 +197,9 @@ export default function Fixture() {
   io.npmView = npmView;
   io.installPackage = installPackage;
   assert.equal(await main(["audit", "lib=npm:fake-compound", "--archetypes", "dialog", "--tiers", "rules"], io), 0);
-  const results = parseResults(JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8")));
+  const results = parseResults(JSON.parse(readFileSync(reportPath(cwd, "results.json"), "utf8")));
   assert.equal(results.targets[0].archetypes.dialog.fixture.source, "authored");
-  assert.ok(!existsSync(join(cwd, "a11y-report", "generated")), "nothing was generated");
+  assert.ok(!existsSync(reportPath(cwd, "generated")), "nothing was generated");
 });
 
 test("web components: a dialog, tooltip, message, and field are built from what the elements say about themselves", { skip, timeout: 240_000 }, async () => {

@@ -21,32 +21,32 @@ Do sections 1 and 2 before you run an audit. A question to the user about a miss
 This skill works with automatica11y **0.10.x**. Run:
 
 ```bash
-npx --yes automatica11y@latest --version
+npx --yes --prefer-online automatica11y@latest --version
 ```
 
-If the command exits with an error or prints nothing, report its exact error text (or say it printed nothing) and the series this copy expects (`0.10.x`), then end the turn. If the output doesn't start with `0.10.`, report the exact version and expected series above, then end the turn. In either case, do not run `doctor` or an audit. If this copy came from a file, offer to read the matching steps with `npx --yes automatica11y@latest guide skill`, but wait for the user's confirmation before running it.
+If the command exits with an error or prints nothing, report its exact error text (or say it printed nothing) and the series this copy expects (`0.10.x`), then end the turn. If the output doesn't start with `0.10.`, report the exact version and expected series above, then end the turn. In either case, do not run `doctor` or an audit. If this copy came from a file, offer to read the matching steps with `npx --yes --prefer-online automatica11y@latest guide skill`, but wait for the user's confirmation before running it.
 
-If the user installed the tool globally (`npm i -g automatica11y`), `automatica11y` is on the `PATH` (so is the short name `a11y`), and it runs the same commands as `npx --yes automatica11y@latest`. Every command in this skill is written with `npx`, so replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above. If the installed version is the wrong series, or nothing is installed, use `npx`.
+If the user installed the tool globally (`npm i -g automatica11y`), `automatica11y` is on the `PATH` (so is the short name `a11y`), and it runs the same commands as `npx --yes --prefer-online automatica11y@latest`. Every command in this skill is written with `npx`, so replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above. If the installed version is the wrong series, or nothing is installed, use `npx`.
 
 ## 2. Check the setup
 
-If the user has already said yes to downloading Chromium, skip the plain `doctor` command and run exactly `npx --yes automatica11y@latest doctor --install-browser` once in the shell. Do not substitute `automatica11y` for `npx` for this command. Report what it prints. Don't run `doctor` first, invoke a standalone browser installer, or install anything else.
+If the user has already said yes to downloading Chromium, skip the plain `doctor` command and run exactly `npx --yes --prefer-online automatica11y@latest doctor --install-browser` once in the shell. Do not substitute `automatica11y` for `npx` for this command. Report what it prints. Don't run `doctor` first, invoke a standalone browser installer, or install anything else.
 
 Otherwise, run:
 
 ```bash
-npx --yes automatica11y@latest doctor
+npx --yes --prefer-online automatica11y@latest doctor
 ```
 
-Relay any fix it prints, then stop until the user has applied it. Exit code 3 means a problem with the environment: Node older than 22, no Chrome or Chromium, or a Chrome or Chromium more than two major versions behind the one Playwright ships. If the problem is the browser, ask the user once whether to download Chromium (about 100 MB). On a yes, run `npx --yes automatica11y@latest doctor --install-browser` and report what it prints. Don't install or configure anything else yourself. That logic lives in the tool.
+Relay any fix it prints, then stop until the user has applied it. Exit code 3 means a problem with the environment: Node older than 22, no Chrome or Chromium, or a Chrome or Chromium more than two major versions behind the one Playwright ships. If the problem is the browser, ask the user once whether to download Chromium (about 100 MB). On a yes, run `npx --yes --prefer-online automatica11y@latest doctor --install-browser` and report what it prints. Don't install or configure anything else yourself. That logic lives in the tool.
 
 ## 3. Turn the request into a command
 
 Only two commands run audits:
 
 ```bash
-npx --yes automatica11y@latest audit <target> [options]
-npx --yes automatica11y@latest compare <target> <target> [<target>...] [options]
+npx --yes --prefer-online automatica11y@latest audit <target> [options]
+npx --yes --prefer-online automatica11y@latest compare <target> <target> [<target>...] [options]
 ```
 
 Use `audit` for one target and `compare` for two or more, even when they're different kinds, such as a live page and an npm package. The report then opens with a warning that the evidence isn't equivalent. A target is `[label=]<spec>`. The label is optional and names the target in the report.
@@ -91,7 +91,7 @@ Options you can set, and nothing else:
 | `--no-generate` | off | The user wants only authored fixtures and the `button` and `link` templates, with no generated ones. |
 | `--max-stories <n>` | 200 | A large Storybook. |
 | `--local-package <name=path>` | none | The user points at a local package folder or a packed `.tgz`. Repeat it for each such package. |
-| `--out <dir>` | `./a11y-report` | The user names a folder. |
+| `--out <dir>` | `./a11y-report/<unique-run>` | The user names a folder; use that folder directly. |
 | `--plan` | off | You want to see how targets classify without running anything. |
 | `--fail-on-axe <impact>` | off | CI-style gating on axe impact (`minor`, `moderate`, `serious`, `critical`). |
 | `--fail-on-ibm <1\|2\|3>` | off | Gating on IBM Toolkit level. |
@@ -116,7 +116,7 @@ A package's components can't be guessed from its name alone. The first run insta
 
 1. Run the audit once. Read `<out>/mapping.json` and the report's **Archetypes** table, which has a **Fixture** column.
 2. Treat the mapping as a guess. Check each `export` or `tag` against what the user asked about.
-3. Each archetype in `mapping.json` has a status. `generated` means the tool built a fixture that passed its checks, and the source is in `<out>/generated/`. `needs-fixture` means the tool found the component but couldn't build a working fixture. `no-match` means no export or custom element looks like that archetype. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow the contract and the examples below. `references/fixtures.md` has more: the mapping file, states, and library accessibility options. It should sit next to this file. If you can't open it, run `npx --yes automatica11y@latest guide fixtures` to print it. The contract here is enough for the first fixture.
+3. Each archetype in `mapping.json` has a status. `generated` means the tool built a fixture that passed its checks, and the source is in `<out>/generated/`. `needs-fixture` means the tool found the component but couldn't build a working fixture. `no-match` means no export or custom element looks like that archetype. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow the contract and the examples below. `references/fixtures.md` has more: the mapping file, states, and library accessibility options. It should sit next to this file. If you can't open it, run `npx --yes --prefer-online automatica11y@latest guide fixtures` to print it. The contract here is enough for the first fixture.
 
   Read the exact target id from `<out>/plan.json` or the target keys in `<out>/mapping.json`; don't derive a different folder from the package scope or tarball filename. An explicit label is normalized into that id: `widgets=npm:@a11y-eval/widgets` uses `fixtures/widgets/tabs.jsx` for a React tabs fixture.
 4. Run the same command again. The tool finds fixtures in that folder without `--mapping`.
@@ -205,7 +205,7 @@ Run the command. Note the exit code:
 
 Then read `<out>/results.json`. It's the source for everything you write. Read `<out>/report.md` too. It's a complete report the tool wrote on its own.
 
-Without `--out`, these files are `./a11y-report/results.json` and `./a11y-report/report.md` in the working folder. A normal audit or comparison writes both files even when every target fails during resolution (exit code 4). Those targets are failed, not audited: their reasons are recorded without engine findings or passes. `--plan` writes only `plan.json` and never audit results. The tool writes these artifacts, not the agent. If an expected file is missing, report that gap and the command's error output; don't invent or create replacement results.
+Without `--out`, each invocation uses a unique timestamped folder under `./a11y-report` in the working folder. Read `results.json` and `report.md` from the exact paths printed by that command; its `plan.json`, screenshots, and other artifacts stay in the same run folder. Do not select a different run's report. An explicit `--out` folder is used directly. A normal audit or comparison writes both files even when every target fails during resolution (exit code 4). Those targets are failed, not audited: their reasons are recorded without engine findings or passes. `--plan` writes only `plan.json` and never audit results. The tool writes these artifacts, not the agent. If an expected file is missing, report that gap and the command's error output; don't invent or create replacement results.
 
 ## 6. Write the report
 

@@ -62,23 +62,25 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
   assert.match(bootstrap, /Don't ask again for anything they've already said/);
   assert.ok(bootstrap.includes("npx --yes --prefer-online automatica11y@latest guide skill"), "it runs the steps directly, with no detour through the overview");
   assert.match(bootstrap, /1\. Follow this decision list/);
-  assert.ok(bootstrap.indexOf("guide skill\n   ```") < bootstrap.indexOf("node --version"), "the guide runs before Node failure diagnosis");
-  assert.match(bootstrap, /If no command produced usable guide output, run `node --version`/);
+  const guideCommand = bootstrap.indexOf("npx --yes --prefer-online automatica11y@latest guide skill");
+  assert.ok(guideCommand >= 0 && guideCommand < bootstrap.indexOf("node --version"), "the guide runs before Node failure diagnosis");
+  assert.match(bootstrap, /\| 6 \| No command produced usable guide output\. \| Run `node --version`\./);
   assert.match(bootstrap, /Don't narrate each step/);
   assert.match(bootstrap, /Before answering, show the exact guide command you ran in a fenced code block/);
   assert.match(bootstrap, /Don't claim to have run a command you couldn't execute/);
-  assert.match(bootstrap, /```bash\n      npx --yes --prefer-online automatica11y@latest guide skill\n      ```/);
+  assert.match(bootstrap, /Run this command once: `npx --yes --prefer-online automatica11y@latest guide skill`/);
   assert.doesNotMatch(bootstrap, /ETARGET/, "there is no separate stale-cache retry branch");
-  assert.match(bootstrap, /Otherwise, report the guide error text \(or state that the guide produced no usable output\) and stop/);
+  assert.match(bootstrap, /\| 8 \| Node\.js is 22 or newer, but no command produced usable guide output\. \| Report the guide error text or state that no usable output was produced\. \| Stop; don't continue with partial instructions\./);
   // The check comes after the guide is read, so the agent has the supported values when it needs them.
-  assert.ok(bootstrap.indexOf("guide skill\n   ```") < bootstrap.indexOf("After reading the guide"), "the unsupported-setting check comes after the command that prints the guide");
+  assert.ok(guideCommand < bootstrap.indexOf("After reading the guide"), "the unsupported-setting check comes after the command that prints the guide");
   assert.doesNotMatch(bootstrap.slice(0, bootstrap.indexOf("npx --yes")), /supported/, "nothing before the guide asks the agent to know the supported values");
   assert.doesNotMatch(bootstrap, /(^|\s)--(?!yes\b|version\b|prefer-online\b)[a-z]/m, "the bootstrap lists no tool flags (--yes and --prefer-online belong to npx, --version to node), so it can't fall out of step with the tool");
-  assert.match(bootstrap, /If Node\.js is missing or below 22, tell the user that Node\.js 22 or newer is required and stop/);
+  assert.match(bootstrap, /If Node\.js is missing or below 22, go to 7/);
+  assert.match(bootstrap, /\| 7 \| Node\.js is missing or below 22\. \| Tell the user Node\.js 22 or newer is required\. \| Stop; don't continue with partial instructions\./);
   assert.match(bootstrap, /ask: "Which target should I test: a URL, a Storybook, or an npm package\?" before running any accessibility check/);
   assert.match(bootstrap, /prints guide text containing at least 20 non-blank lines of Markdown text/);
   assert.match(bootstrap, /Don't guess at results/);
-  assert.match(bootstrap, /Don't continue with partial instructions/);
+  assert.match(bootstrap, /don't continue with partial instructions/i);
   assert.doesNotMatch(bootstrap, /no automated violations found|attestation/, "the wording rules live in the runner");
   assert.equal(existsSync(join(bootstrapDir, "references")), false, "the bootstrap has no references to lose");
   assert.doesNotMatch(bootstrap, /\d+\.\d+\.x/, "the bootstrap names no version, so it never goes stale");
@@ -86,17 +88,19 @@ test("the bootstrap skill advertises the tool and stays tiny", () => {
 });
 
 test("the bootstrap bounds network recovery to an approved retry of the same guide command", () => {
-  const recovery = bootstrap.slice(bootstrap.indexOf("   3."), bootstrap.indexOf("   4."));
-  assert.match(recovery, /If the `npx` guide command fails because it can't reach the npm registry/);
-  assert.match(recovery, /execution environment supports and permits permission requests/);
-  assert.match(recovery, /request only the network access needed for that exact command using the environment's permission mechanism/);
-  assert.match(recovery, /Retry the same command once only if permission is granted/);
-  assert.match(recovery, /at most one network-approved retry across this sequence/);
-  assert.match(recovery, /If it produces usable output, the sequence is complete/);
-  assert.match(recovery, /If permission is denied or unavailable, report the original error and stop/);
-  assert.match(recovery, /If the retry fails or produces no usable output, report its error text/);
-  assert.match(recovery, /don't make further recovery attempts/);
-  assert.match(recovery, /`ENOTFOUND` doesn't prove a sandbox restriction/);
+  const rows = new Map([...bootstrap.matchAll(/^   \| (\d+) \| (.*) \|$/gm)].map((match) => [Number(match[1]), match[2]]));
+  assert.equal(rows.size, 8);
+  assert.match(rows.get(2), /If the command fails because it can't reach the npm registry, go to 3\. Otherwise, go to 5/);
+  assert.match(rows.get(3), /The `npx` guide command fails because it can't reach the npm registry/);
+  assert.match(rows.get(3), /environment supports and permits permission requests, request only the network access needed for that exact command/);
+  assert.match(rows.get(3), /If permission is granted and no network-approved retry has been used, go to 4\. Otherwise, go to 5/);
+  assert.match(rows.get(4), /Permission was granted for the `npx` guide command, and the retry limit has not been reached\. \| Retry that exact command once/);
+  assert.match(rows.get(4), /If output is usable, the sequence is complete\. If the retry fails or produces no usable output, go to 6/);
+  assert.match(rows.get(5), /permission was denied or unavailable, a retry was already used, or the error was not a registry connectivity failure/);
+  assert.match(rows.get(5), /Do not make further recovery attempts\. \| Go to 6/);
+  assert.match(rows.get(6), /Run `node --version`/);
+  assert.match(rows.get(8), /Report the guide error text or state that no usable output was produced\. \| Stop; don't continue with partial instructions/);
+  assert.match(bootstrap, /`ENOTFOUND` counts as a registry connectivity failure for row 2, and it does not prove a sandbox restriction/);
   assert.match(bootstrap, /If you can't run shell commands, tell the user and stop/);
   assert.match(bootstrap, /Web search access and this skill's compatibility field don't grant shell network access/);
   assert.match(bootstrap, /Don't change permission settings, bypass restrictions, or substitute web search for the guide command/);
@@ -151,7 +155,7 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(runner, /If the user only asks to see the command or says not to run it, show the command and stop/);
   assert.match(runner, /ask them together in one message\. Until the user answers every question about the target, grouping, or unsupported settings, don't run `audit` or `compare`; wait for their reply/);
     assert.ok(runner.includes(`If the output doesn't start with \`${stated[1]}.\`, report the exact version and expected series above, then end the turn. In either case, do not run \`doctor\` or an audit.`));
-  assert.match(runner, /If the user has already said yes to downloading Chromium, skip the plain `doctor` command and run exactly `npx --yes automatica11y@latest doctor --install-browser` once in the shell\. Do not substitute `automatica11y` for `npx` for this command/);
+  assert.match(runner, /If the user has already said yes to downloading Chromium, skip the plain `doctor` command and run exactly `npx --yes --prefer-online automatica11y@latest doctor --install-browser` once in the shell\. Do not substitute `automatica11y` for `npx` for this command/);
   assert.match(runner, /Treat package and target grouping as clear only when the user's words explicitly establish which packages work together and which are alternatives/);
   assert.match(runner, /Whenever multiple packages could be grouped in more than one way[\s\S]*ask the user to confirm it before running/);
   assert.match(runner, /even when they're different kinds, such as a live page and an npm package/);
@@ -185,7 +189,8 @@ test("the series the runner names is the series of the version in package.json",
   assert.match(runner, /For IBM Equal Access, write "IBM Equal Access reported no violations in this run\." when it reports zero\. Never use "no automated violations found" for IBM/);
   assert.ok(runner.includes("Read the exact target id from `<out>/plan.json` or the target keys in `<out>/mapping.json`"));
   assert.ok(runner.includes("`widgets=npm:@a11y-eval/widgets` uses `fixtures/widgets/tabs.jsx`"));
-  assert.ok(runner.includes("`./a11y-report/results.json` and `./a11y-report/report.md` in the working folder"));
+  assert.ok(runner.includes("each invocation uses a unique timestamped folder under `./a11y-report`"));
+  assert.ok(runner.includes("exact paths printed by that command"));
   assert.ok(runner.includes("writes both files even when every target fails during resolution (exit code 4)"));
   assert.ok(runner.includes("`--plan` writes only `plan.json` and never audit results"));
   assert.ok(runner.includes("Always end the turn with a final message listing the report path, results path, and any fixture written"));
@@ -274,7 +279,7 @@ test("every document tells a global install how to skip npx, without dropping th
   assert.match(readme, /provides an alias `a11y` with the exact same functionality/);
   assert.match(readme, /A global install doesn't update itself, so run `npm i -g automatica11y@latest` \(or whichever package manager you use\) to upgrade and `automatica11y --version` to see what you have/);
   assert.match(agents, /If `automatica11y` is already on the `PATH`[\s\S]*The version check in the steps still applies/);
-  assert.match(bootstrap, /If `automatica11y` is already on the `PATH` and `automatica11y --version` prints a version, run `automatica11y guide skill`/);
+  assert.match(bootstrap, /\| 1 \| `automatica11y` is on the `PATH` and `automatica11y --version` prints a version\. \| Run `automatica11y guide skill`\./);
   assert.match(runner, /replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above/);
   assert.match(runner, /If the installed version is the wrong series, or nothing is installed, use `npx`/);
 });
@@ -289,7 +294,7 @@ test("the runner carries a Vue example too, and says not to import h", () => {
 test("the runner carries a React example and a web component example, so it works without its references", () => {
   assert.match(runner, /```jsx[\s\S]*export default function Fixture\(\)[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);
   assert.match(runner, /```js\nexport default function mount\(container\)[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);
-  assert.match(runner, /If you can't open it, run `npx --yes automatica11y@latest guide fixtures`/);
+  assert.match(runner, /If you can't open it, run `npx --yes --prefer-online automatica11y@latest guide fixtures`/);
 });
 
 test("AGENTS.md bridges to the runner, and tells contributors what to run", () => {
@@ -307,7 +312,7 @@ test("AGENTS.md bridges to the runner, and tells contributors what to run", () =
   assert.match(agents, /If the request doesn't name a target, ask for the target once, then continue with the steps\. Use the defaults in the steps for any setting the user didn't name/);
   assert.match(agents, /That's only another way to get the text\. If a guide command has already failed, use only the permission-request recovery above or stop as described above\. Reading the files doesn't change that/);
   assert.match(runner, /If the output doesn't start with `\d+(?:\.\d+)?\.`, report the exact version and expected series above, then end the turn/);
-  assert.match(runner, /offer to read the matching steps with `npx --yes automatica11y@latest guide skill`, but wait for the user's confirmation before running it/);
+  assert.match(runner, /offer to read the matching steps with `npx --yes --prefer-online automatica11y@latest guide skill`, but wait for the user's confirmation before running it/);
   assert.match(agents, /print the copy that comes with the latest release, and the steps they print check that the tool's version matches/);
   assert.match(agents, /If either guide command fails because npm can't reach the registry/);
   assert.match(agents, /execution environment supports and permits permission requests/);

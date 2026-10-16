@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { main } from "../src/cli.js";
 import { parsePlan, parseResults } from "../src/schema.js";
-import { STORYBOOK_INDEX, fakeFetch, makeFakeBrowser, makeIo, makeTree } from "./helpers/fixtures.js";
+import { STORYBOOK_INDEX, fakeFetch, makeFakeBrowser, makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 
 const onUnix = process.platform !== "win32";
 
@@ -55,7 +55,7 @@ test("no command, unknown command, and --help", async () => {
 test("check is an alias for audit", async () => {
   const result = await run(["check", "npm:react", "--plan"]);
   assert.equal(result.code, 0, result.stderr);
-  const plan = JSON.parse(readFileSync(join(result.cwd, "a11y-report", "plan.json"), "utf8"));
+  const plan = JSON.parse(readFileSync(reportPath(result.cwd, "plan.json"), "utf8"));
   assert.equal(plan.command, "audit");
   const help = await run(["check", "--help"]);
   assert.equal(help.code, 0);
@@ -93,7 +93,7 @@ test("--plan writes a valid plan.json and exits 0", async () => {
   const fetch = fakeFetch({ "https://example.com/": { body: "<h1>Hi</h1>" } });
   const result = await run(["compare", "local=./page.html", "./sb", "https://example.com/", "radix=npm:@radix-ui/react-dialog@1.1.0", "--plan", "--fail-on-axe", "serious", "--fail-on-ibm", "1", "--fail-mode", "all", "--engine", "axe,ibm", "--screenshots"], { cwd, fetch });
   assert.equal(result.code, 0, result.stderr);
-  const plan = parsePlan(JSON.parse(readFileSync(join(cwd, "a11y-report", "plan.json"), "utf8")));
+  const plan = parsePlan(JSON.parse(readFileSync(reportPath(cwd, "plan.json"), "utf8")));
   assert.equal(plan.command, "compare");
   assert.deepEqual(plan.options.fail, { mode: "all", axe: "serious", ibm: 1 });
   assert.deepEqual(plan.options.tiers, ["rules", "interactions", "computed", "conditions", "vsr"]);
@@ -113,6 +113,28 @@ test("--plan writes a valid plan.json and exits 0", async () => {
   assert.match(result.stdout, /Wrote .*plan\.json/);
 });
 
+test("default output preserves separate plans and reports for repeated runs", async () => {
+  const cwd = makeTree();
+  const first = await run(["audit", "./first-missing.html"], { cwd });
+  assert.equal(first.code, 4, first.stderr);
+  const [firstDirectory] = readdirSync(join(cwd, "a11y-report"));
+  const firstPlanPath = join(cwd, "a11y-report", firstDirectory, "plan.json");
+  const firstPlanText = readFileSync(firstPlanPath, "utf8");
+  const second = await run(["audit", "./second-missing.html"], { cwd });
+  assert.equal(second.code, 4, second.stderr);
+  const directories = readdirSync(join(cwd, "a11y-report"));
+  assert.equal(directories.length, 2);
+  assert.equal(readFileSync(firstPlanPath, "utf8"), firstPlanText);
+  for (const directory of directories) {
+    const output = join(cwd, "a11y-report", directory);
+    const plan = parsePlan(JSON.parse(readFileSync(join(output, "plan.json"), "utf8")));
+    assert.equal(plan.options.out, `./a11y-report/${directory}`);
+    assert.ok(existsSync(join(output, "results.json")));
+    assert.ok(existsSync(join(output, "report.md")));
+  }
+  assert.ok(first.stdout.includes(firstPlanPath));
+});
+
 test("--plan respects --out and shows the same names for duplicate ids", async () => {
   const cwd = makeTree({ "a/page.html": "", "b/page.html": "" });
   const result = await run(["compare", "./a/page.html", "./b/page.html", "--plan", "--out", "./out"], { cwd });
@@ -129,10 +151,10 @@ test("a bare word is a path, so a package has to be written npm:name", async () 
   assert.equal((await run(["audit", "npm:react", "--plan"])).code, 0);
   // A folder with the package's name is a folder without the prefix, and a package with it.
   const cwd = makeTree({ "react/index.html": "<h1>Hi</h1>" });
-  const folder = JSON.parse((await run(["audit", "react", "--plan"], { cwd }) && readFileSync(join(cwd, "a11y-report", "plan.json"), "utf8")));
+  const folder = JSON.parse((await run(["audit", "react", "--plan"], { cwd }) && readFileSync(reportPath(cwd, "plan.json"), "utf8")));
   assert.equal(folder.targets[0].kind, "static-dir");
   await run(["audit", "npm:react", "--plan"], { cwd });
-  assert.equal(JSON.parse(readFileSync(join(cwd, "a11y-report", "plan.json"), "utf8")).targets[0].kind, "npm-react");
+  assert.equal(JSON.parse(readFileSync(reportPath(cwd, "plan.json"), "utf8")).targets[0].kind, "npm-react");
   const scheme = await run(["audit", "ftp://example.com", "--plan"]);
   assert.equal(scheme.code, 4);
   assert.match(scheme.stdout, /Only http and https URLs are supported/);
@@ -148,7 +170,7 @@ test("a failed target doesn't stop a comparison, but all failing exits 4", async
   const mixed = await run(["compare", "./page.html", "./missing.html", "--plan"], { cwd });
   assert.equal(mixed.code, 0);
   /** @type {import("../src/types.js").Plan} */
-  const plan = JSON.parse(readFileSync(join(cwd, "a11y-report", "plan.json"), "utf8"));
+  const plan = JSON.parse(readFileSync(reportPath(cwd, "plan.json"), "utf8"));
   assert.deepEqual(plan.targets.map((t) => t.status), ["ok", "failed"]);
   assert.match(plan.targets[1].reason, /Path not found/);
 
@@ -194,14 +216,14 @@ test("an unreachable URL and its saved plan write failed results in the default 
   const env = { PATH: "", AUTOMATICA11Y_CHROME: "/does/not/exist" };
   const result = await run(["audit", "http://127.0.0.1:9/"], { cwd, env, fetch: async () => { throw new Error("connection refused"); } });
   assert.equal(result.code, 4, result.stderr);
-  const resultsPath = join(cwd, "a11y-report", "results.json");
+  const resultsPath = reportPath(cwd, "results.json");
   const results = parseResults(JSON.parse(readFileSync(resultsPath, "utf8")));
   assert.equal(results.targets.length, 1);
   assert.equal(results.targets[0].status, "failed");
   assert.match(results.targets[0].reason, /The URL didn't respond: connection refused/);
   assert.deepEqual(results.targets[0].archetypes, {});
-  assert.ok(existsSync(join(cwd, "a11y-report", "report.md")));
-  const rerun = await run(["run", "--plan", "a11y-report/plan.json"], { cwd, env });
+  assert.ok(existsSync(reportPath(cwd, "report.md")));
+  const rerun = await run(["run", "--plan", reportPath(cwd, "plan.json")], { cwd, env });
   assert.equal(rerun.code, 4, rerun.stderr);
   const rerunResults = parseResults(JSON.parse(readFileSync(resultsPath, "utf8")));
   assert.deepEqual(rerunResults.targets, results.targets);
@@ -211,13 +233,13 @@ test("a real run writes the plan first, even when the browser won't start", { sk
   const result = await run(["audit", "npm:react"], { env: { PATH: "", AUTOMATICA11Y_CHROME: makeFakeBrowser("200.0.4567.89") } });
   assert.equal(result.code, 3);
   assert.match(result.stderr, /Couldn't start the browser/);
-  const plan = JSON.parse(readFileSync(join(result.cwd, "a11y-report", "plan.json"), "utf8"));
+  const plan = JSON.parse(readFileSync(reportPath(result.cwd, "plan.json"), "utf8"));
   assert.equal(plan.tools.chromium, "200.0.4567.89");
 });
 
 test("run --plan re-runs a saved plan and warns when versions differ", { skip: !onUnix }, async () => {
   const first = await run(["audit", "npm:react", "--plan"]);
-  const planFile = join(first.cwd, "a11y-report", "plan.json");
+  const planFile = reportPath(first.cwd, "plan.json");
   const plan = JSON.parse(readFileSync(planFile, "utf8"));
   plan.tools.node = "18.0.0";
   writeFileSync(planFile, JSON.stringify(plan));

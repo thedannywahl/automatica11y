@@ -9,7 +9,7 @@ import { runRules } from "../src/tiers/rules/index.js";
 import { captureRuleScreenshots } from "../src/run/a11y-screenshots.js";
 import { findingBlock } from "../src/report/parts.js";
 import { main } from "../src/cli.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -158,9 +158,9 @@ test("a page with a closed shadow root is reported as not testable, never as cle
   const cwd = makeTree({ "closed.html": page("closed") });
   const { io } = makeIo({ cwd, env: process.env });
   assert.equal(await main(["audit", "./closed.html", "--tiers", "rules"], io), 0);
-  const results = JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8"));
+  const results = JSON.parse(readFileSync(reportPath(cwd, "results.json"), "utf8"));
   assert.match(results.targets[0].summary.notTestable[0], /closed shadow root in <x-thing>/);
-  const report = readFileSync(join(cwd, "a11y-report", "report.md"), "utf8");
+  const report = readFileSync(reportPath(cwd, "report.md"), "utf8");
   assert.match(report, /\*\*Not testable in closed\.html\.\*\*/);
   assert.match(report, /Not testable: closed shadow root in <x-thing>/);
 });

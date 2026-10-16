@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -171,7 +172,7 @@ export function parseRunArgs(command, argv, context = {}) {
     maxStories,
     screenshots,
     generate: (parsed.tokens?.filter((token) => token.kind === "option" && ["generate", "no-generate"].includes(token.name)).at(-1)?.name ?? (values["no-generate"] ? "no-generate" : "generate")) === "generate",
-    out: values.out ?? "./a11y-report",
+    out: values.out ?? `./a11y-report/${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`,
     fail,
     policy: {
       incomplete: values["fail-on-incomplete"] === undefined ? command === "ci" : parseChoice("fail-on-incomplete", values["fail-on-incomplete"], ["true", "false"]) === "true",
@@ -363,7 +364,7 @@ const FLAGS = `Options:
   --screenshots               Capture annotated screenshots for rule violations. Off by default.
   --no-screenshots            Disable screenshots configured in YAML.
   --plan                      Resolve and print the plan, then stop.
-  --out <dir>                 Output directory. Default ./a11y-report.
+  --out <dir>                 Output directory. Default ./a11y-report/<unique-run>.
   --fail-on-axe <impact>      minor, moderate, serious, critical, or none.
   --fail-on-ibm <level>       1, 2, 3 (IBM Toolkit level), or none.
   --fail-mode <any|all>       How to combine fail checks. Default any.
