@@ -160,6 +160,7 @@ test("the runner offers outdated-browser consent and download-failure fallback",
   assert.match(runner, /keep it in the report header before coverage and findings/);
   const tasks = ["preflight-old-browser-choice.yaml", "preflight-old-browser-install-failed.yaml", "preflight-old-browser-install-declined.yaml"];
   for (const name of tasks) {
+    /** @type {{ graders: { type: string }[], command_mocks: { name: string, responses: { fixture?: string, exit_code?: number }[] }[] }} */
     const task = parse(read("evals", "automatica11y-runner", "tasks", name));
     assert.ok(task.graders.some((grader) => grader.type === "prompt"), `${name} grades consent behavior`);
     assert.ok(task.graders.some((grader) => grader.type === "tool_constraint"), `${name} constrains installs and audits`);

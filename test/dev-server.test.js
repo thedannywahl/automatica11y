@@ -32,13 +32,16 @@ test("cleanup stops signaling once the process group is gone", { skip: process.p
   const { io } = makeIo({ cwd, env: process.env });
   const server = await startDevServer({ command: `"${process.execPath}" server.cjs`, url: `http://127.0.0.1:${port}`, timeoutSeconds: 5 }, io);
   const originalKill = process.kill.bind(process);
+  /** @type {Array<Parameters<typeof process.kill>[1]>} */
   const signals = [];
-  context.mock.method(process, "kill", (pid, signal) => {
+  /** @type {typeof process.kill} */
+  const mockKill = (pid, signal) => {
     signals.push(signal);
     if (signal === 0) throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" });
     if (signal === "SIGKILL") throw Object.assign(new Error("kill EPERM"), { code: "EPERM" });
     return originalKill(pid, signal);
-  });
+  };
+  context.mock.method(process, "kill", mockKill);
   await server.close();
   await server.close();
   assert.deepEqual(signals, ["SIGTERM", 0]);
