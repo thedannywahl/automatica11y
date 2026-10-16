@@ -1,0 +1,29 @@
+# <span class="brand-mark" aria-hidden="true"></span><span class="brand-main">automatic</span><span class="brand-accent">a11y</span>
+
+> Accessibility testing,<br>with evidence.
+
+Test web pages, Storybook builds, and npm components. Compare results side by side, then inspect what each engine found.
+
+## Table of Contents
+
+### Guide
+
+- [Targets.](/targets.md)
+- [What it checks.](/checks.md)
+- [Options and exit codes](/options.md)
+- [GitHub Action](/github-action.md)
+- [Reading a report.](/reports.md)
+- [Writing fixtures](/writing-fixtures.md)
+- [Using it with an AI agent.](/agents.md)
+- [automatica11y runner](/agent-steps.md)
+- [Limits.](/limits.md)
+
+#### Quick Start
+
+- [CLI Quick Start](/quick-start-cli.md)
+- [CI/CD {#quick-start-ci}](/quick-start-ci.md)
+- [AI {#quick-start-ai}](/quick-start-ai.md)
+
+### Other
+
+- [Page not found](/404.md)
