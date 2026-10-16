@@ -8,10 +8,10 @@ inputs:
 command_mocks:
   - name: npx
     responses:
-      - args: ["--yes", "automatica11y@latest", "--version"]
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "--version"]
         stderr: "npm error code E404\nnpm error 404 Not Found - GET https://registry.npmjs.org/automatica11y - Not found\n"
         exit_code: 1
-      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-skill.md
   - name: automatica11y
     responses:

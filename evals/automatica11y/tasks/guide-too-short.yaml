@@ -8,8 +8,6 @@ inputs:
 command_mocks:
   - name: npx
     responses:
-      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
-        fixture: mocks/guide-short.md
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-short.md
   - name: automatica11y
@@ -36,7 +34,7 @@ graders:
       contains:
         - "guide skill"
       regex_match:
-        - "(?i)(no usable|not usable|isn't usable|wasn't usable|usable output|unusable|too short|too little text|incomplete|fewer than 20|far short of (the )?20|no output|empty|returned nothing|non-blank lines|can't treat[^\\n]*as usable)"
+        - "(?i)(no usable|not usable|isn't usable|wasn't usable|didn't return usable (steps|output)|usable output|unusable|too short|too little text|incomplete|fewer than 20|far short of (the )?20|no output|empty|returned nothing|non-blank lines|can't treat[^\\n]*as usable)"
       regex_not_match:
         - "(?i)no automated violations found"
         - "(?i)\\bviolations?\\b.*\\b(found|detected)\\b"

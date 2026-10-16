@@ -9,7 +9,7 @@ import { serveStatic } from "../src/harness/static-serve.js";
 import { openPage } from "../src/harness/url.js";
 import { parseResults } from "../src/schema.js";
 import { flagPhrases, repeatLength, runVsr } from "../src/tiers/vsr.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 
 const fixtures = new URL("./fixtures/", import.meta.url).pathname;
 const { browser: available } = await findBrowser();
@@ -143,8 +143,8 @@ async function audit(args, cwd = makeTree()) {
   const { io, out } = makeIo({ cwd, env: process.env });
   const code = await main(args, io);
   /** @param {string} file */
-  const read = (file) => parseResults(JSON.parse(readFileSync(join(cwd, "a11y-report", file), "utf8")));
-  return { code, results: read("results.json"), report: readFileSync(join(cwd, "a11y-report", "report.md"), "utf8"), ...out };
+  const read = (file) => parseResults(JSON.parse(readFileSync(reportPath(cwd, file), "utf8")));
+  return { code, results: read("results.json"), report: readFileSync(reportPath(cwd, "report.md"), "utf8"), ...out };
 }
 
 test("audit: the tier shows in the results, the matrix, and the report", { skip }, async () => {

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -28,6 +29,7 @@ const OPTION_DEFS = /** @type {const} */ ({
   "fail-on-checks": { type: "string" },
   screenshots: { type: "boolean" },
   "no-screenshots": { type: "boolean" },
+  "allow-old-browser": { type: "boolean" },
   "server-command": { type: "string" },
   "server-url": { type: "string" },
   "server-timeout": { type: "string" },
@@ -170,8 +172,9 @@ export function parseRunArgs(command, argv, context = {}) {
     ...(Object.keys(localPackages).length ? { localPackages } : {}),
     maxStories,
     screenshots,
+    allowOldBrowser: values["allow-old-browser"] === true,
     generate: (parsed.tokens?.filter((token) => token.kind === "option" && ["generate", "no-generate"].includes(token.name)).at(-1)?.name ?? (values["no-generate"] ? "no-generate" : "generate")) === "generate",
-    out: values.out ?? "./a11y-report",
+    out: values.out ?? `./a11y-report/${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`,
     fail,
     policy: {
       incomplete: values["fail-on-incomplete"] === undefined ? command === "ci" : parseChoice("fail-on-incomplete", values["fail-on-incomplete"], ["true", "false"]) === "true",
@@ -362,8 +365,9 @@ const FLAGS = `Options:
   --no-generate               Don't build fixtures for npm packages. Only authored fixtures and the button and link templates run.
   --screenshots               Capture annotated screenshots for rule violations. Off by default.
   --no-screenshots            Disable screenshots configured in YAML.
+  --allow-old-browser         Use an outdated browser with a warning in the report.
   --plan                      Resolve and print the plan, then stop.
-  --out <dir>                 Output directory. Default ./a11y-report.
+  --out <dir>                 Output directory. Default ./a11y-report/<unique-run>.
   --fail-on-axe <impact>      minor, moderate, serious, critical, or none.
   --fail-on-ibm <level>       1, 2, 3 (IBM Toolkit level), or none.
   --fail-mode <any|all>       How to combine fail checks. Default any.

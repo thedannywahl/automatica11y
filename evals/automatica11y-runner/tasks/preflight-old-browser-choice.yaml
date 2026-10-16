@@ -1,0 +1,43 @@
+id: runner-preflight-old-browser-choice
+name: An outdated browser presents both choices before continuing
+description: No download or outdated-browser audit happens without the user's choice.
+tags: [preflight]
+inputs:
+  prompt: "Use automatica11y to audit https://instructure.ai/nutritionfacts with annotated screenshots."
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "--version"]
+        stdout: "0.10.1\n"
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
+        fixture: mocks/guide-skill.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor"]
+        fixture: mocks/doctor-old-browser.txt
+        exit_code: 3
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "command not found: automatica11y\n"
+        exit_code: 127
+expected:
+  should_trigger: true
+graders:
+  - type: text
+    name: offers-both-choices-with-caveat
+    config:
+      contains: ["141", "Chromium"]
+      regex_match:
+        - "(?i)outdated|older|old browser"
+        - "(?i)unreliable|reliability|less reliable"
+        - "(?i)report.*(header|warning)|(header|warning).*report"
+  - type: prompt
+    name: waits-for-browser-choice
+    config:
+      prompt: |
+        Pass only if the agent asks the user to choose between running with the detected outdated browser (version 141) and downloading current Chromium through Playwright (about 100 MB). It must not default to installation, claim the audit ran, or ask again for the target or screenshots. It must explain the reliability risk and report warning.
+  - type: tool_constraint
+    name: no-unapproved-install-or-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "install-browser|playwright(-core)? install|automatica11y@latest (audit|compare)"

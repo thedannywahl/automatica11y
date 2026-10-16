@@ -1,0 +1,47 @@
+id: bootstrap-guide-etarget-failure
+name: ETARGET after a fresh lookup is reported as a guide failure
+description: "The initial guide fetch already uses --prefer-online. If it fails with ETARGET, report the error and stop without a separate stale-cache retry."
+tags:
+  - guide-failure
+inputs:
+  prompt: "Run an accessibility check on https://example.com with automatica11y."
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
+        stderr: "npm error code ETARGET\nnpm error notarget No matching version found for automatica11y@latest.\n"
+        exit_code: 1
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+  - name: node
+    responses:
+      - args: ["--version"]
+        stdout: "v24.22.0\n"
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-automatica11y-skill
+    config:
+      skill_path: "skills/automatica11y/SKILL.md"
+      mode: positive
+      threshold: 0.6
+  - type: tool_constraint
+    name: fetches-fresh-guide-and-runs-no-audit
+    config:
+      expect_tools:
+        - tool: "bash|shell"
+          command_pattern: "--prefer-online.*automatica11y@latest guide skill"
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare|doctor)"
+  - type: text
+    name: reports-guide-error
+    config:
+      contains:
+        - "ETARGET"
+      regex_not_match:
+        - "(?i)(no automated violations found|\\b\\d+\\s+(violations|findings|issues)\\b)"

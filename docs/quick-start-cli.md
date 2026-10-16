@@ -9,6 +9,8 @@ The [automatica11y](https://www.npmjs.com/package/automatica11y) npm package pro
   <li><span class="instui-icon -icon-googlechrome" aria-hidden="true"></span> A recent Chrome or Chromium (within two major versions of the one Playwright ships)</li>
 </ul>
 
+If `doctor` finds an outdated browser, you can use it with `audit` or `compare --allow-old-browser`, or download a current Chromium with `automatica11y doctor --install-browser`. If the download fails, the installed browser remains an option. Outdated-browser runs carry a warning in the report header and `results.json`: results may be unreliable and should be confirmed with a current browser. The flag does not bypass missing browsers, launch failures, or engine self-tests.
+
 ## Installation
 
 You can install `automatica11y` and run it as a linked node.js binary, or you can invoke it with your package manager's script runner.
@@ -124,7 +126,7 @@ yarn dlx automatica11y audit ./path/to/file.html
 
 :::
 
-You can also use `check` as an alias for `audit`. The audit will generate a `plan.json`, `mappings.json`, and when it's complete it will save `results.json` (machine readable) and `report.md` (human readable) in `./a11y-report`.
+You can also use `check` as an alias for `audit`. The audit will generate a `plan.json`, `mapping.json` when needed, and when it's complete it will save `results.json` (machine readable) and `report.md` (human readable) in a unique timestamped folder under `./a11y-report`. Screenshots and other artifacts stay in that same run folder.
 
 To audit built packages in a workspace, build them first and map each npm package to its output directory:
 
@@ -203,4 +205,4 @@ yarn dlx automatica11y doctor
 
 :::
 
-Each run writes `report.md`, `results.json`, and `plan.json` to `./a11y-report` by default. [Read a report](/reports) to understand the results.
+Each run writes `report.md`, `results.json`, and `plan.json` to its own folder under `./a11y-report` by default, preserving earlier runs. The terminal prints the exact paths. An explicit `--out` folder is used directly and can overwrite an earlier run there. [Read a report](/reports) to understand the results.

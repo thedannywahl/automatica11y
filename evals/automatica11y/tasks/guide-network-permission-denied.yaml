@@ -1,0 +1,49 @@
+id: bootstrap-guide-network-permission-denied
+name: Registry failure stops when network permission is denied
+description: "Recovery continuation: the initial ENOTFOUND failure and permission denial are supplied as context. Report the original error without any further fetch or audit."
+tags:
+  - guide-failure
+  - network-recovery
+inputs:
+  prompt: |
+    Continue this same automatica11y accessibility check on https://example.com at the guide-recovery step.
+    The installed automatica11y command was already checked and is unavailable.
+    The initial command was exactly: npx --yes --prefer-online automatica11y@latest guide skill
+    It failed with: npm error code ENOTFOUND; getaddrinfo ENOTFOUND registry.npmjs.org
+    Network access for that exact command was then requested through the environment's permission mechanism and denied.
+    Continue the skill's recovery sequence and report the outcome. Do not request permission again or change permission settings.
+command_mocks:
+  - name: npx
+    expect_calls: 0
+    responses:
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
+        stderr: "npm error code ENOTFOUND\nnpm error network request to https://registry.npmjs.org/automatica11y failed, reason: getaddrinfo ENOTFOUND registry.npmjs.org\n"
+        exit_code: 1
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+  - name: node
+    responses:
+      - args: ["--version"]
+        stdout: "v24.22.0\n"
+expected:
+  should_trigger: true
+graders:
+  - type: text
+    name: reports-original-registry-error
+    config:
+      contains:
+        - "ENOTFOUND"
+        - "guide skill"
+      regex_not_match:
+        - "(?i)(no automated violations found|\\b\\d+\\s+(violations|findings|issues)\\b)"
+  - type: tool_constraint
+    name: runs-no-guide-retry-or-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "npx --yes --prefer-online automatica11y@latest guide skill"
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare|doctor)"

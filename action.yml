@@ -34,7 +34,7 @@ inputs:
   screenshots:
     description: Save annotated screenshots for rule violations (true or false).
   out:
-    description: Report directory, which must be empty or absent. Default ./a11y-report.
+    description: Report directory, which must be empty or absent. Defaults to a unique run folder under ./a11y-report.
   fail-on-axe:
     description: Axe threshold (minor, moderate, serious, critical, none). Default serious when axe/rules selected.
   fail-on-ibm:

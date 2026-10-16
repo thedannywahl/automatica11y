@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { parseResults } from "../src/schema.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 import { installPackage, npmView } from "./helpers/npm-fakes.js";
 
 const fixtures = new URL("./fixtures/", import.meta.url).pathname;
@@ -34,8 +34,8 @@ async function compare(args, { files = {} } = {}) {
   io.installPackage = installPackage;
   const code = await main(["compare", ...args], io);
   /** @param {string} file */
-  const read = (file) => readFileSync(join(cwd, "a11y-report", file), "utf8");
-  const has = existsSync(join(cwd, "a11y-report", "results.json"));
+  const read = (file) => readFileSync(reportPath(cwd, file), "utf8");
+  const has = existsSync(reportPath(cwd, "results.json"));
   return { code, report: has ? read("report.md") : null, results: has ? parseResults(JSON.parse(read("results.json"))) : null, ...out };
 }
 
@@ -163,7 +163,7 @@ test("an audit of one target keeps the single-target report", { skip }, async ()
   const cwd = makeTree();
   const { io } = makeIo({ cwd, env: process.env });
   assert.equal(await main(["audit", `${fixtures}clean.html`, "--tiers", "rules"], io), 0);
-  const report = readFileSync(join(cwd, "a11y-report", "report.md"), "utf8");
+  const report = readFileSync(reportPath(cwd, "report.md"), "utf8");
   assert.match(report, /^# Accessibility report\./);
   assert.doesNotMatch(report, /Accessibility comparison/);
 });
@@ -190,9 +190,9 @@ test("CI gates distinguish clean runs, partial execution, and untestable coverag
     const cwd = makeTree();
     const { io, out } = makeIo({ cwd, env: process.env });
     assert.equal(await main(["ci", ...targets, "--tiers", "rules"], io), expected, out.stderr);
-    const results = JSON.parse(readFileSync(join(cwd, "a11y-report/results.json"), "utf8"));
+    const results = JSON.parse(readFileSync(reportPath(cwd, "results.json"), "utf8"));
     assert.equal(results.outcome.status, expected === 0 ? "passed" : "incomplete");
     assert.equal(results.failCheck.tripped, false);
-    assert.ok(existsSync(join(cwd, "a11y-report/report.md")));
+    assert.ok(existsSync(reportPath(cwd, "report.md")));
   }
 });

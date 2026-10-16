@@ -5,7 +5,7 @@ tags:
   - e2e
 context_dir: evals/e2e/automatica11y-runner/fixtures/pages
 inputs:
-  prompt: "I've been asked to use automatica11y. Audit ./missing-alt.html and write me the report. End with a final reply stating the report path and summarizing its findings."
+  prompt: "I've been asked to use automatica11y. Audit ./missing-alt.html with --out a11y-report and write me the report. End with a final reply stating the report path and summarizing its findings."
   files:
     - path: missing-alt.html
 expected:

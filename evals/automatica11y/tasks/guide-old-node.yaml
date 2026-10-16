@@ -8,11 +8,8 @@ inputs:
 command_mocks:
   - name: npx
     responses:
-      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
-        stderr: "file:///Users/me/.npm/_npx/1a2b3c/node_modules/automatica11y/bin/automatica11y.js:3\nimport { main } from \"../src/cli.js\" with { type: \"json\" };\n                                   ^^^^\nSyntaxError: Unexpected identifier 'with'\n"
-        exit_code: 1
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
-        stderr: "SyntaxError: Unexpected identifier 'with'\n"
+        stderr: "file:///Users/me/.npm/_npx/1a2b3c/node_modules/automatica11y/bin/automatica11y.js:3\nimport { main } from \"../src/cli.js\" with { type: \"json\" };\n                                   ^^^^\nSyntaxError: Unexpected identifier 'with'\n"
         exit_code: 1
   - name: automatica11y
     responses:

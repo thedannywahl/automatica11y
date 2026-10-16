@@ -16,37 +16,50 @@ For the caveat, write "These automated results do not establish that the page me
 
 ## 1. Check the version
 
-Do sections 1 and 2 before you run an audit. A question to the user about a missing target or an unsupported setting (section 3) can come before or after them.
+Do sections 1 and 2 before you run an audit. A question to the user about a missing target or an unsupported setting (section 3) can come before or after them. Run this section's version check before any `doctor`, `audit`, or `compare` command. If section 3 says not to run anything until the user answers, ask first.
 
 This skill works with automatica11y **0.10.x**. Run:
 
 ```bash
-npx --yes automatica11y@latest --version
+npx --yes --prefer-online automatica11y@latest --version
 ```
 
-If the command exits with an error or prints nothing, report its exact error text (or say it printed nothing) and the series this copy expects (`0.10.x`), then end the turn. If the output doesn't start with `0.10.`, report the exact version and expected series above, then end the turn. In either case, do not run `doctor` or an audit. If this copy came from a file, offer to read the matching steps with `npx --yes automatica11y@latest guide skill`, but wait for the user's confirmation before running it.
+If the command exits with an error or prints nothing, report its exact error text (or say it printed nothing) and the series this copy expects (`0.10.x`), then end the turn. If the output doesn't start with `0.10.`, report the exact version and expected series above, then end the turn. In either case, do not run `doctor` or an audit. If this copy came from a file, offer to read the matching steps with `npx --yes --prefer-online automatica11y@latest guide skill`, but wait for the user's confirmation before running it.
 
-If the user installed the tool globally (`npm i -g automatica11y`), `automatica11y` is on the `PATH` (so is the short name `a11y`), and it runs the same commands as `npx --yes automatica11y@latest`. Every command in this skill is written with `npx`, so replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above. If the installed version is the wrong series, or nothing is installed, use `npx`.
+If the user installed the tool globally (`npm i -g automatica11y`), `automatica11y` is on the `PATH` (so is the short name `a11y`), and it runs the same commands as `npx --yes --prefer-online automatica11y@latest`. Every command in this skill is written with `npx`, so replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above. If the installed version is the wrong series, or nothing is installed, use `npx`.
 
 ## 2. Check the setup
 
-If the user has already said yes to downloading Chromium, skip the plain `doctor` command and run exactly `npx --yes automatica11y@latest doctor --install-browser` once in the shell. Do not substitute `automatica11y` for `npx` for this command. Report what it prints. Don't run `doctor` first, invoke a standalone browser installer, or install anything else.
+If the user has already said yes to downloading Chromium, skip the plain `doctor` command and run exactly `npx --yes --prefer-online automatica11y@latest doctor --install-browser` once in the shell. Do not substitute `automatica11y` for `npx` for this command. Report what it prints. Don't run `doctor` first, invoke a standalone browser installer, or install anything else.
 
 Otherwise, run:
 
 ```bash
-npx --yes automatica11y@latest doctor
+npx --yes --prefer-online automatica11y@latest doctor
 ```
 
-Relay any fix it prints, then stop until the user has applied it. Exit code 3 means a problem with the environment: Node older than 22, no Chrome or Chromium, or a Chrome or Chromium more than two major versions behind the one Playwright ships. If the problem is the browser, ask the user once whether to download Chromium (about 100 MB). On a yes, run `npx --yes automatica11y@latest doctor --install-browser` and report what it prints. Don't install or configure anything else yourself. That logic lives in the tool.
+Exit code 3 means a problem with the environment: Node older than 22, no Chrome or Chromium, or a Chrome or Chromium more than two major versions behind the one Playwright ships. Relay the exact problem, then follow the matching row:
+
+| Detected state | User consent given | Allowed next action | Stop condition |
+|---|---|---|---|
+| Outdated browser | The user chooses this browser, chooses a download, or has not chosen yet. | If they choose the outdated browser, name it and its version, explain that results may be unreliable and the report header will flag it, then use `--allow-old-browser` on the audit or comparison and every rerun. Do not install anything. If they choose a download, follow “Download accepted.” If they have not chosen, present both choices: use this browser or download a current Chromium through Playwright (about 100 MB); do not default to downloading. | If neither choice is authorized, wait for the user's choice. |
+| No browser | The user accepts or declines a download. | If accepted, follow “Download accepted.” There is no outdated-browser fallback. | If declined, report that no browser is available and stop without running `doctor` again, auditing, or installing anything. |
+| Setup error | No additional consent applies. | Relay the exact problem and the fix. The outdated-browser option bypasses only the browser version check, never a missing browser, unsupported Node, launch failure, or failed rule-engine self-test. | Stop until the user applies the fix. |
+| Download accepted | The user explicitly agrees to download Chromium. | Run `npx --yes --prefer-online automatica11y@latest doctor --install-browser` once and report what it prints. If installation succeeds, continue. | If installation fails, follow “Download failed.” |
+| Download failed | The user has or has not explicitly authorized using an outdated browser. | If an outdated browser is still found and the user already explicitly authorized that fallback, use it with `--allow-old-browser`. Otherwise, report the exact error and offer that browser with `--allow-old-browser`; wait for consent. If no browser remains, report the error. Choosing a download alone is not consent to use an outdated browser. | If no browser remains, stop. |
+| Fallback declined | The user declines using the outdated browser. | None. | Stop without auditing. |
+
+Add `--allow-old-browser` only after explicit consent to use the outdated browser. Never add it by default.
+
+Do not try other installers, change network settings, or bypass sandbox restrictions. Don't install or configure anything else yourself. That logic lives in the tool.
 
 ## 3. Turn the request into a command
 
 Only two commands run audits:
 
 ```bash
-npx --yes automatica11y@latest audit <target> [options]
-npx --yes automatica11y@latest compare <target> <target> [<target>...] [options]
+npx --yes --prefer-online automatica11y@latest audit <target> [options]
+npx --yes --prefer-online automatica11y@latest compare <target> <target> [<target>...] [options]
 ```
 
 Use `audit` for one target and `compare` for two or more, even when they're different kinds, such as a live page and an npm package. The report then opens with a warning that the evidence isn't equivalent. A target is `[label=]<spec>`. The label is optional and names the target in the report.
@@ -59,7 +72,9 @@ Use `audit` for one target and `compare` for two or more, even when they're diff
 | An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. To test one entry of a package, add a sub-path after the version: `npm:@scope/pkg/button` or `npm:@scope/pkg@1.2.3/button/v2`. The sub-path is what a person would import (`import ... from "@scope/pkg/button"`), and it has to be something the package exports. |
 | A local build or packed `.tgz` of a package | `npm:<name>` with `--local-package <name>=<path>`. The name is the `name` in the package's `package.json`. Add one `--local-package` for each package in the target that comes from disk. |
 
-A bare word such as `button` is a path: the folder or file `./button`. Always write an npm package with the `npm:` prefix. If a word could mean a package or a folder, ask the user which one before you run anything.
+If a local folder is given as a Storybook but has no `index.json`, ask the user for its URL or for a different target before running anything.
+
+If a word could mean a package or a folder, ask the user which one and do not run anything until they answer. Otherwise, use the path rule: A bare word such as `button` is a path: the folder or file `./button`. Always write an npm package with the `npm:` prefix.
 
 For a local packed package, read any README the user supplies and keep `--local-package <name>=<path>` on the initial audit and every rerun. Follow section 4: audit first, then use the documented props to write only requested fixtures marked `needs-fixture`. For React, write `fixtures/<target id>/<archetype>.jsx`, not `.html`, and rerun the same command.
 
@@ -85,19 +100,20 @@ Options you can set, and nothing else:
 | `--engine axe,ibm` | both | The user wants one rule engine. |
 | `--tiers rules,interactions,computed,conditions,vsr` | all five | The user wants fewer checks. |
 | `--screenshots` / `--no-screenshots` | off | The user explicitly requests annotated screenshots of rule violations, or disables screenshots configured in YAML. |
+| `--allow-old-browser` | off | The user explicitly agrees to use the outdated browser reported by `doctor`, including after a failed Chromium download. |
 | `--archetypes a,b` | all | The user cares about some components. Choose from button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, live-region, chart. |
 | `--lib-a11y on,off` | both | Only for libraries with opt-in accessibility features. |
 | `--mapping <file>` | none | You wrote or edited a mapping file. |
 | `--no-generate` | off | The user wants only authored fixtures and the `button` and `link` templates, with no generated ones. |
 | `--max-stories <n>` | 200 | A large Storybook. |
 | `--local-package <name=path>` | none | The user points at a local package folder or a packed `.tgz`. Repeat it for each such package. |
-| `--out <dir>` | `./a11y-report` | The user names a folder. |
+| `--out <dir>` | `./a11y-report/<unique-run>` | The user names a folder; use that folder directly. |
 | `--plan` | off | You want to see how targets classify without running anything. |
 | `--fail-on-axe <impact>` | off | CI-style gating on axe impact (`minor`, `moderate`, `serious`, `critical`). |
 | `--fail-on-ibm <1\|2\|3>` | off | Gating on IBM Toolkit level. |
 | `--fail-mode any\|all` | `any` | How to combine the two fail flags. |
 
-Use the target and the settings the user already gave, and ask only for what's missing. Annotated screenshots are optional and off by default: use `--screenshots` when the user explicitly asks for them, and leave them off for ordinary audit requests. If the user mentions visual evidence without explicitly asking for screenshots, ask whether they want annotated screenshots. Don't enable them by default. Preserve any screenshot links from `report.md` next to the findings they support. If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one before you run anything. Don't pick a target for them.
+Use the target and the settings the user already gave, and ask only for what's missing. When deciding whether to ask, grouping confirmation takes precedence over “ask only for what's missing.” Ask one combined message when any of these is unresolved: the target, a grouping for multi-package targets, or an unsupported setting. Otherwise, run without asking. Annotated screenshots are optional and off by default: use `--screenshots` when the user explicitly asks for them, and leave them off for ordinary audit requests. If the user mentions screenshots, images, or a visual record of results without explicitly requesting annotated screenshots, ask whether they want annotated screenshots. Don't enable them by default. Preserve any screenshot links from `report.md` next to the findings they support. If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one before you run anything. Don't pick a target for them.
 
 Pass only the options in the table above, with the values it lists. If the user names a setting the tool doesn't have, or a value outside those lists (for example, WCAG 3.0), tell them which setting is unsupported, list the supported values, and ask which to use. Don't substitute a default or invent a value.
 
@@ -116,7 +132,7 @@ A package's components can't be guessed from its name alone. The first run insta
 
 1. Run the audit once. Read `<out>/mapping.json` and the report's **Archetypes** table, which has a **Fixture** column.
 2. Treat the mapping as a guess. Check each `export` or `tag` against what the user asked about.
-3. Each archetype in `mapping.json` has a status. `generated` means the tool built a fixture that passed its checks, and the source is in `<out>/generated/`. `needs-fixture` means the tool found the component but couldn't build a working fixture. `no-match` means no export or custom element looks like that archetype. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow the contract and the examples below. `references/fixtures.md` has more: the mapping file, states, and library accessibility options. It should sit next to this file. If you can't open it, run `npx --yes automatica11y@latest guide fixtures` to print it. The contract here is enough for the first fixture.
+3. Each archetype in `mapping.json` has a status. `generated` means the tool built a fixture that passed its checks, and the source is in `<out>/generated/`. `needs-fixture` means the tool found the component but couldn't build a working fixture. `no-match` means no export or custom element looks like that archetype. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` (`.js` for web components) in the working directory. Follow the contract and the examples below. `references/fixtures.md` has more: the mapping file, states, and library accessibility options. It should sit next to this file. If you can't open it, run `npx --yes --prefer-online automatica11y@latest guide fixtures` to print it. The contract here is enough for the first fixture.
 
   Read the exact target id from `<out>/plan.json` or the target keys in `<out>/mapping.json`; don't derive a different folder from the package scope or tarball filename. An explicit label is normalized into that id: `widgets=npm:@a11y-eval/widgets` uses `fixtures/widgets/tabs.jsx` for a React tabs fixture.
 4. Run the same command again. The tool finds fixtures in that folder without `--mapping`.
@@ -205,7 +221,7 @@ Run the command. Note the exit code:
 
 Then read `<out>/results.json`. It's the source for everything you write. Read `<out>/report.md` too. It's a complete report the tool wrote on its own.
 
-Without `--out`, these files are `./a11y-report/results.json` and `./a11y-report/report.md` in the working folder. A normal audit or comparison writes both files even when every target fails during resolution (exit code 4). Those targets are failed, not audited: their reasons are recorded without engine findings or passes. `--plan` writes only `plan.json` and never audit results. The tool writes these artifacts, not the agent. If an expected file is missing, report that gap and the command's error output; don't invent or create replacement results.
+Without `--out`, each invocation uses a unique timestamped folder under `./a11y-report` in the working folder. Read `results.json` and `report.md` from the exact paths printed by that command; its `plan.json`, screenshots, and other artifacts stay in the same run folder. Do not select a different run's report. An explicit `--out` folder is used directly. A normal audit or comparison writes both files even when every target fails during resolution (exit code 4). Those targets are failed, not audited: their reasons are recorded without engine findings or passes. `--plan` writes only `plan.json` and never audit results. The tool writes these artifacts, not the agent. If an expected file is missing, report that gap and the command's error output; don't invent or create replacement results.
 
 ## 6. Write the report
 
@@ -217,7 +233,7 @@ Use the caveat sentence above verbatim, and avoid positive accessibility verdict
 
 A title, run metadata, and settings may precede the coverage matrix; the matrix comes before the findings. When IBM Equal Access reports no violations but reports needs-review items, write "IBM Equal Access reported no violations in this run" and list the needs-review items in their own section. Do not use "no automated violations found" for IBM. Never say an engine "found nothing" when it reported needs-review items.
 
-1. Put the run date and tool versions first. Say that results are a snapshot.
+1. Put the run date and tool versions first. Say that results are a snapshot. When `results.json` contains an outdated-browser warning, keep it in the report header before coverage and findings, name the browser version, and say results may be unreliable. Preserve that warning in any separate summary; do not hide it in a footer or describe the browser as supported.
 2. For a comparison, say that every target used the same archetypes, WCAG version, level, and rules.
 3. Open with the coverage matrix (target by archetype by tier). Then give the findings.
 4. Keep violations, needs-review items, and passes in separate lists. Never merge them.
@@ -226,7 +242,7 @@ A title, run metadata, and settings may precede the coverage matrix; the matrix 
 7. Don't print a single score. If someone insists, pair any number with the coverage matrix and the automated-coverage caveat.
 8. Label virtual screen reader output **simulated**. Label library accessibility options **on** or **off** on every result that has one.
 9. Treat a gap, a not-testable result, an error, or a failed target as a finding. It never counts as a pass.
-10. If the comparison mixes component targets and page targets, open with a warning that the evidence isn't equivalent.
+10. If the comparison mixes npm package or Storybook targets with live URL or local page or site targets, open the report with a warning that the evidence isn't equivalent.
 11. Label every rule finding with its engine. Report axe-core and IBM Equal Access separately. Never add their counts together. Impact is axe-core's own label. IBM Toolkit level is IBM's staged adoption scale (1 is essential, high-impact requirements); report IBM's result even when it has zero violations, without saying "no automated violations found." Don't convert one scale into the other.
 12. Report computed checks (contrast measured from resolved styles) in their own section. Give the measured ratio next to the ratio the criterion needs, and name the state or the method. Never add them to axe-core or IBM counts. Treat `undetermined` as a gap, never as a pass. When a control has visible text and a pale edge, the result is `not-applicable`, because the text identifies the control. Say that, and leave it for a person to confirm.
 13. Report conditions checks (reduced motion, dark mode, more and less contrast, reduced transparency, forced colors, reflow at 320 pixels, text spacing) in their own section, with the numbers from `results.json`. Never add them to axe-core or IBM counts. "Not applicable" means the page doesn't use the feature, such as a page with no dark theme, so don't list it as a failure or a pass. Say what each check can't see: JavaScript-driven motion, overlapping text, and two-dimensional content that WCAG exempts from reflow.

@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { main } from "../src/cli.js";
 import { findBrowser } from "../src/env/browser.js";
 import { parseResults } from "../src/schema.js";
-import { makeIo, makeTree } from "./helpers/fixtures.js";
+import { makeIo, makeTree, reportPath } from "./helpers/fixtures.js";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const out = join(root, "site");
@@ -204,7 +204,7 @@ test("the home, quick-start, and runner pages pass the tool's accessibility chec
     const { io } = makeIo({ cwd, env: process.env });
     const code = await main(["audit", join(out, page), "--tiers", "rules,conditions"], io);
     assert.equal(code, 0);
-    const results = parseResults(JSON.parse(readFileSync(join(cwd, "a11y-report", "results.json"), "utf8")));
+    const results = parseResults(JSON.parse(readFileSync(reportPath(cwd, "results.json"), "utf8")));
     const tiers = results.targets[0].archetypes.page.configs[0].tiers;
     for (const [engine, result] of Object.entries(tiers.rules.engines)) assert.deepEqual(result.violations.map((violation) => violation.ruleId), [], `${page}: ${engine} violations`);
     assert.deepEqual(tiers.conditions.checks.filter((check) => check.result === "fail" || check.result === "error").map((check) => `${check.name}: ${check.detail}`), [], `${page}: conditions`);

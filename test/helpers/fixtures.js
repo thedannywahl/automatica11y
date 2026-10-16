@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -11,6 +11,19 @@ export function makeTree(files = {}) {
     writeFileSync(file, contents);
   }
   return root;
+}
+
+/** @param {string} cwd @param {string[]} parts */
+export function reportPath(cwd, ...parts) {
+  const root = join(cwd, "a11y-report");
+  const runs = existsSync(root) ? readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(join(root, entry.name, "plan.json")))
+    .sort((first, second) => {
+      const firstTime = statSync(join(root, first.name, "plan.json"), { bigint: true }).mtimeNs;
+      const secondTime = statSync(join(root, second.name, "plan.json"), { bigint: true }).mtimeNs;
+      return firstTime < secondTime ? -1 : firstTime > secondTime ? 1 : 0;
+    }) : [];
+  return join(root, runs.at(-1)?.name ?? "", ...parts);
 }
 
 /** A stand-in browser: a shell script that prints a Chrome version. Unix only. */

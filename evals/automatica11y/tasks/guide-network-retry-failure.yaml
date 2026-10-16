@@ -1,0 +1,50 @@
+id: bootstrap-guide-network-retry-failure
+name: A failed approved network retry stops without a third fetch
+description: "Recovery continuation: the initial ENOTFOUND failure and permission grant are supplied as context. The one approved retry fails with EAI_AGAIN; report that new error without another fetch or audit."
+tags:
+  - guide-failure
+  - network-recovery
+inputs:
+  prompt: |
+    Continue this same automatica11y accessibility check on https://example.com at the guide-recovery step.
+    The installed automatica11y command was already checked and is unavailable.
+    The initial command was exactly: npx --yes --prefer-online automatica11y@latest guide skill
+    It failed with: npm error code ENOTFOUND; getaddrinfo ENOTFOUND registry.npmjs.org
+    The environment's permission mechanism has now granted network access for that exact command. No network-approved retry has been used yet, and the guide has not been read.
+    Continue the skill's recovery sequence and report the outcome. Do not change permission settings or substitute a different source for the guide.
+command_mocks:
+  - name: npx
+    expect_calls: 1
+    responses:
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
+        stderr: "npm error code EAI_AGAIN\nnpm error network request to https://registry.npmjs.org/automatica11y failed, reason: getaddrinfo EAI_AGAIN registry.npmjs.org\n"
+        exit_code: 1
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+  - name: node
+    responses:
+      - args: ["--version"]
+        stdout: "v24.22.0\n"
+expected:
+  should_trigger: true
+graders:
+  - type: text
+    name: reports-retry-error-not-just-original-error
+    config:
+      contains:
+        - "EAI_AGAIN"
+        - "guide skill"
+      regex_not_match:
+        - "(?i)(no automated violations found|\\b\\d+\\s+(violations|findings|issues)\\b)"
+  - type: tool_constraint
+    name: retries-guide-but-runs-no-audit
+    config:
+      expect_tools:
+        - tool: "bash|shell"
+          command_pattern: "npx --yes --prefer-online automatica11y@latest guide skill"
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare|doctor)"

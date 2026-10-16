@@ -1,16 +1,13 @@
 id: bootstrap-guide-other-failure
-name: Any other guide failure is reported with its error
-description: "Guide-failure scenario: the guide can't reach the registry and Node is current, so the skill reports the error text and stops without guessing results."
+name: Registry failure stops when permission requests are unavailable
+description: "Guide-failure scenario: the guide can't reach the registry, permission requests are unavailable, and Node is current, so the skill reports the error text and stops without guessing results."
 tags:
   - guide-failure
 inputs:
-  prompt: "Run an accessibility check on https://example.com with automatica11y."
+  prompt: "Run an accessibility check on https://example.com with automatica11y. Network permission requests are unavailable in this execution environment; don't attempt to request them or change permission settings."
 command_mocks:
   - name: npx
     responses:
-      - args: ["--yes", "automatica11y@latest", "guide", "skill"]
-        stderr: "npm error code ENOTFOUND\nnpm error network request to https://registry.npmjs.org/automatica11y failed, reason: getaddrinfo ENOTFOUND registry.npmjs.org\n"
-        exit_code: 1
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         stderr: "npm error code ENOTFOUND\nnpm error network request to https://registry.npmjs.org/automatica11y failed, reason: getaddrinfo ENOTFOUND registry.npmjs.org\n"
         exit_code: 1

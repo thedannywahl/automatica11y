@@ -5,7 +5,7 @@ tags:
   - e2e
 context_dir: evals/e2e/automatica11y-runner/fixtures/pages
 inputs:
-  prompt: "I've been asked to use automatica11y. Compare the accessibility of ./clean.html and ./missing-alt.html and write me the comparison. For IBM Equal Access, if it reports no violations, write 'IBM Equal Access reported no violations in this run' and list any needs-review items separately. End with a final reply stating the report path and summarizing both targets' findings."
+  prompt: "I've been asked to use automatica11y. Compare the accessibility of ./clean.html and ./missing-alt.html with --out a11y-report and write me the comparison. For IBM Equal Access, if it reports no violations, write 'IBM Equal Access reported no violations in this run' and list any needs-review items separately. End with a final reply stating the report path and summarizing both targets' findings."
   files:
     - path: clean.html
     - path: missing-alt.html

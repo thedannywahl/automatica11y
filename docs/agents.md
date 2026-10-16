@@ -10,6 +10,8 @@ npx automatica11y@latest guide fixtures  # how to write the fixtures an npm pack
 
 The guidance ships with the tool, so it always matches the version you run. Tell your agent to run `npx automatica11y@latest guide` and follow it, then ask for things like "How accessible is Radix Dialog?" or "Compare the accessibility of React Aria and Headless UI." The agent needs to run shell commands and read and write files. Nothing here is tied to one agent.
 
+Shell networking can be restricted separately from web search or browser access. If npm can't reach the registry, the agent can request network permission for the exact guide command where the execution environment supports and permits it, then retry once if granted. If permission is denied or unavailable, or the retry fails, it reports the error and stops. Prompt wording and a skill's compatibility field describe requirements; they don't grant access.
+
 ## Skills.
 
 If your agent loads skills from a folder, copy [`skills/automatica11y`](https://github.com/thedannywahl/automatica11y/tree/main/skills/automatica11y) into it. That's one small file, `SKILL.md`. It advertises the tool to the agent, and sends it to `guide skill`. It names no version, so it doesn't go stale. The full steps are the [`automatica11y-runner`](https://github.com/thedannywahl/automatica11y/tree/main/skills/automatica11y-runner) skill, which ships in the package and is what `guide skill` prints. Copy it too if you want the steps available without the network. They're also on this site as [the agent steps](agent-steps.md).

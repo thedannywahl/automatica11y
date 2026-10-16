@@ -30,8 +30,8 @@ test("Action keeps reports and original failing exit for artifact upload", async
   const outputs = await runAudit({ "upload-artifact": "true" }, { GITHUB_WORKSPACE: cwd }, { installBrowser: false, run: async (file, args, options) => {
     commands.push({ file, args, options });
     if (args[1] === "ci") {
-      writeFileSync(join(cwd, "a11y-report/report.md"), "Report");
-      writeFileSync(join(cwd, "a11y-report/results.json"), "{}");
+      writeFileSync(join(cwd, args[3], "report.md"), "Report");
+      writeFileSync(join(cwd, args[3], "results.json"), "{}");
       return 5;
     }
     return 0;
@@ -40,7 +40,8 @@ test("Action keeps reports and original failing exit for artifact upload", async
   assert.equal(outputs.outcome, "incomplete");
   assert.equal(outputs["artifact-name"], "custom-report");
   assert.equal(outputs["artifact-retention-days"], "3");
-  assert.equal(outputs["report-path"], join(cwd, "a11y-report/report.md"));
+  assert.equal(outputs["report-path"], join(cwd, commands[1].args[3], "report.md"));
+  assert.match(commands[1].args[3], /^\.\/a11y-report\/[^/]+$/);
   assert.equal(commands[0].args[1], "doctor");
   assert.equal(commands[1].args[1], "ci");
   assert.equal(commands[1].options.cwd, cwd);
@@ -48,7 +49,7 @@ test("Action keeps reports and original failing exit for artifact upload", async
 
 test("Action rejects stale output instead of uploading existing reports", async () => {
   const cwd = makeTree({ "page.html": "<h1>Test</h1>", "a11y-report/report.md": "Stale" });
-  const outputs = await runAudit({ targets: "./page.html", summary: "false" }, { GITHUB_WORKSPACE: cwd }, { installBrowser: false, run: async () => { throw new Error("must not run"); } });
+  const outputs = await runAudit({ targets: "./page.html", out: "./a11y-report", summary: "false" }, { GITHUB_WORKSPACE: cwd }, { installBrowser: false, run: async () => { throw new Error("must not run"); } });
   assert.equal(outputs["exit-code"], 2);
   assert.equal(outputs["artifact-path"], "");
   assert.equal(outputs["report-path"], "");

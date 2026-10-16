@@ -25,6 +25,12 @@ test("annotated screenshot option defaults off and config/CLI values override in
   assert.equal(parseRunArgs("audit", ["./dist", "--screenshots"]).options.screenshots, true);
 });
 
+test("configured output stays exact and CLI output overrides it", () => {
+  const cwd = makeTree({ ".automatica11y.yml": "version: 1\noptions:\n  out: ./configured-report\n" });
+  assert.equal(parseRunArgs("audit", ["./page.html"], { cwd }).options.out, "./configured-report");
+  assert.equal(parseRunArgs("audit", ["./page.html", "--out", "./custom-report"], { cwd }).options.out, "./custom-report");
+});
+
 test("local package mappings work in YAML and as repeatable CLI options", () => {
   const cwd = makeTree({ ".automatica11y.yml": "version: 1\nlocalPackages:\n  fake-ui: ./packages/ui\n" });
   const config = loadConfig(undefined, cwd);
