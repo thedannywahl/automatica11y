@@ -9,7 +9,7 @@ Complete these settings before enabling the workflow on main:
 3. Configure npm's trusted publisher for package `automatica11y`: GitHub repository `thedannywahl/automatica11y`, workflow filename `changesets.yml`, no environment name. The package must already exist; initial bootstrap/authentication is a separate owner task. Publishing uses npm 11.5.1 or newer, OIDC and provenance, not an npm token.
 4. Permit only trusted maintainers to modify release automation and the `changeset-release/main` branch. Protect existing `v*` release tags against deletion/replacement. Establish the initial Marketplace listing separately if needed; a GitHub Release alone does not guarantee a Marketplace listing.
 
-`RELEASE_PAT` is used only for the generated PR and auto-merge. Its writes allow normal PR CI and the merge's main-push workflow to start automatically. The publish job uses `GITHUB_TOKEN` for GitHub tags/releases and `id-token: write` for npm. PR validation receives neither the PAT nor npm OIDC. The workflow never uses `pull_request_target` to execute candidate code.
+`RELEASE_PAT` is used for the generated release PR, auto-merge, and the scheduled Renovate workflow. Renovate additionally requires Issues and Workflows read/write permissions for its Dependency Dashboard and GitHub Actions updates. Its writes allow normal PR CI and the merge's main-push workflow to start automatically. The publish job uses `GITHUB_TOKEN` for GitHub tags/releases and `id-token: write` for npm. PR validation receives neither the PAT nor npm OIDC. The workflow never uses `pull_request_target` to execute candidate code.
 
 ## Execution
 
@@ -23,9 +23,11 @@ Complete these settings before enabling the workflow on main:
 | Version-PR update or registry no-op | No release request | No docs deployment |
 | Manual Changesets dispatch on main | Complete validation; no retry bypass | Retry the builtin release flow |
 | Manual Docs dispatch on main | Validate selected main or existing stable release tag | Deploy docs only; never publish npm |
-| Weekly latest-dependencies run | Separate unfiltered upgrade diagnostics | Log artifacts and issue reporting; never publishes |
+| Weekly Renovate run | Dependency update PRs receive normal PR validation | Opens update PRs with squash auto-merge enabled; never publishes directly |
 
 One validation workflow owns the Node 22/24/26 matrix and calls the reusable Action smoke workflow. There is no independent main matrix, duplicate release-candidate test, or tag-triggered release creator. Failed, cancelled, or skipped required jobs prevent publication. Releases and docs deploys are serialized without cancelling running work; superseded PR validation is cancelled.
+
+Renovate includes a patch Changeset for `automatica11y` in each update PR and enables GitHub squash auto-merge, including for major updates and lockfile maintenance. Its post-upgrade task passes the branch's `upgrades` list through a JSON data file to `scripts/renovate-changeset.js`, which lists dependency names, old/new versions and available new digests in `.changeset/renovate-dependencies.md`. Lockfile maintenance is identified explicitly. The workflow allowlists only that script command; dependency metadata is never interpolated into shell commands. Main's required `ci-gate` check and up-to-date branch requirement must remain enforced; auto-merge does not bypass them. Once the PR merges, the normal Changesets release flow handles the patch release.
 
 ## Changesets and version PRs
 
