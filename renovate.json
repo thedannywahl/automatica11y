@@ -1,0 +1,36 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard", "helpers:pinGitHubActionDigests"],
+  "schedule": ["before 9am on monday"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 10,
+  "minimumReleaseAge": "5 days",
+  "automerge": true,
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
+  "platformAutomerge": true,
+  "postUpgradeTasks": {
+    "commands": [
+      "node scripts/renovate-changeset.js"
+    ],
+    "dataFileTemplate": "{{{toJSON upgrades}}}",
+    "fileFilters": [".changeset/renovate-dependencies.md"],
+    "executionMode": "branch"
+  },
+  "packageRules": [
+    {
+      "description": "Group non-major dependency updates into one pull request.",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "non-major dependencies"
+    },
+    {
+      "description": "Group GitHub Actions updates and keep them SHA-pinned.",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    }
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 9am on monday"]
+  }
+}

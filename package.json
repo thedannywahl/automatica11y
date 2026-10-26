@@ -77,7 +77,7 @@
     "shiki": "^4.5.0",
     "svelte": "^5.57.2",
     "typescript": "^7.0.2",
-    "vitepress": "2.0.0-alpha.20",
+    "vitepress": "2.0.0-alpha.21",
     "vitepress-plugin-llms": "^1.14.0",
     "vue": "^3.5.43",
     "zone.js": "^0.16.3"
