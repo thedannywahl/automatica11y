@@ -7,15 +7,15 @@ Instructions for AI agents working in this repository or asked to use this tool.
 Keep the user's request as they gave it, including the target and any settings they named, and carry it into the steps. Don't ask again for what they've already said. If the request doesn't name a target, ask for the target once, then continue with the steps. Use the defaults in the steps for any setting the user didn't name. Read the full steps and follow them exactly. They cover the version check, `doctor`, turning a request into an `audit` or `compare` command, writing fixtures for npm packages, and writing the report from `results.json`:
 
 ```bash
-npx --yes automatica11y@latest guide skill
+npx --yes --prefer-online automatica11y@latest guide skill
 ```
 
-If `automatica11y` is already on the `PATH` (the user ran `npm i -g automatica11y`, and `automatica11y --version` prints a version), you can run `automatica11y guide skill` and `automatica11y guide fixtures` instead, and use `automatica11y` wherever the steps say `npx --yes automatica11y@latest`. The version check in the steps still applies. An installed copy can be older than the steps expect, and then the check stops you. Use `npx` when the installed version is the wrong series, or when nothing is installed.
+If `automatica11y` is already on the `PATH` (the user ran `npm i -g automatica11y`, and `automatica11y --version` prints a version), you can run `automatica11y guide skill` and `automatica11y guide fixtures` instead, and use `automatica11y` wherever the steps say `npx --yes --prefer-online automatica11y@latest`. The version check in the steps still applies. An installed copy can be older than the steps expect, and then the check stops you. Use `npx` when the installed version is the wrong series, or when nothing is installed.
 
 When the steps tell you to write a fixture, read the fixture guide:
 
 ```bash
-npx --yes automatica11y@latest guide fixtures
+npx --yes --prefer-online automatica11y@latest guide fixtures
 ```
 
 If either guide command fails because npm can't reach the registry, and the execution environment supports and permits permission requests, request only the network access needed for that exact command using the environment's permission mechanism. Retry the same command once only if permission is granted. If permission is denied or unavailable, report the original error and stop. If the retry fails, report its exact error and stop; don't make further recovery attempts. Don't change permission settings or bypass restrictions. For any other guide failure, stop. Don't produce an audit or compare result from memory. If the steps report a problem themselves, such as `doctor` finding no browser, follow what they say. If the version check in the steps reports a mismatch, stop. Report the installed version and the version the steps expect, and don't produce an audit or compare result until the user confirms how to proceed.

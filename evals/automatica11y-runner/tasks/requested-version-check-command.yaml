@@ -4,7 +4,10 @@ description: A user already directed the assistant to automatica11y and requests
 tags:
   - requested-version-check
 inputs:
-  prompt: "I've already been asked to use automatica11y. I have a local static site. Before anything else, give me the exact command that checks the tool version. Show it in a code block. Don't run anything yet."
+  prompt: "I've already been asked to use automatica11y. I have a local static site at ./dist. Before anything else, give me the exact command that checks the tool version. Show it in a code block. Don't run anything yet."
+  files:
+    - path: dist/index.html
+      content: "<!doctype html><html><body></body></html>"
 expected:
   should_trigger: true
 graders:

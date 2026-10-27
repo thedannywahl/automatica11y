@@ -1,5 +1,6 @@
 import { VIEWPORT } from "./browser.js";
 import { recordClosedShadowRoots, recordCustomElements } from "./shadow.js";
+import { pagePolicy } from "../discovery/context.js";
 
 const NETWORK_IDLE_MS = 30_000;
 
@@ -13,13 +14,16 @@ const NETWORK_IDLE_MS = 30_000;
  *   `waitUntil` defaults to `networkidle`. Local fixture pages don't need to wait for the network.
  */
 export async function openPage(browser, url, { viewport = VIEWPORT, forcedColors = false, colorScheme = "light", reducedMotion = false, contrast, reducedTransparency = false, beforeGoto, waitUntil = "networkidle" } = {}) {
-  const context = await browser.newContext({ viewport, deviceScaleFactor: 1, forcedColors: forcedColors ? "active" : "none", colorScheme, reducedMotion: reducedMotion ? "reduce" : "no-preference" });
+  const policy = pagePolicy.getStore();
+  const context = await browser.newContext({ ...policy?.contextOptions, viewport, deviceScaleFactor: 1, forcedColors: forcedColors ? "active" : "none", colorScheme, reducedMotion: reducedMotion ? "reduce" : "no-preference" });
   await context.addInitScript(recordClosedShadowRoots);
   await context.addInitScript(recordCustomElements);
   /** @type {string[]} */
   const warnings = [];
   try {
+    await policy?.setupContext?.(context);
     const page = await context.newPage();
+    await policy?.guardPage?.(page);
     page.setDefaultTimeout(30_000);
     // Playwright can't set prefers-reduced-transparency or prefers-contrast: less, so ask the browser directly.
     // A page opened this way sets nothing else, because the call replaces any other emulated media features.
@@ -43,6 +47,7 @@ export async function openPage(browser, url, { viewport = VIEWPORT, forcedColors
       }
     }
     if (response && response.status() >= 400) throw new Error(`The page responded with HTTP ${response.status()}.`);
+    await policy?.verifyPage?.(page);
     return { context, page, warnings, close: () => context.close().catch(() => {}) };
   } catch (error) {
     await context.close().catch(() => {});

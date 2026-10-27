@@ -9,6 +9,13 @@ automatica11y helps answer two questions:
 - How accessible is this? (`audit`)
 - How do these compare? (`compare`)
 
+For a whole-site request, use opt-in [sitemap or rendered-link discovery](docs/site-discovery.md), including trusted authentication hooks:
+
+```bash
+automatica11y audit https://example.com/docs/ --crawl
+automatica11y audit https://example.com/docs/ --sitemap https://example.com/sitemap.xml
+```
+
 ## Quick start
 
 Run it from your terminal:

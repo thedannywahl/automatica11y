@@ -21,5 +21,11 @@ graders:
         - "annotated screenshots"
       regex_match:
         - "(?i)(\\?|confirm|which|do you want)"
-      not_contains:
-        - "--screenshots"
+      regex_not_match:
+        - "automatica11y(@latest)? audit[^\\n]*--screenshots"
+  - type: tool_constraint
+    name: runs-no-audit
+    config:
+      reject_tools:
+        - tool: "bash|shell"
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

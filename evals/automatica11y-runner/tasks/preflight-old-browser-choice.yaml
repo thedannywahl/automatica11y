@@ -8,7 +8,7 @@ command_mocks:
   - name: npx
     responses:
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "--version"]
-        stdout: "0.10.1\n"
+        stdout: "0.11.0\n"
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-skill.md
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor"]
@@ -33,7 +33,9 @@ graders:
   - type: prompt
     name: waits-for-browser-choice
     config:
+      continue_session: true
       prompt: |
+        Grade the evaluated agent's response, not your own behavior. Call set_waza_grade_pass if it meets all requirements below; otherwise call set_waza_grade_fail with reasons.
         Pass only if the agent asks the user to choose between running with the detected outdated browser (version 141) and downloading current Chromium through Playwright (about 100 MB). It must not default to installation, claim the audit ran, or ask again for the target or screenshots. It must explain the reliability risk and report warning.
   - type: tool_constraint
     name: no-unapproved-install-or-audit

@@ -17,6 +17,7 @@ const pageList = [
   { source: "docs/quick-start-ci.md", out: "quick-start-ci.html", route: "/quick-start-ci" },
   { source: "docs/quick-start-ai.md", out: "quick-start-ai.html", route: "/quick-start-ai" },
   { source: "docs/targets.md", out: "targets.html", route: "/targets" },
+  { source: "docs/site-discovery.md", out: "site-discovery.html", route: "/site-discovery" },
   { source: "docs/checks.md", out: "checks.html", route: "/checks" },
   { source: "docs/options.md", out: "options.html", route: "/options" },
   { source: "docs/github-action.md", out: "github-action.html", route: "/github-action" },

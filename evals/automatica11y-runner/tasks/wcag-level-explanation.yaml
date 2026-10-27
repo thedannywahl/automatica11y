@@ -8,12 +8,11 @@ inputs:
 expected:
   should_trigger: false
 graders:
-  - type: trigger
+  - type: tool_constraint
     name: avoids-runner-skill
     config:
-      skill_path: "skills/automatica11y-runner/SKILL.md"
-      mode: negative
-      threshold: 0.6
+      reject_tools:
+        - tool: ".*"
   - type: text
     name: runs-nothing
     config:

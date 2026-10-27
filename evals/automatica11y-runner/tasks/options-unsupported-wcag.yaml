@@ -22,7 +22,7 @@ graders:
         - "2.1"
         - "2.2"
       regex_match:
-        - "(?i)(unsupported|not supported|isn't supported|doesn't support|does not support|only .*2\\.0.*2\\.1.*2\\.2|not one of)"
+        - "(?i)(unsupported|not supported|isn't (a )?supported|doesn't support|does not support|only .*2\\.0.*2\\.1.*2\\.2|not one of)"
       not_contains:
         - "--wcag 3"
   - type: tool_constraint

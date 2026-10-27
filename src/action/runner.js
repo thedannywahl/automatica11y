@@ -5,7 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
-const FLAGS = ["config", "wcag", "level", "tiers", "engine", "archetypes", "lib-a11y", "mapping", "max-stories", "out", "fail-on-axe", "fail-on-ibm", "fail-mode", "fail-on-incomplete", "fail-on-review", "fail-on-checks", "server-command", "server-url", "server-timeout", "server-working-directory"];
+const FLAGS = ["config", "wcag", "level", "tiers", "engine", "archetypes", "lib-a11y", "mapping", "max-stories", "out", "fail-on-axe", "fail-on-ibm", "fail-mode", "fail-on-incomplete", "fail-on-review", "fail-on-checks", "server-command", "server-url", "server-timeout", "server-working-directory", "max-pages", "max-depth", "crawl-delay", "discovery-scope", "crawler-config"];
 
 /**
  * @param {Record<string, string | undefined>} inputs
@@ -14,6 +14,11 @@ const FLAGS = ["config", "wcag", "level", "tiers", "engine", "archetypes", "lib-
 export function inputArgs(inputs) {
   const args = [];
   for (const flag of FLAGS) if (inputs[flag]?.trim()) args.push(`--${flag}`, inputs[flag].trim());
+  for (const flag of ["crawl", "ignore-robots"]) {
+    if (inputs[flag]?.trim() && !["true", "false"].includes(inputs[flag])) throw new Error(`${flag} must be true or false.`);
+    if (inputs[flag] === "true") args.push(`--${flag}`);
+  }
+  for (const url of (inputs.sitemaps ?? "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean)) args.push("--sitemap", url);
   for (const source of (inputs["local-packages"] ?? "").split(/\r?\n/).map((entry) => entry.trim()).filter(Boolean)) args.push("--local-package", source);
   if (inputs.generate?.trim()) {
     if (!["true", "false"].includes(inputs.generate)) throw new Error("generate must be true or false.");
@@ -138,6 +143,7 @@ export async function runAudit(inputs, env = process.env, { run = execute, insta
     if (results) {
       /** @type {import("../types.js").Results} */
       const data = JSON.parse(readFileSync(results, "utf8"));
+      if (data.discovery) text += `Crawlee requests finished: ${data.discovery.statistics.requestsFinished}; failed: ${data.discovery.statistics.requestsFailed}; pending queue: ${data.discovery.queue.pendingRequestCount}. These are crawler metrics, not accessibility passes.\n\n`;
       for (const engine of parsed.options.engines) {
         const count = data.targets.reduce((total, target) => total + (target.summary.engines[engine]?.violations ?? 0), 0);
         text += `${engine}: ${count} automated violations.\n\n`;

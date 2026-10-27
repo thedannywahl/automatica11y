@@ -4,6 +4,22 @@ branding:
   icon: check-circle
   color: green
 inputs:
+  crawl:
+    description: Discover rendered page links (true or false). Default false.
+  sitemaps:
+    description: Same-origin sitemap URLs, one per line.
+  max-pages:
+    description: Crawlee handled-request limit. Default 100; retries are additional attempts.
+  max-depth:
+    description: Crawlee link depth. Default 5; seeds are depth 0.
+  crawl-delay:
+    description: Crawlee same-domain delay in seconds. Default 1; not subrequest pacing.
+  discovery-scope:
+    description: subtree (default) or origin.
+  ignore-robots:
+    description: Explicitly ignore robots.txt (true or false). Default false.
+  crawler-config:
+    description: Trusted local ESM hook module path. Never expose secrets to untrusted PR code.
   targets:
     description: One target per line. Replaces config.targets. Supports URLs, built paths, and npm packages.
   config:

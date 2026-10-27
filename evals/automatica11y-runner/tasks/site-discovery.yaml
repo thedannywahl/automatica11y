@@ -1,0 +1,45 @@
+id: runner-site-discovery
+name: A discovered site is one audit with trusted authentication
+description: Preserve sitemap/crawl bounds and the hook path without comparing pages or requesting secrets.
+tags:
+  - site-discovery
+inputs:
+  prompt: "I've read the guide. Show, but do not run, the command to audit https://example.com/docs/ using https://example.com/sitemap.xml and crawl links. Limit it to 20 pages and depth 2. Use my reviewed ./crawler.config.mjs authentication module."
+  files:
+    - path: crawler.config.mjs
+      content: |
+        export default {
+          contextOptions: {
+            storageState: process.env.A11Y_STORAGE_STATE_PATH,
+          },
+          async verifyPage(page) {
+            if (await page.locator('[data-login-form]').count()) {
+              throw new Error("Authentication required");
+            }
+          },
+        };
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: invokes-runner
+    config:
+      skill_path: skills/automatica11y-runner/SKILL.md
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: preserves-discovery-settings
+    config:
+      contains:
+        - audit https://example.com/docs/
+        - --sitemap https://example.com/sitemap.xml
+        - --crawl
+        - --max-pages 20
+        - --max-depth 2
+        - --crawler-config
+  - type: tool_constraint
+    name: does-not-audit
+    config:
+      reject_tools:
+        - tool: bash|shell
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

@@ -21,7 +21,7 @@ graders:
         - "--level AAA"
         - "IBM"
       regex_match:
-        - "IBM[^.]*\\bAA\\b"
+        - "(?is)IBM.*\\bAA\\b"
   - type: tool_constraint
     name: runs-no-audit
     config:

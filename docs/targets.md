@@ -1,6 +1,8 @@
 
 # Targets.
 
+For multiple pages within one site, see [site discovery](site-discovery.md): opt-in sitemap and rendered-link crawling, bounded scope, trusted authentication hooks and native crawl statistics..
+
 ## Auditing local workspace packages.
 
 Build the package first, then map its package name to the directory that contains its built `package.json`, or to a packed `.tgz` file. The mapping applies to primary and companion packages by exact package name. Unmapped packages continue to resolve from npm; a mapped path or package identity error fails instead of falling back to the registry.

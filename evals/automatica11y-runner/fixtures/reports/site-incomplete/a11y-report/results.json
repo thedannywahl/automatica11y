@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "planRef": "plan.json",
+  "runAt": "2026-10-26T00:00:00.000Z",
+  "tools": {},
+  "targets": [],
+  "discovery": {
+    "root": "https://example.com/docs/",
+    "scope": "subtree",
+    "statistics": {
+      "requestsFinished": 0,
+      "requestsFailed": 1,
+      "requestsTotal": 1,
+      "retryHistogram": [null, null, 1],
+      "requestAvgFailedDurationMillis": 100,
+      "requestAvgFinishedDurationMillis": null,
+      "requestsFailedPerMinute": 1,
+      "requestsFinishedPerMinute": 0,
+      "requestTotalDurationMillis": 100,
+      "crawlerRuntimeMillis": 1000
+    },
+    "queue": {
+      "totalRequestCount": 2,
+      "handledRequestCount": 1,
+      "pendingRequestCount": 1
+    },
+    "events": [
+      { "url": "https://example.com/docs/", "reason": "authentication-failed" }
+    ],
+    "gaps": [
+      "Authentication verification failed after bounded retries.",
+      "Sitemap https://example.com/private.xml: Sitemap responded with HTTP 503.",
+      "Crawlee stopped with pending queued requests."
+    ]
+  },
+  "failCheck": null,
+  "outcome": {
+    "status": "incomplete",
+    "coverage": [
+      "Authentication failed; no intended page was audited.",
+      "Sitemap enumeration was partial.",
+      "Queued work remains."
+    ],
+    "review": [],
+    "checks": []
+  },
+  "warnings": []
+}

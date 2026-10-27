@@ -1,5 +1,7 @@
 # Options and exit codes
 
+Site-discovery options (`--crawl`, repeatable `--sitemap`, `--max-pages`, `--max-depth`, `--crawl-delay`, `--discovery-scope`, `--ignore-robots`, and `--crawler-config`) are described with their defaults in [Auditing a site](site-discovery.md).
+
 ## Options
 
 | Option | Default | What it does |

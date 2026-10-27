@@ -6,13 +6,16 @@ tags:
 inputs:
   prompt: "I've been asked to use automatica11y. Get it ready to audit https://example.com, then show me the exact audit command. Don't run the audit itself."
   responder:
-    instructions: "You want to audit https://example.com with automatica11y defaults. If you're asked whether to download Chromium, answer yes. Don't volunteer anything else. Abstain if asked about anything you can't infer from this."
+    instructions: |
+      Make exactly one responder decision per turn; never call responder_stop after replying.
+      If asked whether to download Chromium, reply: "Yes, download Chromium through automatica11y doctor --install-browser. Then show me the exact audit command for https://example.com, but do not run the audit."
+      Answer a pending question even if the agent also shows a candidate command or reports that no browser is installed. Use defaults for unspecified settings. End the conversation only when there is no question to answer.
     max_followups: 4
 command_mocks:
   - name: npx
     responses:
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "--version"]
-        stdout: "0.10.1\n"
+        stdout: "0.11.0\n"
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-skill.md
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--install-browser"]
@@ -39,7 +42,7 @@ graders:
     config:
       expect_tools:
         - tool: "bash|shell"
-          command_pattern: "npx --yes automatica11y@latest doctor --install-browser"
+          command_pattern: "npx --yes --prefer-online automatica11y@latest doctor --install-browser"
       reject_tools:
         - tool: "bash|shell"
           command_pattern: "playwright(-core)? install|brew install|automatica11y@latest (audit|compare)"

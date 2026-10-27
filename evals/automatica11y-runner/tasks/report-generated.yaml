@@ -34,7 +34,9 @@ graders:
   - type: prompt
     name: follows-report-rules
     config:
+      continue_session: true
       prompt: |
+        Grade the evaluated agent's report in its response, not the pre-existing fixture report.md. Call set_waza_grade_pass if it meets all requirements below; otherwise call set_waza_grade_fail with reasons. Do not write a replacement report.
         You are grading an accessibility report written from automatica11y results for one React component package. The dialog ran from a generated fixture (recipe dialog-compound) and failed three interaction checks: focus-moves-into-dialog, tab-stays-inside-dialog, and escape-closes. The tabs ran from an authored fixture. axe-core found no violations. IBM Equal Access found one Toolkit level 3 violation, target_spacing_sufficient, on a tab, plus needs-review items.
         Pass only if all of these hold:
         1. It says which results come from the generated fixture, names the recipe, and calls them lower evidence than an authored fixture, noting a failure may come from the wiring rather than the library.

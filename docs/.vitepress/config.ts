@@ -169,6 +169,7 @@ export default defineConfig({
           { text: "AI", link: "/quick-start-ai" },
         ] },
         { text: "Targets", link: "/targets" },
+        { text: "Site discovery", link: "/site-discovery" },
         { text: "What it checks", link: "/checks" },
         { text: "Options and exit codes", link: "/options" },
         { text: "GitHub Action", link: "/github-action" },

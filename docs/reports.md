@@ -1,5 +1,7 @@
 # Reading a report.
 
+[Site discovery](site-discovery.md) produces a site report with native Crawlee statistics, queue counts, skipped/failed request events, coverage gaps and per-page evidence. Finished requests are not accessibility passes. Recurring rule IDs and affected pages are summarized separately for axe and IBM; counts are never added across engines.
+
 Every run writes `report.md`, `results.json`, and `plan.json`. `report.md` is the one to read first. `results.json` has everything behind it.
 
 ## The coverage matrix.

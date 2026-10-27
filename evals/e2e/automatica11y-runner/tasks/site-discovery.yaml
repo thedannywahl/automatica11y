@@ -1,0 +1,35 @@
+id: runner-e2e-site-discovery
+name: Discover two local pages and report native crawl metrics
+description: "Run the local fixture server only for this task and report the discovered site, not a comparison. Include the manual-review caveat."
+tags:
+  - e2e
+  - site-discovery
+context_dir: evals/e2e/automatica11y-runner/fixtures/pages
+inputs:
+  prompt: "Use automatica11y to crawl http://127.0.0.1:43971/ with max-pages 5, max-depth 2, crawl-delay 0, tiers rules and engine axe, with --out a11y-report. Start the supplied discovery-server.mjs for this check and stop it when done. End with a final reply stating the report path and native Crawlee request totals separately from accessibility findings. Include: These automated results do not establish that the page meets WCAG; manual review is still needed."
+  files:
+    - path: discovery-server.mjs
+expected:
+  should_trigger: true
+graders:
+  - type: file
+    name: writes-results
+    config:
+      must_exist:
+        - a11y-report/results.json
+        - a11y-report/report.md
+  - type: text
+    name: measured-site-report
+    config:
+      contains:
+        - Crawlee
+        - "These automated results do not establish that the page meets WCAG; manual review is still needed."
+  - type: tool_constraint
+    name: crawls-not-compares
+    config:
+      expect_tools:
+        - tool: bash|shell
+          command_pattern: "automatica11y(@latest)? audit .*--crawl"
+      reject_tools:
+        - tool: bash|shell
+          command_pattern: "automatica11y(@latest)? compare "
