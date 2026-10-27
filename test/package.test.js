@@ -43,7 +43,7 @@ test("the package is ready to publish: public, MIT, ESM, Node 22 or newer", () =
 
 test("browser-heavy test files run with bounded concurrency in both test commands", () => {
   assert.ok(pkg.scripts.test.split(/\s+/).includes("--test-concurrency=2"), "limit browser contention without relaxing fixture deadlines");
-  assert.equal(pkg.scripts["test:release"], "AUTOMATICA11Y_SKIP_VITEPRESS_A11Y=1 npm test");
+  assert.equal(pkg.scripts["test:release"], "npm test");
 });
 
 test("release version sync updates all runner skill version checks", () => {
@@ -178,11 +178,13 @@ test("release policy distinguishes shipped changes from development-only changes
 });
 
 test("release validation rejects missing-browser and unexpected skipped tests", () => {
-  validateTestSummary("Known upstream VitePress issue\n# skipped 1\n");
-  assert.throws(() => validateTestSummary("Known upstream VitePress issue\n# skipped 2\n"), /one known VitePress skip/);
-  assert.throws(() => validateTestSummary("No Chrome or Chromium found\n# skipped 1\n"), /sole skip/);
-  assert.throws(() => validateTestSummary(""), /one known VitePress skip/);
-  const cwd = makeTree({ "test-output.txt": "Known upstream VitePress issue\n# skipped 1\n" });
+  validateTestSummary("# skipped 0\n");
+  validateTestSummary("ℹ skipped 0\n");
+  assert.throws(() => validateTestSummary("# skipped 1\n"), /zero skipped tests/);
+  assert.throws(() => validateTestSummary("# skipped 2\n"), /zero skipped tests/);
+  assert.throws(() => validateTestSummary("No Chrome or Chromium found\n# skipped 1\n"), /zero skipped tests/);
+  assert.throws(() => validateTestSummary(""), /zero skipped tests/);
+  const cwd = makeTree({ "test-output.txt": "# skipped 0\n" });
   execFileSync(process.execPath, [join(root, "scripts/release-policy.js"), "test-summary"], { cwd, stdio: "pipe" });
   assert.throws(() => execFileSync(process.execPath, [join(root, "scripts/release-policy.js"), "test-summary", "../outside.txt"], { cwd, stdio: "pipe" }), /no file path arguments/);
 });

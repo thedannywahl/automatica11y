@@ -37,7 +37,6 @@ writeFileSync(join(out, "CNAME"), "automatica11y.dev\n");
 const html = Object.fromEntries(pageList.map((page) => [page.out, readFileSync(join(out, page.out), "utf8")]));
 const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
-const skipKnownVitePressA11y = process.env.AUTOMATICA11Y_SKIP_VITEPRESS_A11Y === "1" ? "Known upstream VitePress issue; see the project's open issue." : skip;
 
 test("all documentation sources build at clean VitePress routes", () => {
   const sources = readdirSync(join(root, "docs"))
@@ -230,7 +229,7 @@ test("README preview and public domain remain correct", () => {
   }
 });
 
-test("the home, quick-start, and runner pages pass the tool's accessibility checks", { skip: skipKnownVitePressA11y, timeout: 400_000 }, async () => {
+test("the home, quick-start, and runner pages pass the tool's accessibility checks", { skip, timeout: 400_000 }, async () => {
   for (const page of ["index.html", "quick-start-cli.html", "quick-start-ci.html", "quick-start-ai.html", "agent-steps.html"]) {
     const cwd = makeTree();
     const { io } = makeIo({ cwd, env: process.env });

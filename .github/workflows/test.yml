@@ -66,7 +66,7 @@ jobs:
           {
             printf '### Node %s: %s\n\n' "$NODE_VERSION" "$OUTCOME"
             printf 'Commit: %s\n\n' "$GITHUB_SHA"
-            printf 'Known exception: the upstream VitePress accessibility assertion is opted out.\n'
+            printf 'Release validation requires zero skipped tests, including documentation accessibility checks.\n'
           } >> "$GITHUB_STEP_SUMMARY"
 
   smoke:

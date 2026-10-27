@@ -107,7 +107,7 @@ MIT. See [LICENSE](LICENSE). The WCAG data below has its own terms.
 
 ## Contributing and releases
 
-Run `npm run lint` and `npm run test:release` before opening a PR. Chrome or Chromium is required. The release suite opts out of exactly one known upstream VitePress assertion; additional skips fail CI. Use `npm test` to check the unfiltered suite.
+Run `npm run lint` and `npm run test:release` before opening a PR. Chrome or Chromium is required. The release suite runs the same unfiltered tests as `npm test`, including documentation accessibility checks. Any skipped tests fail CI.
 
 Changes to shipped code, runtime dependencies, the Action, or packaged instructions need a package Changeset (`npm run changeset`). CI checks PRs across Node 22, 24, and 26 and runs the real Action smoke tests. Changesets generates the version PR, which auto-merges only after required checks pass. npm and the Action share one immutable version tag and GitHub Release. See the [release runbook](.github/RELEASING.md) for credentials, branch rules, docs deployments, and recovery.
 

@@ -30,7 +30,7 @@
     "changeset:version": "changeset version && node scripts/sync-release-version.js",
     "release": "changeset publish",
     "test": "node --test --test-concurrency=2 --test-reporter=spec test/*.test.js",
-    "test:release": "AUTOMATICA11Y_SKIP_VITEPRESS_A11Y=1 npm test",
+    "test:release": "npm test",
     "lint": "tsc -p jsconfig.json",
     "eval:bootstrap": "waza run evals/automatica11y/wazaEval.yaml -v",
     "eval:runner": "waza run evals/automatica11y-runner/wazaEval.yaml -v",

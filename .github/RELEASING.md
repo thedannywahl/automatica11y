@@ -39,9 +39,9 @@ The reserved PR identity is the same repository, branch `changeset-release/main`
 
 ## Validation and diagnostics
 
-Run `npm run lint` and `npm run test:release` with a real Chrome/Chromium browser. The release suite explicitly skips one known upstream VitePress accessibility assertion. CI requires exactly that skip and its known reason. Missing-browser skips, additional skips, nonzero test exits and failing lint block releases. `npm test` remains the unfiltered suite for evaluating an upstream fix. Remove the exception and update the skip validator together when that fix lands.
+Run `npm run lint` and `npm run test:release` with a real Chrome/Chromium browser. The release suite runs the same unfiltered tests as `npm test`, including documentation accessibility checks. CI requires zero skipped tests. Missing-browser or other skips, nonzero test exits and failing lint block releases.
 
-Matrix artifacts contain install, browser, lint and test output with Node/run-attempt names. Action scenarios retain reports even for expected finding exits. Job summaries include the validated SHA and explicit exception. Latest-dependency diagnostics retain both versions and test output; that workflow intentionally does not hide the upstream assertion.
+Matrix artifacts contain install, browser, lint and test output with Node/run-attempt names. Action scenarios retain reports even for expected finding exits. Job summaries include the validated SHA and zero-skip requirement. Latest-dependency diagnostics retain both versions and test output.
 
 ## Docs deployment
 
