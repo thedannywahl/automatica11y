@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type MarkdownIt from "markdown-it";
@@ -10,9 +10,10 @@ const hostname = "https://automatica11y.dev";
 const description = "Test and compare the accessibility of web pages, Storybook builds, and npm component libraries.";
 const repo = "https://github.com/thedannywahl/automatica11y";
 const root = fileURLToPath(new URL("../../", import.meta.url));
+const referencesDir = resolve(root, "skills/automatica11y-runner/references");
 const skillFiles = [
   resolve(root, "skills/automatica11y-runner/SKILL.md"),
-  resolve(root, "skills/automatica11y-runner/references/fixtures.md"),
+  ...readdirSync(referencesDir).filter((name) => name.endsWith(".md")).map((name) => resolve(referencesDir, name)),
 ];
 
 const docsContentPlugin: Plugin = {
@@ -176,7 +177,12 @@ export default defineConfig({
         { text: "Reading a report", link: "/reports" },
         { text: "Writing fixtures", link: "/writing-fixtures" },
         { text: "Using it with an AI agent", link: "/agents" },
-        { text: "The agent steps", link: "/agent-steps" },
+        { text: "The agent steps", link: "/agent-steps", items: [
+          { text: "Fixing the setup", link: "/agent-setup" },
+          { text: "Writing targets", link: "/agent-targets" },
+          { text: "Discovering a site", link: "/agent-site-discovery" },
+          { text: "Writing the report", link: "/agent-reporting" },
+        ] },
         { text: "Limits", link: "/limits" },
       ] },
     ],

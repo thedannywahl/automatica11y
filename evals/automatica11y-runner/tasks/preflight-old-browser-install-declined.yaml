@@ -6,7 +6,7 @@ inputs:
   prompt: "Use automatica11y to audit https://instructure.ai/nutritionfacts with annotated screenshots. Yes, you can download Chromium if needed."
   responder:
     instructions: |
-      Make exactly one responder decision per turn; never call responder_stop after replying.
+      Make exactly one responder decision per turn: either reply or call responder_stop, never both. Once you have replied in a turn, end the turn without calling any responder tool.
       The initial prompt already authorizes downloading Chromium if needed. If asked before the download, reply: "Download Chromium through automatica11y doctor --install-browser. I have not authorized the outdated browser."
       If asked to use the outdated browser after a failed download, reply: "I decline using headless-shell 141. Do not run the audit, retry the download, or use any other installer or network changes."
       Answer a pending question even if a candidate command is shown. End the conversation only when there is no question to answer.
@@ -18,9 +18,21 @@ command_mocks:
         stdout: "0.11.0\n"
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-skill.md
-      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--install-browser"]
-        fixture: mocks/doctor-old-browser.txt
-        stderr: "The Chromium download failed.\ngetaddrinfo ENOTFOUND cdn.playwright.dev\n"
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "fixtures"]
+        fixture: mocks/guide-fixtures.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "reporting"]
+        fixture: mocks/guide-reporting.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "setup"]
+        fixture: mocks/guide-setup.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "site"]
+        fixture: mocks/guide-site.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "targets"]
+        fixture: mocks/guide-targets.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--install-browser", "--json"]
+        fixture: mocks/doctor-install-failed-outdated.json
+        exit_code: 3
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--json"]
+        fixture: mocks/doctor-old-browser.json
         exit_code: 3
   - name: automatica11y
     responses:

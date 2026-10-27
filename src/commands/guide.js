@@ -1,15 +1,39 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { EXIT, UsageError } from "./common.js";
 
 const PACKAGE_ROOT = new URL("../../", import.meta.url).pathname;
+const REFERENCES = "skills/automatica11y-runner/references";
 
-/** What `guide` can print: the topic, the file it comes from, and what it's for. */
+/**
+ * Every file in the runner's `references/` folder is a topic named for the file, so a reference
+ * can't ship without a way to print it. Its first heading says what it's for.
+ * @returns {Record<string, { file: string, about: string }>}
+ */
+function referenceTopics() {
+  const dir = join(PACKAGE_ROOT, REFERENCES);
+  if (!existsSync(dir)) return {};
+  return Object.fromEntries(
+    readdirSync(dir)
+      .filter((name) => name.endsWith(".md"))
+      .sort()
+      .map((name) => {
+        const file = `${REFERENCES}/${name}`;
+        const heading = /^#\s+(.+)$/m.exec(readFileSync(join(PACKAGE_ROOT, file), "utf8"))?.[1] ?? name;
+        return [name.slice(0, -3), { file, about: heading.replace(/\.$/, "").toLowerCase() }];
+      }),
+  );
+}
+
+/**
+ * What `guide` can print: the topic, the file it comes from, and what it's for.
+ * @type {Record<string, { file: string, about: string }>}
+ */
 export const TOPICS = {
   agents: { file: "AGENTS.md", about: "where an agent starts: what to do, and where to read the rest" },
-  skill: { file: "skills/automatica11y-runner/SKILL.md", about: "the full steps: build the command, run it, write fixtures, write the report" },
-  fixtures: { file: "skills/automatica11y-runner/references/fixtures.md", about: "how to write the fixtures an npm package needs" },
+  skill: { file: "skills/automatica11y-runner/SKILL.md", about: "the core steps: check, build the command, run it, and where to read more" },
+  ...referenceTopics(),
 };
 
 /**
@@ -26,14 +50,16 @@ export async function guideCommand(argv, io) {
   } catch (error) {
     throw new UsageError(error instanceof Error ? error.message.split(". ")[0] : String(error));
   }
-  const list = Object.entries(TOPICS).map(([name, t]) => `  ${name.padEnd(9)} ${t.about}`).join("\n");
+  const names = Object.keys(TOPICS);
+  const width = Math.max(...names.map((name) => name.length)) + 2;
+  const list = Object.entries(TOPICS).map(([name, t]) => `  ${name.padEnd(width)}${t.about}`).join("\n");
   if (parsed.values.help) {
-    io.stdout.write(`Usage: automatica11y guide [agents|skill|fixtures]\n\nPrint guidance for an AI agent. With no topic, it prints "agents".\n\n${list}\n`);
+    io.stdout.write(`Usage: automatica11y guide [${names.join("|")}]\n\nPrint guidance for an AI agent. With no topic, it prints "agents".\n\n${list}\n`);
     return EXIT.OK;
   }
   if (parsed.positionals.length > 1) throw new UsageError("guide takes one topic.");
   const topic = parsed.positionals[0] ?? "agents";
-  const entry = TOPICS[/** @type {keyof typeof TOPICS} */ (topic)];
+  const entry = Object.hasOwn(TOPICS, topic) ? TOPICS[topic] : undefined;
   if (!entry) throw new UsageError(`Unknown guide topic "${topic}". Choose from:\n${list}`);
   const file = join(PACKAGE_ROOT, entry.file);
   if (!existsSync(file)) {

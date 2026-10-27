@@ -1,0 +1,18 @@
+{
+  "ok": false,
+  "state": "browser-missing",
+  "node": "24.22.0",
+  "browser": null,
+  "install": {
+    "attempted": false,
+    "ok": null,
+    "output": ""
+  },
+  "problems": [
+    {
+      "id": "browser",
+      "message": "No Chrome or Chromium found.",
+      "fix": "Install Chrome, or run: npx playwright-core install --only-shell chromium"
+    }
+  ]
+}

@@ -25,6 +25,10 @@ const pageList = [
   { source: "docs/writing-fixtures.md", out: "writing-fixtures.html", route: "/writing-fixtures" },
   { source: "docs/agents.md", out: "agents.html", route: "/agents" },
   { source: "skills/automatica11y-runner/SKILL.md", out: "agent-steps.html", route: "/agent-steps" },
+  { source: "docs/agent-setup.md", out: "agent-setup.html", route: "/agent-setup" },
+  { source: "docs/agent-targets.md", out: "agent-targets.html", route: "/agent-targets" },
+  { source: "docs/agent-site-discovery.md", out: "agent-site-discovery.html", route: "/agent-site-discovery" },
+  { source: "docs/agent-reporting.md", out: "agent-reporting.html", route: "/agent-reporting" },
   { source: "docs/limits.md", out: "limits.html", route: "/limits" },
 ];
 
@@ -139,6 +143,11 @@ test("skill pages stay synchronized with their canonical sources", () => {
   assert.ok(fixtures.startsWith("# Writing fixtures"));
   assert.ok(html["writing-fixtures.html"].includes("<h1 id=\"writing-fixtures\""));
   assert.ok(html["agent-steps.html"].includes('href="/writing-fixtures"'));
+  for (const [topic, page] of [["setup", "agent-setup"], ["targets", "agent-targets"], ["site", "agent-site-discovery"], ["reporting", "agent-reporting"]]) {
+    assert.equal(readFileSync(join(root, "docs", `${page}.md`), "utf8").trim(), `<!-- @include: ../skills/automatica11y-runner/references/${topic}.md -->`);
+    const heading = /^# (.+)$/m.exec(readFileSync(join(root, `skills/automatica11y-runner/references/${topic}.md`), "utf8"))?.[1] ?? "";
+    assert.ok(html[`${page}.html`].includes(heading), `${page} shows ${topic}.md`);
+  }
 });
 
 test("scrollable tables have keyboard-focusable, uniquely labelled regions", () => {

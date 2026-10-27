@@ -7,7 +7,7 @@ inputs:
   prompt: "I've been asked to use automatica11y. Get it ready to audit https://example.com, then show me the exact audit command. Don't run the audit itself."
   responder:
     instructions: |
-      Make exactly one responder decision per turn; never call responder_stop after replying.
+      Make exactly one responder decision per turn: either reply or call responder_stop, never both. Once you have replied in a turn, end the turn without calling any responder tool.
       If asked whether to download Chromium, reply: "Yes, download Chromium through automatica11y doctor --install-browser. Then show me the exact audit command for https://example.com, but do not run the audit."
       Answer a pending question even if the agent also shows a candidate command or reports that no browser is installed. Use defaults for unspecified settings. End the conversation only when there is no question to answer.
     max_followups: 4
@@ -18,10 +18,20 @@ command_mocks:
         stdout: "0.11.0\n"
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-skill.md
-      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--install-browser"]
-        stdout: "Downloading Chromium (this can take a minute)...\nautomatica11y doctor\n  Node     24.22.0  ok\n  Browser  chromium-headless-shell 155.0.8059.80  ok\n           /Users/me/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-mac/headless_shell\n"
-      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor"]
-        fixture: mocks/doctor-no-browser.txt
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "fixtures"]
+        fixture: mocks/guide-fixtures.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "reporting"]
+        fixture: mocks/guide-reporting.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "setup"]
+        fixture: mocks/guide-setup.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "site"]
+        fixture: mocks/guide-site.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "targets"]
+        fixture: mocks/guide-targets.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--install-browser", "--json"]
+        fixture: mocks/doctor-install-ok.json
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--json"]
+        fixture: mocks/doctor-no-browser.json
         exit_code: 3
   - name: automatica11y
     responses:

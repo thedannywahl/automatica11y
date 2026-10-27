@@ -439,8 +439,8 @@ export function usage(command) {
   automatica11y compare <target> <target> [<target>...] [options]
   automatica11y ci [<target>...] [options]
   automatica11y run --plan <plan.json>
-  automatica11y doctor
-  automatica11y guide [agents|skill|fixtures]
+  automatica11y doctor [--install-browser] [--json]
+  automatica11y guide [<topic>]
   automatica11y --version
 
 Run a command with --help for its options.

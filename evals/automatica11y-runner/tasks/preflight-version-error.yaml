@@ -13,6 +13,16 @@ command_mocks:
         exit_code: 1
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-skill.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "fixtures"]
+        fixture: mocks/guide-fixtures.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "reporting"]
+        fixture: mocks/guide-reporting.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "setup"]
+        fixture: mocks/guide-setup.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "site"]
+        fixture: mocks/guide-site.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "targets"]
+        fixture: mocks/guide-targets.md
   - name: automatica11y
     responses:
       - args_regex: [".*"]

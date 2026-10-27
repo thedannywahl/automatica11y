@@ -27,7 +27,7 @@ graders:
         - "authored"
       regex_match:
         - "(?i)generated"
-        - "(?i)((lower|weaker|less) evidence|wiring)"
+        - "(?i)((lower|weaker|less)[- ]evidence|wiring)"
       regex_not_match:
         - "(?i)\\b(is|are|was|be|fully) accessible\\b"
         - "(?i)\\bcompliant\\b"

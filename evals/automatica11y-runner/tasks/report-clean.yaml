@@ -31,10 +31,11 @@ graders:
   - type: prompt
     name: follows-report-rules
     config:
+      continue_session: true
       prompt: |
         You are grading an accessibility report written from automatica11y results. One page was audited and both axe-core and IBM Equal Access reported zero violations. The user asked whether the page is accessible.
         Pass only if all of these hold:
-        1. The report says "no automated violations found" for each engine separately, and doesn't merge the engines.
+        1. The report gives each engine its own result and doesn't merge the engines. It says "no automated violations found" for axe-core, and says IBM Equal Access reported no violations without using that phrase for IBM.
         2. It never says the page is accessible, compliant, or passes WCAG, and it explains that automated checks cover only part of WCAG.
         3. Interactions and computed checks that didn't run are reported as not run or not applicable, not as passes.
         4. Virtual screen reader output, if mentioned, is labelled simulated.

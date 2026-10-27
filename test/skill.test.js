@@ -50,6 +50,15 @@ for (const [label, dir, text] of [["the bootstrap skill", bootstrapDir, bootstra
   });
 }
 
+test("the runner's core stays small, and its references load on demand", () => {
+  // About 5,000 tokens is the Agent Skills recommendation for an activated SKILL.md body.
+  assert.ok(Buffer.byteLength(runner) < 20_000, `SKILL.md is ${Buffer.byteLength(runner)} bytes`);
+  for (const { name, text } of referenceFiles) {
+    assert.match(text, /^# \S/, `${name} opens with a heading`);
+    if (text.split("\n").length > 100) assert.match(text, /^Contents:/m, `${name} lists its contents`);
+  }
+});
+
 test("the bootstrap skill is a single portable file", () => {
   assert.deepEqual(readdirSync(bootstrapDir), ["SKILL.md"]);
 });
@@ -61,24 +70,34 @@ test("bootstrap evals mock a single prefer-online guide command", () => {
     /** @type {{ command_mocks?: { name: string, responses: { args?: string[] }[] }[] }} */
     const task = parse(readFileSync(join(tasksDir, name), "utf8"));
     const npx = task.command_mocks?.find((command) => command.name === "npx");
+    /** @type {{ args?: string[], fixture?: string }[]} */
     const guides = npx?.responses.filter((response) => response.args?.includes("guide")) ?? [];
     if (!guides.length) continue;
-    assert.equal(guides.length, 1, name);
-    assert.deepEqual(guides[0].args, ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"], name);
+    const skill = guides.filter((response) => response.args?.at(-1) === "skill");
+    assert.equal(skill.length, 1, name);
+    assert.deepEqual(skill[0].args, ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"], name);
+    for (const response of guides.filter((r) => r !== skill[0])) {
+      const topic = /** @type {string} */ (response.args?.at(-1));
+      assert.deepEqual(response.args, ["--yes", "--prefer-online", "automatica11y@latest", "guide", topic], name);
+      assert.ok(referenceFiles.some((ref) => ref.name === `references/${topic}.md`), `${name} mocks the reference topic ${topic}`);
+      assert.equal(response.fixture, `mocks/guide-${topic}.md`, name);
+    }
     checked += 1;
   }
   assert.ok(checked > 0);
 });
 
-test("runner evals mock the skill's prefer-online npx prefix", () => {
-  const suiteDir = join(root, "evals", "automatica11y-runner");
-  const files = ["wazaEval.yaml", ...readdirSync(join(suiteDir, "tasks")).filter((name) => name.endsWith(".yaml")).map((name) => join("tasks", name))];
+test("evals mock the skill's prefer-online npx prefix", () => {
+  const files = ["automatica11y-runner", "automatica11y"].flatMap((suite) => {
+    const suiteDir = join(root, "evals", suite);
+    return [join(suiteDir, "wazaEval.yaml"), ...readdirSync(join(suiteDir, "tasks")).filter((name) => name.endsWith(".yaml")).map((name) => join(suiteDir, "tasks", name))];
+  });
   let checked = 0;
   for (const name of files) {
     /** @type {{ command_mocks?: { name: string, responses: { args?: string[] }[] }[] }} */
-    const definition = parse(readFileSync(join(suiteDir, name), "utf8"));
+    const definition = parse(readFileSync(name, "utf8"));
     const npx = definition.command_mocks?.find((command) => command.name === "npx");
-    for (const response of npx?.responses ?? []) {
+    for (const response of (npx?.responses ?? []).filter((r) => r.args)) {
       assert.deepEqual(response.args?.slice(0, 3), ["--yes", "--prefer-online", "automatica11y@latest"], name);
       checked += 1;
     }
@@ -89,12 +108,12 @@ test("runner evals mock the skill's prefer-online npx prefix", () => {
 test("outdated-browser evals wire consent graders and environment mocks", () => {
   const tasks = ["preflight-old-browser-choice.yaml", "preflight-old-browser-install-failed.yaml", "preflight-old-browser-install-declined.yaml"];
   for (const name of tasks) {
-    /** @type {{ graders: { type: string }[], command_mocks: { name: string, responses: { fixture?: string, exit_code?: number }[] }[] }} */
+    /** @type {{ graders: { type: string }[], command_mocks: { name: string, responses: { args?: string[], fixture?: string, exit_code?: number }[] }[] }} */
     const task = parse(read("evals", "automatica11y-runner", "tasks", name));
     assert.ok(task.graders.some((grader) => grader.type === "prompt"), `${name} grades consent behavior`);
     assert.ok(task.graders.some((grader) => grader.type === "tool_constraint"), `${name} constrains installs and audits`);
     const responses = task.command_mocks.find((command) => command.name === "npx").responses;
-    assert.ok(responses.some((response) => response.fixture === "mocks/doctor-old-browser.txt" && response.exit_code === 3));
+    assert.ok(responses.some((response) => ["mocks/doctor-old-browser.json", "mocks/doctor-install-failed-outdated.json"].includes(response.fixture ?? "") && response.exit_code === 3 && response.args?.includes("--json")));
   }
 });
 
@@ -108,12 +127,13 @@ test("skill and reference paths resolve", () => {
   const pointers = new Set([...runner.matchAll(/`(references\/[a-z-]+\.md)`/g)].map((m) => m[1]));
   assert.ok(pointers.size > 0);
   for (const pointer of pointers) assert.ok(existsSync(join(runnerDir, pointer)), `${pointer} exists`);
+  for (const { name } of referenceFiles) assert.ok(pointers.has(name), `SKILL.md routes to ${name}`);
   for (const { name, text } of referenceFiles) assert.doesNotMatch(text, /`references\//, `${name} points to no further reference`);
   for (const path of [...agents.matchAll(/`(skills\/[^`]+)`/g)].map((m) => m[1])) assert.ok(existsSync(join(root, path)), `${path} exists`);
 });
 
 test("guide topics resolve to packaged files", () => {
-  assert.deepEqual(Object.keys(TOPICS), ["agents", "skill", "fixtures"]);
+  assert.deepEqual(Object.keys(TOPICS), ["agents", "skill", ...referenceFiles.map(({ name }) => name.slice("references/".length, -".md".length)).sort()]);
   for (const [topic, { file }] of Object.entries(TOPICS)) assert.ok(existsSync(join(root, file)), `${topic} prints ${file}`);
 });
 
@@ -121,7 +141,7 @@ function knownFlags() {
   const common = read("src/commands/common.js");
   const defs = /OPTION_DEFS = [^{]*\{([\s\S]*?)\n\}\);/.exec(common)[1];
   const names = [...defs.matchAll(/^\s*"?([a-z0-9-]+)"?: \{/gm)].map((m) => `--${m[1]}`);
-  return new Set([...names, "--version", "--plan", "--yes", "--prefer-online", "--install-browser"]);
+  return new Set([...names, "--version", "--plan", "--yes", "--prefer-online", "--install-browser", "--json"]);
 }
 
 test("documented flags are supported", () => {
@@ -204,4 +224,7 @@ test("eval mocks match the version and guide this checkout ships", () => {
   assert.ok(checked > 0);
   assert.equal(read("evals", "automatica11y", "mocks", "guide-skill.md"), runner);
   assert.equal(read("evals", "automatica11y-runner", "mocks", "guide-skill.md"), runner);
+  for (const suite of ["automatica11y", "automatica11y-runner"]) {
+    for (const { name, text } of referenceFiles) assert.equal(read("evals", suite, "mocks", `guide-${name.slice("references/".length)}`), text, `${suite} mocks ${name}`);
+  }
 });

@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "state": "ok",
+  "node": "24.22.0",
+  "browser": {
+    "kind": "chrome",
+    "version": "155.0.8059.80",
+    "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "outdated": false
+  },
+  "install": {
+    "attempted": false,
+    "ok": null,
+    "output": ""
+  },
+  "problems": []
+}

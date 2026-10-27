@@ -1,7 +1,0 @@
-automatica11y doctor
-  Node     22.22.2  ok
-  Browser  headless-shell 141.0.7390.0  problem
-           /opt/chromium/headless_shell
-
-headless-shell 141.0.7390.0 is too old. The recommended minimum is Chrome or Chromium 154.
-  Fix: Run the audit or comparison with --allow-old-browser to use this outdated browser with a report warning, or download Chromium with: automatica11y doctor --install-browser

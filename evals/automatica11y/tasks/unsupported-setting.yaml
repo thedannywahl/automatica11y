@@ -10,10 +10,20 @@ command_mocks:
     responses:
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-skill.md
-      - args: ["--yes", "automatica11y@latest", "--version"]
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "fixtures"]
+        fixture: mocks/guide-fixtures.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "reporting"]
+        fixture: mocks/guide-reporting.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "setup"]
+        fixture: mocks/guide-setup.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "site"]
+        fixture: mocks/guide-site.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "targets"]
+        fixture: mocks/guide-targets.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "--version"]
         stdout: "0.11.0\n"
-      - args: ["--yes", "automatica11y@latest", "doctor"]
-        fixture: mocks/doctor-ok.txt
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--json"]
+        fixture: mocks/doctor-ok.json
   - name: automatica11y
     responses:
       - args_regex: [".*"]
@@ -36,7 +46,7 @@ graders:
         - "2.1"
         - "2.2"
       regex_match:
-        - "(?i)(unsupported|not supported|isn't supported|doesn't support|does not support)"
+        - "(?i)(unsupported|not (a )?supported|isn't (a )?supported|doesn't support|does not support)"
       not_contains:
         - "--wcag 3"
   - type: tool_constraint

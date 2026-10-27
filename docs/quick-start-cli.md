@@ -175,7 +175,7 @@ yarn dlx automatica11y compare npm:react-aria-components npm:@instructure/ui-but
 ### `doctor` command
 
 yarn dlx automatica11y doctor
-`doctor` checks your setup to make sure your system meets the [requirements](#requirements). If it can't find a browser, it prints the command to install one. If the browser is too old, it tells you to update it. Add `--install-browser` to download Chromium when the check fails.
+`doctor` checks your setup to make sure your system meets the [requirements](#requirements). If it can't find a browser, it prints the command to install one. If the browser is too old, it tells you to update it. Add `--install-browser` to download Chromium when the check fails. Add `--json` to print the result as one JSON object, with a `state` (`ok`, `node-unsupported`, `browser-missing`, `browser-outdated`, `install-failed-no-browser`, `install-failed-outdated`, or `other`), the Node and browser it found, the download result, and each problem with its fix. Scripts and AI agents can act on the state without reading the text. The exit codes are the same.
 
 ::: code-group
 
