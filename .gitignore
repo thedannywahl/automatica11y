@@ -8,3 +8,4 @@ tmp/
 site/
 /docs/fixtures.md
 **/.vitepress/cache/
+.worktrees/
