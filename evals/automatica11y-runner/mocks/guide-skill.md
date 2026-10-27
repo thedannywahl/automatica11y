@@ -26,7 +26,7 @@ This file has what every run needs. The steps for particular cases are in refere
 
 The tool is **not** an attestation or certification tool. Automated checks cover only part of WCAG. Never say a target is "accessible" or "compliant," and don't use those words or "passes WCAG" about a target even in a negative or hedged sentence ("I can't say whether the page is accessible"). Say what the results do and don't establish instead. If the user asks whether a target is accessible, open with exactly "Automated checks can't answer that." (ending at "that", never "can't answer whether…") followed by the caveat, then report what the engines found. Don't restate the question anywhere in the reply. For axe-core, say "no automated violations found" when it reports zero violations for a target it tested; otherwise list its violations as reported, and where no page was tested, say so without using that phrase. For IBM Equal Access, report what it found, including when it found no violations, without using that phrase.
 
-For the caveat, write "These automated results do not establish that the page meets WCAG; manual review is still needed." Don't quote a positive accessibility claim just to disclaim it. Negative statements such as "not accessible" are not claims of a pass, but use the caveat above rather than drawing an overall verdict from automated results.
+For the caveat, write "These automated results do not establish that the page meets WCAG; manual review is still needed." Don't quote a positive accessibility claim just to disclaim it. Use this caveat rather than drawing an overall verdict from automated results, whether positive or negative.
 
 ## 1. Check the version
 
@@ -54,15 +54,15 @@ If the user has already said yes to downloading Chromium, run this instead of th
 npx --yes --prefer-online automatica11y@latest doctor --install-browser --json
 ```
 
-Then read `references/setup.md` and follow the row for the state it reports. Otherwise, run:
+Apply the exit-code and output checks below, then read `references/setup.md` and follow the row for the state it reports. Otherwise, run:
 
 ```bash
 npx --yes --prefer-online automatica11y@latest doctor --json
 ```
 
-It prints one JSON object. Read its `state`. If it's `ok` (exit code 0), continue. For any other state (exit code 3), read `references/setup.md` and follow the row for that state.
+For either `doctor` command, if it exits with any code other than 0 or 3, or its output is not a JSON object with a `state` field, report the exact error text (or the invalid output if there is no error text) and exit code, do not run `audit` or `compare`, and end the turn. Otherwise, read its `state`. If it's `ok` (exit code 0), continue. For any other state (exit code 3), read `references/setup.md` and follow the row for that state.
 
-Don't install or configure anything yourself, try other installers, change network settings, or bypass sandbox restrictions. That logic lives in the tool. Preserve any instruction to show the audit command without running it, including after a setup choice.
+Don't install or configure anything yourself, try other installers, change network settings, or bypass sandbox restrictions. That logic lives in the tool. If the user asked to see the audit command without running it, keep that request in effect after the user chooses to install Chromium in section 2, and show the audit command without running it.
 
 ## 3. Turn the request into a command
 
@@ -73,7 +73,7 @@ npx --yes --prefer-online automatica11y@latest audit <target> [options]
 npx --yes --prefer-online automatica11y@latest compare <target> <target> [<target>...] [options]
 ```
 
-Use `audit` for one target and `compare` for two or more independent targets, even when they're different kinds, such as a live page and an npm package. Pages discovered within a single site are one audit, not a comparison. A target is `[label=]<spec>`. The label is optional and names the target in the report. A live page's spec is its URL, such as `https://example.com/page`. For every other kind of target, read `references/targets.md` before you build the command. Always write an npm package with the `npm:` prefix.
+Use `audit` for one target. Use `compare` when the request names two or more separate targets (each a separate URL, local page or folder, Storybook, or npm package), even when they're different kinds. Pages discovered within one site, and packages grouped into one target, count as one target and use `audit`. A target is `[label=]<spec>`. The label is optional and names the target in the report. A live page's spec is its URL, such as `https://example.com/page`. For every other kind of target, read `references/targets.md` before you build the command. Always write an npm package with the `npm:` prefix.
 
 Options the tool supports (crawl and discovery options are in `references/site.md`):
 
@@ -83,7 +83,7 @@ Options the tool supports (crawl and discovery options are in `references/site.m
 | `--level A\|AA\|AAA` | `AA` | The user names a level. IBM Equal Access has no AAA rules, so it runs its AA rules and says so. |
 | `--engine axe,ibm` | both | The user wants one rule engine. |
 | `--tiers rules,interactions,computed,conditions,vsr` | all five | The user wants fewer checks. |
-| `--screenshots` / `--no-screenshots` | off | The user explicitly requests annotated screenshots of rule violations, or disables screenshots configured in YAML. |
+| `--screenshots` / `--no-screenshots` | off | Follow checklist step 4 below. |
 | `--allow-old-browser` | off | The user explicitly agrees to use the outdated browser reported by `doctor`, including after a failed Chromium download. |
 | `--archetypes a,b` | all | The user cares about some components. Choose from button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, live-region, chart. |
 | `--lib-a11y on,off` | both | Only for libraries with opt-in accessibility features. |
@@ -104,13 +104,16 @@ Use this ordered checklist to decide whether to ask or run:
 1. If the target is missing or ambiguous, ask for clarification. If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one; don't pick a target for them.
 2. If grouping is unresolved for multi-package targets, show the proposed grouping and ask the user to confirm it.
 3. If a setting is unsupported, identify it, list supported values, and ask which to use.
-4. If the user mentions screenshots, images, or a visual record of results without explicitly requesting annotated screenshots, ask whether they want annotated screenshots. Screenshots are optional and off by default; use `--screenshots` only when explicitly requested, and leave them off for ordinary audit requests.
+4. Handle screenshots as follows:
+   1. If the user mentions screenshots, images, or a visual record of results without explicitly requesting annotated screenshots or declining screenshots, ask whether they want annotated screenshots and run nothing until they answer.
+   2. Until they answer, show no command containing `--screenshots`, including conditional commands ("if yes, the command is…").
+   3. Use `--screenshots` only when the user explicitly requests annotated screenshots of rule violations. If they say no or don't request them, run without `--screenshots`; use `--no-screenshots` when they disable screenshots configured in YAML.
 
 Ask at most one combined question per turn, listing every unresolved item from steps 1–4 in that message. If none apply, run. Preserve any screenshot links from `report.md` next to the findings they support.
 
 Pass only the options in the tables in this skill and its references, with the values they list. If the user names a setting the tool doesn't have, or a value outside those lists (for example, WCAG 3.0), tell them which setting is unsupported, list the supported values, and ask which to use. Don't substitute a default or invent a value.
 
-Show the user the exact command before you run it. If the user only asks to see the command or says not to run it, show the command and stop. When you show a command, don't list or suggest options the user didn't name (no "tell me if you want `--wcag 2.1`…"); state the defaults it uses in plain words instead. If you have questions (a target that could mean two things, a missing target, an unsupported setting), ask them together in one message. Until the user answers every question about the target, grouping, or unsupported settings, don't run `audit` or `compare`; wait for their reply. When you ask to confirm a grouping, show the command for the proposed grouping with the table. While the screenshot question is open, show no command with `--screenshots`, not even a conditional one ("if yes, the command is…").
+Show the user the exact command before you run it. If the user only asks to see the command or says not to run it, show the command and stop. When you show a command, don't list or suggest options the user didn't name (no "tell me if you want `--wcag 2.1`…"); state the defaults it uses in plain words instead. If you have questions (a target that could mean two things, a missing target, an unsupported setting), ask them together in one message. Until the user answers every question about the target, grouping, or unsupported settings, don't run `audit` or `compare`; wait for their reply. When you ask to confirm a grouping, show the command for the proposed grouping with the table.
 
 Don't set the fail flags unless the user asks for gating. They change the exit code. They don't change the results.
 

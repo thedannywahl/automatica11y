@@ -36,15 +36,17 @@ const pantokenRootPlugin: Plugin = {
   },
 };
 
-function installAccessibleTables(md: MarkdownIt) {
+function installAccessibleMarkdown(md: MarkdownIt) {
   const renderHeading = md.renderer.rules.heading_open;
+  const renderCodeGroup = md.renderer.rules["container_code-group_open"];
+  if (!renderCodeGroup) throw new Error("VitePress code-group renderer is unavailable");
 
   md.renderer.rules.heading_open = (tokens, index, options, env, self) => {
-    env.automatica11yTableHeading = tokens[index + 1]?.content || "this page";
+    env.automatica11ySectionHeading = tokens[index + 1]?.content || "this page";
     return renderHeading ? renderHeading(tokens, index, options, env, self) : self.renderToken(tokens, index, options);
   };
   md.renderer.rules.table_open = (tokens, index, options, env, self) => {
-    const heading = env.automatica11yTableHeading || "this page";
+    const heading = env.automatica11ySectionHeading || "this page";
     const counts = env.automatica11yTableCounts ??= new Map();
     const count = (counts.get(heading) ?? 0) + 1;
     counts.set(heading, count);
@@ -52,6 +54,12 @@ function installAccessibleTables(md: MarkdownIt) {
     return `<div class="scroll" role="region" tabindex="0" aria-label="${md.utils.escapeHtml(label)}">\n<table>\n`;
   };
   md.renderer.rules.table_close = () => "</table>\n</div>\n";
+  md.renderer.rules["container_code-group_open"] = (tokens, index, options, env, self) => {
+    const label = md.utils.escapeHtml(`Code examples: ${env.automatica11ySectionHeading || "this page"}`);
+    const html = renderCodeGroup(tokens, index, options, env, self);
+    if (!html.includes('<div class="tabs">')) throw new Error("VitePress code-group tabs markup has changed");
+    return html.replace('<div class="tabs">', `<div class="tabs" role="radiogroup" aria-label="${label}">`);
+  };
 }
 
 export default defineConfig({
@@ -144,7 +152,7 @@ export default defineConfig({
       prompt: "bash",
       skill: "markdown"
     },
-    config: installAccessibleTables,
+    config: installAccessibleMarkdown,
   },
   vite: {
     plugins: [docsContentPlugin, pantokenRootPlugin, llmstxt()],

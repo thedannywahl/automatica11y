@@ -158,6 +158,28 @@ test("scrollable tables have keyboard-focusable, uniquely labelled regions", () 
   assert.equal((text.match(/<table>/g) ?? []).length, labels.length);
 });
 
+test("code-group radios have contextually labelled groups without changing their controls", () => {
+  /** @type {[string, string[]][]} */
+  const cases = [
+    ["quick-start-cli.html", ["Invocation", "Global install", "`audit` command", "`compare` command", "`doctor` command"]],
+    ["quick-start-ci.html", ["`ci` command"]],
+  ];
+  for (const [page, headings] of cases) {
+    const groups = [...html[page].matchAll(/<div class="vp-code-group"><div class="tabs" role="radiogroup" aria-label="([^"]+)">([\s\S]*?)<\/div><div class="blocks">/g)];
+    assert.equal(groups.length, headings.length, `${page} groups have radio semantics`);
+    assert.equal((html[page].match(/class="vp-code-group"/g) ?? []).length, groups.length);
+    assert.deepEqual(groups.map((group) => group[1]), headings.map((heading) => `Code examples: ${heading}`));
+    for (const [, , tabs] of groups) {
+      const inputs = [...tabs.matchAll(/<input type="radio" name="([^"]+)" id="([^"]+)"([^>]*)>/g)];
+      assert.equal(inputs.length, 6);
+      assert.equal(new Set(inputs.map((input) => input[1])).size, 1);
+      assert.equal(inputs.filter((input) => /\bchecked\b/.test(input[3])).length, 1);
+      assert.match(inputs[0][3], /\bchecked\b/);
+      for (const [, , id] of inputs) assert.ok(tabs.includes(`for="${id}"`), `${id} retains its label`);
+    }
+  }
+});
+
 test("Pantoken plum styling and responsive pattern are included", () => {
   const styles = readdirSync(join(out, "assets"))
     .filter((name) => name.endsWith(".css"))
