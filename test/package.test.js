@@ -165,6 +165,24 @@ test("the test matrix refreshes the npm download cache after test-time installs"
   assert.ok(steps.indexOf(cache) < steps.findIndex((/** @type {{ name?: string }} */ step) => step.name === "Install dependencies"));
 });
 
+test("the test matrix fails hung workers before the job deadline and retains diagnostics", () => {
+  const workflow = parse(readFileSync(join(root, ".github/workflows/test.yml"), "utf8"));
+  const job = workflow.jobs.test;
+  const run = job.steps.find((/** @type {{ name?: string }} */ step) => step.name === "Run tests with detailed output");
+  assert.equal(job["timeout-minutes"], 40);
+  assert.equal(run["timeout-minutes"], 32);
+  assert.match(run.run, /timeout --signal=USR2 --kill-after=10s 30m npm run test:release/);
+  assert.match(run.run, /--report-on-signal --report-exclude-env --report-directory=/);
+  assert.match(run.run, /if timeout .* \| tee test-output\.txt; then\n\s+node scripts\/release-policy\.js test-summary/);
+  assert.match(run.run, /status=\$\?/);
+  assert.match(run.run, /::error::Test processes exceeded the 30-minute deadline/);
+  assert.match(run.run, /exit "\$status"/);
+  assert.doesNotMatch(run.run, /--test-force-exit|continue-on-error|\|\| true/);
+  const upload = job.steps.find((/** @type {{ name?: string }} */ step) => step.name === "Upload test log");
+  assert.equal(upload.if, "always()");
+  assert.deepEqual(upload.with.path.trim().split("\n"), ["*-output.txt", "test-diagnostics/"]);
+});
+
 test("release policy distinguishes shipped changes from development-only changes", () => {
   const manifest = { name: "automatica11y", version: "0.9.0", dependencies: { axe: "1" }, devDependencies: { typescript: "1" } };
   assert.equal(requiresChangeset(["src/cli.js"], manifest, manifest), true);

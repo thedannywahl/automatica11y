@@ -43,6 +43,10 @@ Run `npm run lint` and `npm run test:release` with a real Chrome/Chromium browse
 
 Matrix artifacts contain install, browser, lint and test output with Node/run-attempt names. Action scenarios retain reports even for expected finding exits. Job summaries include the validated SHA and zero-skip requirement. Latest-dependency diagnostics retain both versions and test output.
 
+The matrix job has a 40-minute safety limit, but the test command has its own 30-minute deadline (and a 32-minute step limit) so a hung test fails before the job is cancelled and leaves time to upload diagnostics. The deadline covers worker process exit, not just assertions: Node's per-test timeout does not stop a worker whose assertions finished but whose resources remain open. On the command deadline, `SIGUSR2` requests Node diagnostic reports, then processes still running are killed after 10 seconds. Timeouts remain failures, never successful forced exits. Reports omit environment variables and are uploaded in `test-diagnostics/` alongside the normal logs.
+
+If GitHub shows a cancelled matrix job, check its annotations for "The job has exceeded the maximum execution time" before assuming it was superseded by a push. For a test deadline failure, inspect the last emitted test results and the reports' `libuv` handles to identify the worker and any remaining timers, sockets, or child processes. Passing assertions without worker exit are not a completed test run. Reproduce and repair that resource lifecycle before treating a rerun as resolution; do not extend the job cap or bypass the validation gate.
+
 ## Docs deployment
 
 The Docs workflow does not deploy arbitrary main pushes. It accepts a successful, same-repository Changesets run on main only when that run contains an unexpired `docs-deploy-request` artifact. The request's SHA/version/tag must match the producer and existing release tag. It builds that exact commit, not whichever main commit happens to be current when the workflow runs.
