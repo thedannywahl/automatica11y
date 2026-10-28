@@ -47,7 +47,9 @@ export function updateEvalVersions(source, version) {
     }
     const record = /** @type {Record<string, unknown>} */ (value);
     if (definition.id !== "runner-preflight-version-mismatch"
-      && JSON.stringify(record.args) === JSON.stringify(["--yes", "automatica11y@latest", "--version"])
+      && Array.isArray(record.args)
+      && record.args.at(-1) === "--version"
+      && record.args.includes("automatica11y@latest")
       && typeof record.stdout === "string"
       && /^\d+\.\d+\.\d+\n$/.test(record.stdout)
       && record.stdout !== `${version}\n`) {
