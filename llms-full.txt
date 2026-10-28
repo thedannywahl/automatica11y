@@ -1,0 +1,1512 @@
+---
+url: /quick-start-cli.md
+---
+# CLI Quick Start
+
+The [automatica11y](https://www.npmjs.com/package/automatica11y) npm package provides everything needed to run from the command line.
+
+## Requirements
+
+If `doctor` finds an outdated browser, you can use it with `audit` or `compare --allow-old-browser`, or download a current Chromium with `automatica11y doctor --install-browser`. If the download fails, the installed browser remains an option. Outdated-browser runs carry a warning in the report header and `results.json`: results may be unreliable and should be confirmed with a current browser. The flag does not bypass missing browsers, launch failures, or engine self-tests.
+
+## Installation
+
+You can install `automatica11y` and run it as a linked node.js binary, or you can invoke it with your package manager's script runner.
+
+### Invocation
+
+The preferred method of running `automatica11y` is to use your package manager's script runner and directly invoke the script. This prevents  drift and allows you to always use the latest version.
+
+::: code-group
+
+```bash [<span class="instui-icon -icon-vite-plus" aria-hidden="true"></span> vp]
+vpx automatica11y audit ./dist
+```
+
+```bash [<span class="instui-icon -icon-pnpm" aria-hidden="true"></span> pnpm]
+pnpm dlx automatica11y audit ./dist
+```
+
+```bash [<span class="instui-icon -icon-bun" aria-hidden="true"></span> bun]
+bunx automatica11y audit ./dist
+```
+
+```bash [<span class="instui-icon -icon-npm" aria-hidden="true"></span> npm]
+npx -y automatica11y audit ./dist
+```
+
+```bash [<span class="instui-icon -icon-deno" aria-hidden="true"></span> deno]
+deno run npm:automatica11y audit ./dist
+```
+
+```bash [<span class="instui-icon -icon-yarn" aria-hidden="true"></span> yarn]
+yarn dlx automatica11y audit ./dist
+```
+
+:::
+
+### Global install
+
+A global install doesn't update itself, so run `npm i -g automatica11y@latest` (or whichever package manager you use) to upgrade and `automatica11y --version` to see what you have.
+
+Install it once with `npm i -g automatica11y`; Make sure that `automatica11y` is on your `$PATH` and then run:
+
+::: code-group
+
+```bash [<span class="instui-icon -icon-vite-plus" aria-hidden="true"></span> vp]
+vp install -g automatica11y
+```
+
+```bash [<span class="instui-icon -icon-pnpm" aria-hidden="true"></span> pnpm]
+pnpm add -g automatica11y
+```
+
+```bash [<span class="instui-icon -icon-bun" aria-hidden="true"></span> bun]
+bun add -g automatica11y
+```
+
+```bash [<span class="instui-icon -icon-npm" aria-hidden="true"></span> npm]
+npm i -g automatica11y
+```
+
+```bash [<span class="instui-icon -icon-deno" aria-hidden="true"></span> deno]
+deno install -g -A npm:automatica11y
+```
+
+```bash [<span class="instui-icon -icon-yarn" aria-hidden="true"></span> yarn]
+# Yarn v2 has no `global` command; use `yarn dlx automatica11y <command>`.
+yarn dlx automatica11y <command>
+```
+
+:::
+
+### Alias
+
+When you install `automatica11y` it also provides an alias `a11y` with the exact same functionality.
+
+```bash
+a11y audit ./dist
+```
+
+## Commands
+
+`automatica11y` includes three main commands: `audit`, `compare`, and `doctor`.
+
+### `audit` command
+
+The `audit` command takes an input which can be a static file or folder, a live website, an npm package, or a Storybook. `audit` knows how to install, build, and test npm packages that have a UI including: html, web components, React, Svelte, Vue, and Angular.
+
+::: code-group
+
+```bash [<span class="instui-icon -icon-vite-plus" aria-hidden="true"></span> vp]
+vpx automatica11y audit ./path/to/file.html
+```
+
+```bash [<span class="instui-icon -icon-pnpm" aria-hidden="true"></span> pnpm]
+pnpm dlx automatica11y audit ./path/to/file.html
+```
+
+```bash [<span class="instui-icon -icon-bun" aria-hidden="true"></span> bun]
+bunx automatica11y audit ./path/to/file.html
+```
+
+```bash [<span class="instui-icon -icon-npm" aria-hidden="true"></span> npm]
+npx -y automatica11y audit ./path/to/file.html
+```
+
+```bash [<span class="instui-icon -icon-deno" aria-hidden="true"></span> deno]
+deno run npm:automatica11y audit ./path/to/file.html
+```
+
+```bash [<span class="instui-icon -icon-yarn" aria-hidden="true"></span> yarn]
+yarn dlx automatica11y audit ./path/to/file.html
+```
+
+:::
+
+You can also use `check` as an alias for `audit`. The audit will generate a `plan.json`, `mapping.json` when needed, and when it's complete it will save `results.json` (machine readable) and `report.md` (human readable) in a unique timestamped folder under `./a11y-report`. Screenshots and other artifacts stay in that same run folder.
+
+To audit built packages in a workspace, build them first and map each npm package to its output directory:
+
+```bash
+automatica11y ci ui=npm:@scope/components,@scope/interactions \
+  --local-package @scope/components=./packages/components/dist \
+  --local-package @scope/interactions=./packages/interactions/dist
+```
+
+Use the same package-name-to-path mapping in root-level `.automatica11y.yml` for repeatable CI runs.
+
+### `compare` command
+
+deno run automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
+yarn dlx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
+The `compare` command performs two or more audits and provides a comparative report. You can compare across multiple sources and frameworks.
+
+::: code-group
+
+```bash [<span class="instui-icon -icon-vite-plus" aria-hidden="true"></span> vp]
+vpx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
+```
+
+```bash [<span class="instui-icon -icon-pnpm" aria-hidden="true"></span> pnpm]
+pnpm dlx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
+```
+
+```bash [<span class="instui-icon -icon-bun" aria-hidden="true"></span> bun]
+bunx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
+```
+
+```bash [<span class="instui-icon -icon-npm" aria-hidden="true"></span> npm]
+npx -y automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
+```
+
+```bash [<span class="instui-icon -icon-deno" aria-hidden="true"></span> deno]
+deno run automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
+```
+
+```bash [<span class="instui-icon -icon-yarn" aria-hidden="true"></span> yarn]
+yarn dlx automatica11y compare npm:react-aria-components npm:@instructure/ui-buttons
+```
+
+:::
+
+### `doctor` command
+
+yarn dlx automatica11y doctor
+`doctor` checks your setup to make sure your system meets the [requirements](#requirements). If it can't find a browser, it prints the command to install one. If the browser is too old, it tells you to update it. Add `--install-browser` to download Chromium when the check fails. Add `--json` to print the result as one JSON object, with a `state` (`ok`, `node-unsupported`, `browser-missing`, `browser-outdated`, `install-failed-no-browser`, `install-failed-outdated`, or `other`), the Node and browser it found, the download result, and each problem with its fix. Scripts and AI agents can act on the state without reading the text. The exit codes are the same.
+
+::: code-group
+
+```bash [<span class="instui-icon -icon-vite-plus" aria-hidden="true"></span> vp]
+vpx automatica11y doctor
+```
+
+```bash [<span class="instui-icon -icon-pnpm" aria-hidden="true"></span> pnpm]
+pnpm dlx automatica11y doctor
+```
+
+```bash [<span class="instui-icon -icon-bun" aria-hidden="true"></span> bun]
+bunx automatica11y doctor
+```
+
+```bash [<span class="instui-icon -icon-npm" aria-hidden="true"></span> npm]
+npx -y automatica11y doctor
+```
+
+```bash [<span class="instui-icon -icon-deno" aria-hidden="true"></span> deno]
+deno run automatica11y doctor
+```
+
+```bash [<span class="instui-icon -icon-yarn" aria-hidden="true"></span> yarn]
+yarn dlx automatica11y doctor
+```
+
+:::
+
+Each run writes `report.md`, `results.json`, and `plan.json` to its own folder under `./a11y-report` by default, preserving earlier runs. The terminal prints the exact paths. An explicit `--out` folder is used directly and can overwrite an earlier run there. [Read a report](/reports) to understand the results.
+
+---
+
+---
+url: /quick-start-ci.md
+---
+# CI/CD {#quick-start-ci}
+
+Using `automatica11y` in your CI/CD pipeline can be done using the `ci` command, or by using the provided Github Action.
+
+### `ci` command
+
+The `ci` command provides a wrapper around the `audit` command and provides a number of non-zero exit codes to help inform what failed.
+
+deno run automatica11y ci ./dist
+yarn dlx automatica11y ci ./dist
+::: code-group
+
+```bash [<span class="instui-icon -icon-vite-plus" aria-hidden="true"></span> vp]
+vpx automatica11y ci ./dist
+```
+
+```bash [<span class="instui-icon -icon-pnpm" aria-hidden="true"></span> pnpm]
+pnpm dlx automatica11y ci ./dist
+```
+
+```bash [<span class="instui-icon -icon-bun" aria-hidden="true"></span> bun]
+bunx automatica11y ci ./dist
+```
+
+```bash [<span class="instui-icon -icon-npm" aria-hidden="true"></span> npm]
+npx -y automatica11y ci ./dist
+```
+
+```bash [<span class="instui-icon -icon-deno" aria-hidden="true"></span> deno]
+deno run automatica11y ci ./dist
+```
+
+```bash [<span class="instui-icon -icon-yarn" aria-hidden="true"></span> yarn]
+yarn dlx automatica11y ci ./dist
+```
+
+:::
+
+To audit packages built from the current workspace, build them first and map each package name to its output directory:
+
+```bash
+automatica11y ci ui=npm:@scope/components,@scope/interactions \
+  --local-package @scope/components=./packages/components/dist \
+  --local-package @scope/interactions=./packages/interactions/dist
+```
+
+For the GitHub Action, pass one mapping per line with `local-packages`:
+
+```yaml
+- uses: thedannywahl/automatica11y
+  with:
+    targets: ui=npm:@scope/components,@scope/interactions
+    local-packages: |
+      @scope/components=./packages/components/dist
+      @scope/interactions=./packages/interactions/dist
+```
+
+Alternatively, set `localPackages` in `.automatica11y.yml` as in [Targets](/targets#auditing-local-workspace-packages).
+
+The CI command fails (non-zero exit code) on serious-or-higher axe violations, IBM Toolkit level 1 violations, and incomplete execution or coverage by default. All policies are configurable. See [Options](/options#exit-codes) for more details.
+
+## Github Action
+
+For GitHub Actions on Ubuntu, use the reusable action, which installs the tool and Chromium and uploads the reports for review:
+
+```yaml
+- uses: thedannywahl/automatica11y
+  with:
+    targets: ./dist
+```
+
+See [Github Action](/github-action) for more details.
+
+---
+
+---
+url: /quick-start-ai.md
+---
+# AI {#quick-start-ai}
+
+Automatica11y provides an evergreen bootstrap skill you can add to your agent of choice. Automatica11y cli bundles the latest version of the runner skill and its references, so every invocation is always compatible.
+
+```skill
+---
+name: automatica11y
+compatibility: Needs Node 22 or newer, a shell that can run npx or the installed automatica11y command, and network access to the npm registry.
+description: Test and compare web accessibility. Use when someone asks how accessible a web page, Storybook, or npm component library is, asks for an accessibility or WCAG check or audit (including a whole site, using its sitemap or a crawl across its links, with a trusted authentication module for pages behind sign-in), or asks to compare the accessibility of two or more sites or component libraries (for example "how accessible is Radix Dialog?" or "compare React Aria and Headless UI").
+---
+
+# automatica11y
+
+automatica11y tests and compares web accessibility. This skill only gets you started. The full steps ship with the tool, so they always match its version.
+
+Don't narrate each step. Before answering, show the exact guide command you ran in a fenced code block, then report results or the error. Don't claim to have run a command you couldn't execute.
+
+1. Follow this decision list:
+
+   Guide output is usable only if the command exits with code 0 and prints guide text containing at least 20 non-blank lines of Markdown text (blank lines and lines containing only code fence markers are not counted; count newline-delimited lines, not visual wrapping).
+
+   At the start of each new accessibility request in this conversation, obtain usable guide output using the sequence below, read all of it, and follow it; continue to step 2. For a follow-up message about the same request, reuse the guide already read. For a comparison, reuse that guide for every target instead of fetching it again.
+
+   Run these phases in order. As soon as a guide command produces usable output, read and follow it and continue to step 2; skip the remaining phases.
+
+   1. **A: Installed command.** If `automatica11y` is on the `PATH` and `automatica11y --version` prints a version, run `automatica11y guide skill`. Otherwise, or if its output is not usable, continue to phase B.
+   2. **B: npx command.** Run `npx --yes --prefer-online automatica11y@latest guide skill` once. If it fails because it can't reach the npm registry, continue to phase C. For any other failure or unusable output, skip phase C and continue to phase D.
+   3. **C: Permission-based retry.** If the shell tool returns a permission or sandbox prompt for network access, request network access for that exact command only. If permission is granted, retry that exact command once. If no such prompt is available, the request is refused, or the retry fails or produces unusable output, continue to phase D. Do not make further recovery attempts.
+   4. **D: Node.js check.** If no command produced usable guide output, run `node --version` and report the outcome using the table below. Stop; don't continue with partial instructions.
+
+   | Phase | Outcome | Result |
+   | --- | --- | --- |
+   | A, B, or C | Usable guide output. | Read and follow the guide; continue to step 2. |
+   | D | Node.js is missing or below 22. | Tell the user Node.js 22 or newer is required, then stop. |
+   | D | Node.js is 22 or newer, but no command produced usable guide output. | Report the guide error text or state that no usable output was produced, then stop. |
+
+   A DNS lookup failure such as `ENOTFOUND` counts as a registry connectivity failure for phase B, and it does not prove a sandbox restriction.
+
+   The guide sends you to other topics only when the request needs them (for example `guide reporting` before you write a report). Run each with the same command form that produced usable `guide skill` output, such as `npx --yes --prefer-online automatica11y@latest guide reporting`. The same usable-output check and recovery rules apply. Reuse a topic you've already read for the same request.
+
+   If the tool's accessibility check fails or returns no results after the guide was read, report the error text or state that no results were produced, and stop, except for an unreachable comparison target as described in step 2. Don't retry the check, present partial results as complete, or invent findings.
+
+2. Keep the user's request as they gave it: the target or targets, and any settings they named, such as a WCAG version or level. Apply them using the guide.
+
+   If the user's request names no target, ask: "Which target should I test: a URL, a Storybook, or an npm package?" before running any accessibility check. Do not guess a target.
+   If the user names a library or component without a URL, Storybook address, or npm package name, ask the user to confirm the exact npm package name or URL before running a check on that target. For a comparison, still run the checks for the fully specified targets and report the pending target separately after the user confirms. Don't assume a package name.
+
+   If a named target cannot be reached or does not exist, report which target failed and the error text. For a comparison, test the remaining targets and report the failed one separately; otherwise, stop. Don't substitute a different target.
+
+   After reading the guide, pass only settings that the guide lists as supported for this tool. If the user named a setting the guide doesn't list as supported, tell the user which setting is unsupported, list the supported values from the guide, and ask which to use. Don't ask again for anything they've already said.
+
+3. If you can't run shell commands, tell the user and stop. For npm network failures, use only the permission-request recovery in step 1. Web search access and this skill's compatibility field don't grant shell network access. Don't change permission settings, bypass restrictions, or substitute web search for the guide command. Don't guess at results.
+
+```
+
+Once the skill is installed in your agent you can prompt it with the same commands and flags that are available to the cli.
+
+## Audit a web page
+
+You can audit web pages, static html files, Storybooks, and npm packages. To audit a live web page, simply provide the URL.
+
+```prompt
+/automatica11y audit "https://iywahl.com/"
+```
+
+## Compare two packages
+
+Automatica11y can compare two packages, even across different frameworks. It also supports versioning, sub-component exports, and aliases. Here's an example of comparing two different versions of a button from the same package:
+
+```prompt
+/automatica11y compare next-gen=npm:@instructure/ui-button/Button/v2 canvas=npm:@instructure/ui-buttons/Button/v1
+```
+
+The runner skill and references guide the Agent on how to write custom fixtures, how to interpret results, and how to turn the machine results (`report.json`) into a human-readable templated report.
+
+See [Using it with an AI agent](/agents) for additional details.
+
+---
+
+---
+url: /targets.md
+---
+# Targets.
+
+For multiple pages within one site, see [site discovery](site-discovery.md): opt-in sitemap and rendered-link crawling, bounded scope, trusted authentication hooks and native crawl statistics..
+
+## Auditing local workspace packages.
+
+Build the package first, then map its package name to the directory that contains its built `package.json`, or to a packed `.tgz` file. The mapping applies to primary and companion packages by exact package name. Unmapped packages continue to resolve from npm; a mapped path or package identity error fails instead of falling back to the registry.
+
+```bash
+automatica11y audit ui=npm:@scope/components,@scope/interactions \
+  --local-package @scope/components=./packages/components/dist \
+  --local-package @scope/interactions=./packages/interactions/dist \
+  --plan
+automatica11y audit ui=npm:@scope/components,@scope/interactions \
+  --local-package @scope/components=./packages/components/dist \
+  --local-package @scope/interactions=./packages/interactions/dist
+```
+
+`--plan` reads local package metadata without installing packages or launching a browser. It reports each mapped package's resolved path and version. A requested npm version must exactly match the local package version. Relative paths use the command working directory.
+
+For CI, the same mapping can be checked in as root-level YAML:
+
+```yaml
+version: 1
+targets:
+  - ui=npm:@scope/components,@scope/interactions
+localPackages:
+  "@scope/components": ./packages/components/dist
+  "@scope/interactions": ./packages/interactions/dist
+```
+
+A target is `[label=]<spec>`. The label is optional, and names the target in the report.
+
+| Target | Spec |
+|---|---|
+| A live page | `https://example.com/page` |
+| A local page or site | `./page.html` or `./dist`. A path with no prefix is relative to the working folder, so `dist` means `./dist`. Prefixes `../`, `/`, `~`, and `file:` work too. |
+| A Storybook | Its URL, or a local folder with `index.json` or `stories.json`. |
+| An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. Add a sub-path to test one entry of a package: `npm:@scope/pkg/button` or `npm:@scope/pkg@1.2.3/button/v2`. React, Vue 3, Angular 22 and newer, Svelte 5 and newer, plain HTML, and web component libraries work. A library that ships in pieces is one target: join the packages with commas and no spaces, `npm:@scope/components,@scope/interactions`. The first is the primary and names the target, and the others install beside it into the same folder. |
+
+A bare word such as `button` is a path: the folder or file `./button`. Write `npm:button` to pick the package. The prefix is what chooses a package, so a folder with the same name never gets in the way. A bare word that isn't a path fails with a hint, such as "If you meant the npm package, write npm:react."
+
+A local `.html` file is served over `http://localhost`, never `file://`. A static site audits its `index.html` only.
+
+## Comparing libraries that come in pieces.
+
+Targets are separated by spaces. Packages inside one target are separated by commas, with no spaces. This compares a design system's plain HTML build (a stylesheet package and a script package) with its React build and its web component build:
+
+```bash
+automatica11y compare \
+  pantoken-html=npm:@pantoken/components,@pantoken/interactions \
+  instui=npm:@instructure/ui \
+  pantoken-wc=npm:@pantoken/web-components
+```
+
+An agent reading "compare A, B and C and D" treats the comma as joining packages and "and" as separating targets, so that is three targets: `A,B`, `C`, and `D`. It shows that grouping and asks you to confirm it when the sentence could be read another way.
+
+## Evidence levels.
+
+A page target gives **page** evidence: the whole page is tested, and the interaction and computed tiers say "not applicable", because a page carries no trigger to press. An npm package gives **component** evidence: each archetype runs from a fixture that marks the control to exercise. A comparison that mixes the two opens with a warning, because the evidence isn't equivalent.
+
+## Sub-paths of an npm package.
+
+`npm:name[@version][/sub/path]` tests one entry of a package, such as `npm:@scope/ui-buttons/button` or `npm:@scope/ui-buttons@11.7.8/button/v2`. That lets you compare two versions of a component side by side:
+
+```bash
+automatica11y compare v1=npm:@scope/ui-buttons/button v2=npm:@scope/ui-buttons/button/v2
+```
+
+The sub-path is what a person would import (`import ... from "@scope/pkg/button"`), and it has to be something the package exports. The version stops at the first slash, and a sub-path can't contain empty parts, `.`, `..`, or backslashes. Capital letters are fine.
+
+The tool checks the sub-path twice. At plan time it reads the registry's `exports` field, so `--plan` rejects a wrong sub-path before anything installs. After the install it checks the package's own `package.json`, and a package with no exports map is checked against its files. A wrong sub-path names the package and version, suggests the closest exports, and lists what the package offers.
+
+For a package with no exports map, a directory uses its `index.js`, `index.mjs`, or `index.cjs` entry. For example, `npm:@instructure/ui-buttons/es/Button/v1/` and `npm:@instructure/ui-buttons/es/Button/v1/index.js` test the same entry. A directory without an index fails and lists available entries at that path, when present.
+
+---
+
+---
+url: /site-discovery.md
+---
+# Auditing a site
+
+Site discovery is opt-in. A normal URL audit still checks one page; a discovered site's pages are not a comparison.
+
+```bash
+# Rendered links under /docs/
+npx automatica11y audit https://example.com/docs/ --crawl
+
+# Only URLs listed in a sitemap, filtered to /docs/
+npx automatica11y audit https://example.com/docs/ --sitemap https://example.com/sitemap.xml
+
+# Sitemap seeds plus rendered links
+npx automatica11y ci https://example.com/docs/ --sitemap https://example.com/sitemap.xml --crawl
+```
+
+Use one HTTP(S) root with `audit` or `ci`. `--sitemap` is repeatable. Sitemap sources must use the root's exact origin. `compare`, npm packages, Storybook discovery, local-file crawling and multiple discovery roots are not supported.
+
+## Limits and coverage
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--max-pages` | 100 | Crawlee handled-request limit; retries are additional attempts |
+| `--max-depth` | 5 | Native link depth; seeds are depth 0 |
+| `--crawl-delay` | 1 | Same-domain delay in seconds, not a global subresource rate limit |
+| `--discovery-scope` | `subtree` | Exact origin and root path subtree; `origin` permits other paths |
+| `--ignore-robots` | off | Explicit robots.txt override |
+| `--crawler-config` | none | Trusted local ESM hook module |
+
+The crawler runs sequentially and uses Crawlee's queue, deduplication, retries, robots handling and statistics. A request can run up to three times. Native request totals do not count every browser subresource or the additional navigations made by condition checks. Each discovered page is reopened in a separate authenticated audit context: Crawlee's convenience page context does not support every auxiliary page operation used by the rule engines.
+
+Discovery admits at most 10,000 queued URLs. Sitemap loading limits are 100 documents, nesting depth 5, 10,000 entries, 5 MiB per document after decompression, five redirects and a two-minute loading window. Limit events and sitemap errors are coverage gaps, not passes.
+
+Rendered ordinary links are followed; forms, arbitrary controls and hash-router states are not explored. Exhausting the queue does not prove every site page was found. Site reports preserve native crawl metrics separately from individual page and engine outcomes. Axe and IBM findings remain separate.
+
+CI defaults to failing on incomplete coverage, including robots exclusions of intended pages and reached caps. `--fail-on-incomplete false` changes the gate, not the recorded coverage. No page audit results returns exit 4.
+
+## Trusted authentication hooks
+
+Pass a local module with `--crawler-config ./crawler.config.mjs`. It executes with your process privileges: review it as trusted code. Never run untrusted PR hook code with secrets.
+
+```js
+export default {
+  contextOptions: {
+    storageState: process.env.A11Y_STORAGE_STATE_PATH,
+  },
+  async setupContext(context) {
+    // Optional: configure each fresh crawler and condition-check context.
+  },
+  async verifyPage(page) {
+    if (await page.locator('[data-login-form]').count()) {
+      throw new Error("Authentication required");
+    }
+  },
+};
+```
+
+`verifyPage(page)` is mandatory when a module is supplied. It must assert the application's authenticated state. HTTP 401/403 and a failed verifier cause bounded retries; an application returning its login page with HTTP 200 cannot be recognized automatically.
+
+Supported native pass-through arrays are `preNavigationHooks`, `postNavigationHooks`, and these hooks within `browserPoolOptions`: `preLaunchHooks`, `postLaunchHooks`, `prePageCreateHooks`, `postPageCreateHooks`, `prePageCloseHooks`, `postPageCloseHooks`. Their callback signatures are Crawlee's. The adapter owns queues, request handlers, limits and internal guards.
+
+Use `contextOptions` for Playwright storage state, HTTP credentials or headers. Use `setupContext(context)` and `verifyPage(page)` for shared initialization and validation across the crawler and additional accessibility-check contexts. Native navigation hooks execute for crawler requests only; secondary checks do not fabricate Crawlee request/session objects. Cookie/localStorage state is captured from the authenticated crawler page for each page's checks; sessionStorage or custom initialization must be reapplied by `setupContext`.
+
+For interactive login, a trusted pre-navigation hook can use the page to sign in before continuing to the requested page. Repeated hook executions may refresh expired credentials, but must not contain unbounded login loops. Set `loginOrigins` to exact additional origins such as `["https://login.example.com"]` when an identity provider is required. Those origins are not crawled or audited. The page must return to the audited scope before verification. Authorization and configured extra headers are stripped from requests leaving the site origin, including redirect hops. HTTP credentials without an explicit `origin` are restricted to the site's origin.
+
+Private sitemap fetching uses cookies installed by `contextOptions`/`setupContext`, HTTP credentials, configured headers, and optional `async sitemapHeaders(url)`. Browser navigation hooks are not called to fetch XML. For private sitemaps, establish cookies in `setupContext` or supply `sitemapHeaders`; localStorage tokens do not automatically become Authorization headers.
+
+```js
+export default {
+  contextOptions: {
+    extraHTTPHeaders: { Authorization: `Bearer ${process.env.A11Y_TOKEN}` },
+  },
+  async verifyPage(page) {
+    if (!(await page.locator("[data-authenticated]").count())) {
+      throw new Error("Expected authenticated application");
+    }
+  },
+};
+```
+
+Do not put credentials in command-line URLs, YAML, checked-in modules, or saved plans. Hooks should read environment secrets or local files. Paths to modules may appear in plans, but returned configuration, storage state and credentials are not serialized. Hook code controls its own logging: never log secrets. Authenticated pages' findings can contain sensitive content; screenshots are opt-in. Restrict report artifact access and retention accordingly.
+
+## YAML and GitHub Action
+
+```yaml
+version: 1
+targets:
+  - https://example.com/docs/
+options:
+  crawl: true
+  sitemaps:
+    - https://example.com/sitemap.xml
+  maxPages: 50
+  maxDepth: 3
+  crawlDelay: 1
+  discoveryScope: subtree
+  crawlerConfig: ./crawler.config.mjs
+```
+
+The Action accepts `crawl`, `sitemaps` (one URL per line), `max-pages`, `max-depth`, `crawl-delay`, `discovery-scope`, `ignore-robots`, and `crawler-config`. Provide hook secrets through the step's environment, not action input values. Existing `server-command`/`server-url` inputs support explicit localhost testing.
+
+`--plan` records discovery intent without loading the hook module, launching a browser or claiming a discovered inventory. Running a saved plan rediscovers the site.
+
+---
+
+---
+url: /checks.md
+---
+# What it checks.
+
+Five tiers run by default. Use `--tiers` to pick fewer.
+
+## Rules.
+
+axe-core and IBM Equal Access run side by side. They overlap, and each catches things the other misses. Their findings are reported separately and never added together. axe-core reports an impact (`minor` to `critical`). IBM reports its Toolkit level, a staged adoption scale where level 1 is essential, high-impact requirements. The two scales aren't comparable.
+
+## Interactions.
+
+Keyboard and focus checks for ten archetypes: button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, and live-region (a message that appears or changes without moving focus, such as an alert or status message). Each check runs on a fresh page. Archetypes are the standard building blocks of HTML and ARIA patterns. A larger widget, such as a carousel, is tested through the archetypes it's made of.
+
+## Computed checks.
+
+automatica11y's own measurements from resolved styles in the browser, for the trigger of each archetype fixture: text contrast in rest, hover, keyboard focus, and pressed states (1.4.3), the contrast of the control's edge, fill, or icon (1.4.11), and the contrast and thickness of the focus indicator (1.4.11, and 2.4.13 at level AAA). A page that uses a gradient, an image, or transparency behind the control can't be reduced to one color, so that check reports `undetermined`, which is a gap and never a pass. These results are reported on their own and never added to the rule engines' counts.
+
+## Conditions.
+
+How the page holds up under a user's settings and environment. Each check opens fresh copies of the page and says what happened:
+
+* `prefers-reduced-motion: reduce` (2.3.3, 2.2.2): do animations that move or repeat stop or go away? Motion driven by JavaScript timers isn't visible to this check.
+* `prefers-color-scheme: dark` (1.4.3): if the page changes in dark mode, does every piece of text keep its contrast? A page that doesn't adapt isn't failed.
+* `prefers-contrast: more` (1.4.3, 1.4.6): if the page responds, does the lowest text contrast stay above the minimum and not drop? The check says whether enhanced contrast (7:1) is reached. `prefers-contrast: less` (1.4.3): if the page softens, does text stay above the minimum? A page that doesn't respond isn't failed.
+* `prefers-reduced-transparency: reduce` (1.4.3, 1.4.11): do surfaces that hold text stop being see-through (translucent backgrounds, backdrop blur)? This preference isn't a WCAG requirement. It matters because see-through backgrounds make text contrast unpredictable.
+* Forced colors (1.4.11, 2.4.7): is the focus indicator still visible? A ring drawn with `box-shadow` disappears in forced colors, so use an outline.
+* Reflow at 320 CSS pixels (1.4.10): does the page scroll sideways, or does anything reach past the right edge? Two-dimensional content such as data tables and maps is exempt, so a person judges those.
+* Text spacing (1.4.12): with the spacing the criterion names, does any element cut off its text? Overlapping text isn't checked.
+
+Conditions run on whole pages and on component fixtures. Storybook stories are reported as not applicable.
+
+## Virtual screen reader.
+
+The announcements a simulated screen reader makes, recorded as data. The output is simulated. It isn't a real screen reader, and real ones announce things differently.
+
+## What every result says.
+
+Every result says what it ran, or why it didn't. A gap, a failure, or a result that can't be tested is a finding. It never counts as a pass.
+
+`automatica11y ci` fails on execution and coverage gaps by default: failed or unsupported targets, missing fixtures or requested results, untestable checks, `undetermined` or `error` measurements, failed Storybook stories, and coverage truncated by the story cap. Intentional tier/archetype exclusions and genuinely inapplicable checks are not failures. Engine findings needing manual review and explicit non-rule check failures have separate opt-in gates. See [CI configuration](github-action.md).
+
+---
+
+---
+url: /options.md
+---
+# Options and exit codes
+
+Site-discovery options (`--crawl`, repeatable `--sitemap`, `--max-pages`, `--max-depth`, `--crawl-delay`, `--discovery-scope`, `--ignore-robots`, and `--crawler-config`) are described with their defaults in [Auditing a site](site-discovery.md).
+
+## Options
+
+| Option | Default | What it does |
+|---|---|---|
+| `--config <file>` | `.automatica11y.yml` if present | Shared YAML configuration. Explicit missing files are errors. Paths use the working directory. |
+| `--wcag 2.0\|2.1\|2.2` | `2.2` | The WCAG version. |
+| `--level A\|AA\|AAA` | `AA` | The conformance level. IBM Equal Access has no AAA rules, so it runs its AA rules and says so. |
+| `--engine axe,ibm` | both | Which rule engines run. |
+| `--tiers rules,interactions,computed,conditions,vsr` | all | Which tiers run. |
+| `--screenshots` / `--no-screenshots` | off | Save annotated full-page screenshots for rule violations and link them from the report. YAML: `options.screenshots`. |
+| `--allow-old-browser` | off | Explicitly use an outdated Chrome or Chromium. Records a warning in `results.json` and the report header. Launch and engine self-tests must still succeed. |
+| `--archetypes a,b` | all | Limit npm and Storybook targets to these archetypes. |
+| `--lib-a11y on,off` | both | For libraries with opt-in accessibility features. See [Writing fixtures](writing-fixtures.md). |
+| `--mapping <file>` | none | A mapping file for npm targets. |
+| `--local-package <name=path>` | none | Use a local package directory or `.tgz` for a named npm package. Repeat for companions; unmapped packages still resolve from npm. |
+
+* `plan.json` records what ran, the resolved tool and package versions, and local package source paths.
+  | `--no-generate` | off | Don't build fixtures for npm packages. Only authored fixtures and the `button` and `link` templates run. |
+  | `--generate` | on | Enable generated fixtures, overriding YAML `generate: false`. |
+  | `--max-stories <n>` | `200` | The Storybook story cap. The cap spreads over components. |
+  | `--out <dir>` | `./a11y-report/<unique-run>` | Where results go. Each default run gets its own timestamped folder. An explicit folder is used exactly as given. |
+  | `--plan` | off | Classify the targets and write `plan.json`, then stop. Nothing installs and no browser launches. |
+  | `--fail-on-axe <impact>` | off; `serious` in CI | Exit 1 if axe-core reports a violation at or above `minor`, `moderate`, `serious`, or `critical`. `none` disables the gate. |
+  | `--fail-on-ibm <1\|2\|3\|none>` | off; `1` in CI | Exit 1 if IBM reports a violation at or below that Toolkit level. `none` disables the gate. |
+  | `--fail-mode any\|all` | `any` | `any` trips when either engine's check trips. `all` trips only when both do, on the same target. |
+  | `--fail-on-incomplete true\|false` | off; on in CI | Exit 5 for execution or coverage gaps when at least one target ran. Independent of engine threshold combination. |
+  | `--fail-on-review true\|false` | off | Exit 1 for engine findings needing review or simulated-screen-reader review flags. |
+  | `--fail-on-checks true\|false` | off | Exit 1 for explicit interaction, computed, or condition check failures. |
+  | `--server-command <cmd>` | none | CI only: trusted local server shell command. Requires a loopback readiness URL. |
+  | `--server-url <url>` | none | CI only: HTTP(S) loopback URL that must not already respond. |
+  | `--server-timeout <seconds>` | `60` | CI only: positive integer readiness timeout. |
+  | `--server-working-directory <dir>` | working directory | CI only: server command directory. |
+
+Run `automatica11y run --plan <plan.json>` to repeat a saved plan. It warns if tool versions have changed.
+
+## Output
+
+* `report.md` is a complete report, written without any model. It opens with a coverage matrix, then lists findings, then ends with a method note.
+* With `--screenshots`, `report.md` links to annotated PNGs beside the relevant findings, and `results.json` records their paths relative to the output directory.
+* `results.json` holds everything, including element selectors and announcement logs.
+* `plan.json` records what ran and the resolved tool and package versions.
+* `mapping.json` appears for npm targets. See [Writing fixtures](writing-fixtures.md).
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | No configured CI gate tripped. This does not mean accessible or fully tested. |
+| 1 | A violation, review, or non-rule check gate tripped. |
+| 2 | The command line was wrong. |
+| 3 | An environment problem, such as a missing browser or an old Node. The message says how to fix it. |
+| 4 | No target produced results. |
+| 5 | At least one target ran, but the enabled incomplete-coverage gate tripped. Takes precedence over exit 1. |
+
+One failing target doesn't stop a comparison. It's recorded with its reason, and the others run. Reports are written before findings or coverage cause a nonzero exit. Environment and all-resolution failures can produce only a plan or no files.
+
+---
+
+---
+url: /github-action.md
+---
+With `screenshots: true`, annotated PNGs are included in the same artifact and linked from `report.md`. A job summary shows the outcome and independent engine counts; `summary: 'false'` disables it. Use normal GitHub `continue-on-error` when the caller wants to inspect a failing outcome without failing the job.
+Add `options.archetypes: [button, dialog]` to limit component coverage or `options.mapping: ./mapping.json` for authored fixtures. To audit local monorepo builds, add root-level `localPackages` entries from package names to built package directories (or `.tgz` files); build those packages before the action runs. `--plan` reports their resolved paths and versions without installing them. Add the `server` object from the next example when testing a local application instead of built files.
+
+# GitHub Action
+
+For site audits, set `crawl: 'true'` and/or `sitemaps` (one URL per line) with one HTTP(S) root in `targets`. Discovery limits and `crawler-config` match the CLI. See [authenticated site discovery](site-discovery.md) for inputs and trusted-hook security requirements.
+
+Run on an Ubuntu GitHub-hosted runner or an Ubuntu self-hosted runner with permission to install Chromium's system dependencies. The Action sets up Node 26, installs the tool from the selected Action checkout in an isolated temporary directory, and downloads the matching Playwright headless shell. It does not install or build your application.
+
+The npm package and Action share the same release version and immutable `v<version>` tag. Pin the reviewed release commit for production; the Action runs code from that checkout, not the latest npm version. Releases are created only after the Node matrix and Action smoke tests pass. GitHub Marketplace listing setup remains a repository-owner task.
+
+## Built site
+
+Build your site first, then pass its output directory. Built HTML and Storybook directories are served automatically; they do not need a separate dev server.
+
+```yaml
+name: Accessibility
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  accessibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout
+      - uses: actions/setup-node
+        with:
+          node-version: '26'
+      - run: npm ci
+      - run: npm run build
+      - uses: thedannywahl/automatica11y
+        with:
+          targets: ./dist
+          tiers: rules
+```
+
+`tiers: rules` intentionally limits coverage to rule engines. Omit it to run all five tiers. A URL or `npm:package` can replace the built path. For npm targets, check in authored fixtures and mappings when generated fixtures are insufficient.
+
+## Shared YAML
+
+Check in `.automatica11y.yml` in the effective working directory, or select another file with `config`. The CLI accepts the same file:
+
+```bash
+automatica11y ci --config .automatica11y.yml
+```
+
+This example shows every audit and delivery setting; omit fields to use defaults. `options.archetypes` is optional and omitted here so all archetypes are considered.
+
+```yaml
+version: 1
+targets:
+  - site=./dist
+options:
+  wcag: '2.2'
+  level: AA
+  tiers: [rules, interactions, computed, conditions, vsr]
+  engines: [axe, ibm]
+  libA11y: [on, off]
+  maxStories: 200
+  generate: true
+  out: ./a11y-report
+fail:
+  axe: serious
+  ibm: 1
+  mode: any
+  incomplete: true
+  review: false
+  checks: false
+artifacts:
+  enabled: true
+  name: accessibility-report
+  retentionDays: 14
+summary: true
+```
+
+Add `options.archetypes: [button, dialog]` to limit component coverage or `options.mapping: ./mapping.json` for authored mappings. Add the `server` object from the next example when testing a local application instead of built files.
+
+Precedence is built-in defaults, YAML, then explicit Action inputs or CLI flags. Objects merge by known fields; arrays and the target list replace entirely. Blank Action inputs do not override YAML. Unknown fields, duplicate keys, custom tags, invalid types, and explicit missing config files fail validation. Quote WCAG versions because they must be strings.
+
+All relative paths use `working-directory`, not the directory containing the config file. This includes target paths, config selection, mapping files and their authored fixtures, report output, and server directories. Standalone CLI commands use the current directory. `audit` and `compare` also accept YAML, but managed-server settings require `ci`.
+
+## Failure policies
+
+The Action and `ci` default to axe `serious` or higher, IBM Toolkit level `1`, and incomplete execution/coverage failure. Counts and scales remain separate. `fail.mode: all` requires both engine thresholds to trip on the same target; it never hides an execution gap.
+
+Incomplete coverage includes failed or unsupported targets, fixture gaps, missing requested results, untestable checks, `undetermined`/`error` measurements, failed stories, and story-cap truncation. Deliberately excluded tiers or archetypes and genuinely inapplicable checks do not fail. A target with no usable audit evidence is not a completed audit.
+
+`fail.review: true` gates engine findings needing manual review and simulated-screen-reader review flags. `fail.checks: true` gates explicit failures in interactions, computed checks, and conditions. These are off by default and remain separate from rule-engine violations.
+
+Disable engine thresholds with YAML `axe: null` or `ibm: null`, or Action inputs `fail-on-axe: none` and `fail-on-ibm: none`. Disable coverage gating with `incomplete: false` or `fail-on-incomplete: 'false'`. Disabling a gate never removes its findings. An excluded engine or rules tier has no inherited CI threshold; an explicitly incompatible threshold is a configuration error.
+
+## Local server
+
+The caller installs the application's dependencies. The Action starts the trusted command, waits for an HTTP 2xx or 3xx readiness response, and cleans up the process group afterward, including failure and cancellation paths.
+
+```yaml
+version: 1
+targets: [http://127.0.0.1:4173]
+server:
+  command: npm run dev -- --host 127.0.0.1 --port 4173 --strictPort
+  url: http://127.0.0.1:4173
+  timeoutSeconds: 60
+  cwd: .
+options:
+  tiers: [rules]
+```
+
+The readiness URL must be HTTP(S) on `localhost`, `127.0.0.1`, or `[::1]`, without credentials. If it already responds before startup, the Action fails rather than auditing an unrelated server. Startup exit, timeout, or server exit during the audit fails CI. `--plan` validates the settings without starting the server or browser. `server-command`, `server-url`, `server-timeout`, and `server-working-directory` inputs override the corresponding YAML values.
+
+## Comparisons and overrides
+
+One target audits; two or more compare under the same settings. Use one target per line, retaining labels and npm companion lists as single strings:
+
+```yaml
+- uses: thedannywahl/automatica11y@main
+  with:
+    config: .automatica11y.yml
+    targets: |
+      current=https://example.com/current
+      candidate=https://example.com/candidate
+    fail-on-axe: critical
+    fail-on-review: 'true'
+    artifact-name: comparison-report
+```
+
+Named audit inputs are `wcag`, `level`, `tiers`, `engine`, `archetypes`, `lib-a11y`, `mapping`, `max-stories`, `generate`, and `out`. Lists use commas. `generate`, `fail-on-incomplete`, `fail-on-review`, `fail-on-checks`, `upload-artifact`, and `summary` take `'true'` or `'false'`. All inputs are documented in the root Action metadata. There is no raw shell-arguments input.
+Named audit inputs are `wcag`, `level`, `tiers`, `engine`, `archetypes`, `lib-a11y`, `mapping`, `max-stories`, `generate`, `screenshots`, and `out`. Lists use commas. `generate`, `screenshots`, `fail-on-incomplete`, `fail-on-review`, `fail-on-checks`, `upload-artifact`, and `summary` take `'true'` or `'false'`. Blank inputs leave YAML values unchanged. All inputs are documented in the root Action metadata. There is no raw shell-arguments input.
+
+For a matrix, use a unique artifact name and report directory:
+
+```yaml
+with:
+  artifact-name: a11y-${{ matrix.component }}
+  out: ./reports/${{ matrix.component }}
+```
+
+## Reports and outputs
+
+Reports upload before the final step propagates the original failure. By default the artifact is `automatica11y-report`; `artifact-name`, `artifact-retention-days` (1–90), and `upload-artifact` override delivery settings. A job summary shows the outcome and independent engine counts; `summary: 'false'` disables it. Use normal GitHub `continue-on-error` when the caller wants to inspect a failing outcome without failing the job.
+
+The report directory must be absent or empty. A nonempty directory is rejected to prevent stale uploads; no existing report directory is deleted. Early environment or resolution failures can produce only a plan or no files. No missing evidence is presented as a successful audit.
+
+| Output | Meaning |
+|---|---|
+| `exit-code` | `0` no gate tripped; `1` finding policy; `2` configuration; `3` environment/server; `4` no target results; `5` incomplete coverage. |
+| `outcome` | `passed`, `failed`, `incomplete`, or `error` for the entire Action run. |
+| `report-path` | Absolute Markdown path, empty if no report. |
+| `results-path` | Absolute JSON path, empty if no results. |
+| `artifact-name` | Effective report artifact name. |
+| `artifact-id` | Uploaded artifact ID, empty when not uploaded. |
+| `artifact-url` | Uploaded artifact URL, empty when not uploaded. |
+
+Setup failures before the audit step can leave all outputs empty. Artifact-service errors also fail the Action. A `passed` outcome means only that configured gates did not trip; it makes no accessibility claim.
+
+## Trust boundaries
+
+Targets and options are passed as argument arrays, never evaluated as shell fragments. Only `server.command` is an explicitly trusted shell command; do not populate it from untrusted pull-request text. npm installs disable lifecycle scripts, but package bundles and server commands still execute code. Do not run untrusted projects with privileged `pull_request_target` credentials.
+
+Reports can contain target URLs, DOM snippets, paths, and generated fixtures. Avoid credentials in target URLs and page markup; GitHub log masking does not redact report artifacts. Restrict artifact access/retention and disable artifact uploads or summaries where needed.
+
+---
+
+---
+url: /reports.md
+---
+# Reading a report.
+
+[Site discovery](site-discovery.md) produces a site report with native Crawlee statistics, queue counts, skipped/failed request events, coverage gaps and per-page evidence. Finished requests are not accessibility passes. Recurring rule IDs and affected pages are summarized separately for axe and IBM; counts are never added across engines.
+
+Every run writes `report.md`, `results.json`, and `plan.json`. `report.md` is the one to read first. `results.json` has everything behind it.
+
+## The coverage matrix.
+
+A report opens with a matrix of target by archetype by tier. Each cell says what happened: `ran`, `gap`, `not-testable`, `not-applicable`, `skipped`, or `failed`. A gap, a failure, or a target that wasn't testable is a finding. It never counts as a pass.
+
+## Result values.
+
+Checks in the interactions, computed, and conditions tiers report one of these:
+
+| Result | Meaning |
+|---|---|
+| `pass` | The check measured or observed what it looks for, and it held. |
+| `fail` | It didn't hold. The detail says what was measured and what was needed. |
+| `undetermined` | The check couldn't reduce the page to an answer, for example text over a gradient. It's a gap, never a pass. |
+| `not-applicable` | The page doesn't use the feature. A page with no dark theme has nothing to check in dark mode. That isn't a failure. |
+| `error` | The check couldn't finish. It's untested, not failed. |
+
+## Findings stay separate.
+
+axe-core and IBM Equal Access findings are listed under their own names, and their counts are never added together. axe-core's `impact` and IBM's Toolkit level are different scales and aren't converted into each other. Computed checks and conditions checks are reported on their own as well, because they are automatica11y's own measurements.
+
+## Finding selectors.
+
+Both engines provide a CSS `selector` for each stored finding node in `results.json`, and the report shows the same location. Ordinary document selectors can be used with `document.querySelector(selector)`. IBM's indexed DOM display paths are replaced with selectors generated from its reported elements.
+
+For open shadow roots and same-origin frames, a node also has `selectorPath`: an ordered array of `{ selector, enter }` steps. Starting at the audited document, query each step's selector, then enter its `shadowRoot` when `enter` is `"shadow"`, or its `contentDocument` when `enter` is `"frame"`. Query the node's final `selector` within the resulting root. The report labels these boundaries explicitly; a single document-level query cannot cross them.
+
+Selectors identify elements at audit time, not after arbitrary page changes. A location that cannot be resolved has `selectorError`, which the report shows without discarding the finding. Closed shadow roots remain not testable; cross-origin frame traversal is unsupported.
+
+Optional annotated screenshots use these same locations. Notes identify nodes omitted because their locations are unresolved or have no visible bounds, including partial omissions. Marker numbers follow the stored violation nodes, so an omitted node can leave a gap in the numbering.
+
+## CI outcome.
+
+When a CI policy is enabled, the report includes its outcome and lists coverage gaps, review findings, and non-rule check failures separately. `results.json` exposes the same information under `outcome`, alongside the independent engine threshold results in `failCheck`.
+
+A `passed` CI outcome means only that the configured gates did not trip. Disabling a gate does not remove its findings. The GitHub Action can also fail on setup or server errors even when an audit report was produced; its `exit-code` and `outcome` outputs describe the entire step.
+
+## How much to trust a result.
+
+Each target carries the kind of evidence it gave:
+
+* **Component evidence** comes from a fixture. An **authored** fixture, written from the library's documentation, is the strongest. A **template** (for `button` and `link`) is built from the export name. A **generated** fixture is a guess about how the library is assembled, so a failure may come from the wiring and not from the library. Reports mark generated results and the source is written to `generated/<target id>/` beside the report.
+* **Page evidence** comes from testing a whole page.
+
+A comparison that mixes the two opens with a warning. The report also records the date, the tool versions, and the package versions, because results are a snapshot.
+
+## Wording.
+
+A report says "no automated violations found" only for an engine that reported none for that target. It never says "accessible," "compliant," or "passes WCAG." It doesn't print a single score. If someone asks for a number, pair it with the coverage matrix and the limits.
+
+Criterion names and levels come from the W3C's [WCAG 2.2 JSON](https://www.w3.org/WAI/WCAG22/wcag.json), and every report credits the source in its closing section.
+
+---
+
+---
+url: /writing-fixtures.md
+---
+# Writing fixtures
+
+A fixture renders one archetype (a dialog, a set of tabs, a menu) in its starting state, so the tool can test it. You write one when the tool can't build the component from a template. The tool only fills in `button` and `link`.
+
+Write fixtures from the library's public documentation. Don't copy from memory when you aren't sure of the API. If the documentation doesn't cover the API you need, or you can't read it, don't guess. Leave the archetype without a fixture, so the report lists it as a gap, and tell the user what you couldn't find. Don't stand in a plain element for the library's component. That would test the plain element, and the result would say nothing about the library.
+
+Contents: [How the tool fills each archetype](#how-the-tool-fills-each-archetype) · [The workflow](#the-workflow) · [Where fixtures go](#where-fixtures-go) · [Start from a generated fixture](#start-from-a-generated-fixture) · [The contract](#the-contract) · [Examples](#examples) · [Library accessibility options](#library-accessibility-options) · [Companion packages](#companion-packages) · [States](#states) · [Live regions](#live-regions) · [Check your fixture](#check-your-fixture)
+
+## How the tool fills each archetype
+
+A package's components can't be guessed from its name alone. The first run installs the package, loads it in the browser, finds its exports (or custom elements), and writes a candidate mapping to `<out>/mapping.json`. It then fills each archetype from the first source that applies:
+
+* **Authored.** A **fixture** you write: a small file that assembles the component the way the library intends. It always wins.
+* **Template.** The tool builds `button` and `link` from the export name.
+* **Generated.** For dialog, menu, tooltip, tabs, accordion, combobox, form-field, and live-region, the tool builds candidates from the package's compound parts (or from what a custom element says about itself), runs each in the browser, and keeps the first that behaves: one trigger, no errors, a root that appears with a fitting role. The `--no-generate` option turns this off.
+* **Gap.** If none of those worked, the report lists what was tried and why each attempt failed.
+
+## The workflow
+
+1. Run the audit once. Read `<out>/mapping.json` and the report's **Archetypes** table, which has a **Fixture** column.
+2. Treat the mapping as a guess. Check each `export` or `tag` against what the user asked about.
+3. Each archetype in `mapping.json` has a status. `generated` means the tool built a fixture that passed its checks, and the source is in `<out>/generated/`. `needs-fixture` means the tool found the component but couldn't build a working fixture. `no-match` means no export or custom element looks like that archetype. For each archetype marked `needs-fixture` that matters to the request, write `fixtures/<target id>/<archetype>.jsx` for React and Vue 3, `fixtures/<target id>/<archetype>.js` for web components, and `fixtures/<target id>/<archetype>.html` for plain HTML, in the working directory (Angular and Svelte are below). Stop and report a gap for any other framework. Follow the contract and the examples below.
+4. Run the same command again. The tool finds fixtures in that folder without `--mapping`.
+5. For an archetype that matters, read the generated source before you rely on it. If it looks wrong for the library, write an authored fixture from the documentation. To keep a generated one, copy it from `<out>/generated/<target id>/` into `fixtures/<target id>/`.
+6. Don't invent fixtures for archetypes the user didn't ask about. For a `no-match` archetype, write a fixture only if the library's documentation names a component, or a documented way, to make it. Otherwise leave it as a gap. A gap is an honest result.
+
+If the user asked for a comparison, give every target the same archetypes. Fixtures are code that the tool bundles and runs in a browser on the user's machine. Tell the user the files exist and where. Package installs run with scripts turned off.
+
+## Where fixtures go
+
+`fixtures/<target id>/<archetype>.jsx` for React and Vue 3, in the working folder: the folder where you run `automatica11y audit` or `automatica11y compare`. Use `.js` for web components. The target id is the label (`radix=npm:@radix-ui/react-dialog` has the id `radix`), or the package name with `/` turned into `-`, such as `radix-ui-react-dialog`. The report's **Targets** list shows each id.
+
+Read the exact target id from `<out>/plan.json` or the target keys in `<out>/mapping.json`; don't derive a different folder from the package scope or tarball filename. An explicit label is normalized into that id: `widgets=npm:@a11y-eval/widgets` uses `fixtures/widgets/tabs.jsx` for a React tabs fixture.
+
+To keep a fixture somewhere else, name it in a mapping file and pass `--mapping`:
+
+```json
+{
+  "radix": {
+    "dialog": { "fixture": "my-fixtures/radix-dialog.jsx" },
+    "button": { "export": "Button" }
+  }
+}
+```
+
+The keys are target ids, then archetypes. `export` (React) or `tag` (web components) changes which export or element a template uses.
+
+## Start from a generated fixture
+
+You often don't need to write a fixture from nothing. For dialog, menu, tooltip, tabs, accordion, combobox, form-field, and live-region, the tool tries to build one from the package's exports and keeps it only if it works. The source is written to `<out>/generated/<target id>/<archetype>.jsx` (`.js` for web components). To make one an authored fixture, copy it to `fixtures/<target id>/` and edit it. It will carry a block of marking code at the top (`startMarking`). That code marks the trigger and root by role, because a generated fixture can't know how the library forwards props. In an authored fixture you can drop it and put `data-a11y-trigger` and `data-a11y-root` on the right elements yourself, which is clearer and doesn't depend on timing.
+
+If the tool couldn't build a working fixture, the report's **Archetypes** table says what it tried and why each attempt failed. That's a good place to start reading.
+
+## The contract
+
+1. The file's default export renders the archetype in its **initial state**.
+2. Mark **exactly one** element with `data-a11y-trigger`. This is what a person would focus and activate: the button that opens a dialog, the first tab, the combobox input, the form control. If nothing in the archetype can be activated, as with a chart, put `data-a11y-trigger` and `data-a11y-root` on the same element: the outermost one the library renders.
+3. Mark the **primary surface** with `data-a11y-root`. Put it on the element that carries the role (`role="dialog"`, `role="menu"`, `role="tooltip"`), not on an overlay or a portal wrapper. It's fine if the root doesn't exist until the trigger fires, and fine if it renders in a portal. The tool looks in the whole document.
+4. Mount without console errors. The tool treats errors as a broken fixture.
+5. A stylesheet the fixture imports is bundled and linked. If the library needs one (a token file, a theme) and its documentation says to load it, import it. If that stylesheet is in another package, list the package under `install` in the mapping (see below). Without the stylesheet the library renders unstyled, and the results describe that, not the library.
+6. Include every part the library's documentation marks as required (for example, a dialog's title and description), so the component doesn't log warnings.
+
+The attributes have to reach the DOM. Pass `data-a11y-trigger` to the component that renders the real element. If a component drops unknown props, use the library's documented way to render your own element in its place (for example, `asChild` in Radix, or the `as` prop in Headless UI), and put the attribute on that native element. If the library has no such way, leave the archetype as a gap. Don't wrap the library's component in an element you add and mark that element, because the fixture would then test your element and not the library.
+
+## Examples
+
+For React, JSX works without importing React. Import the library from its package name. The tool installs it for you.
+
+```jsx
+import * as Dialog from "@radix-ui/react-dialog";
+
+export default function Fixture() {
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger data-a11y-trigger>Open dialog</Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay />
+        <Dialog.Content data-a11y-root>
+          <Dialog.Title>Edit profile</Dialog.Title>
+          <Dialog.Description>Update your details.</Dialog.Description>
+          <Dialog.Close>Close</Dialog.Close>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+```
+
+For Vue 3, a fixture is also JSX, and the default export is a component: a function that returns JSX is a functional component, or you can export a component object. The tool turns JSX into `h()` calls and supplies `h` and `Fragment` itself, so don't import them. Importing `h` fails the bundle with "symbol already declared". JSX children become the default slot. Vue's reactivity works, so `import { ref } from "vue"` for state, and wrap the JSX in `defineComponent({ setup() { ... return () => (<jsx/>) } })`. A library that needs a plugin, a theme, or global components can export a function named `setup(app)`, which runs before the app mounts, for example `export function setup(app) { app.use(plugin) }`. Named slots and `v-model` aren't JSX syntax. Pass a slots object as the children, or set `modelValue` and `onUpdate:modelValue` with a spread, for example `{...{ "onUpdate:open": (next) => (open.value = next) }}`.
+
+```jsx
+import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogTrigger } from "reka-ui";
+
+export default function Fixture() {
+  return (
+    <DialogRoot>
+      <DialogTrigger data-a11y-trigger>Open dialog</DialogTrigger>
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogContent data-a11y-root>
+          <DialogTitle>Edit profile</DialogTitle>
+          <DialogDescription>Update your details.</DialogDescription>
+          <DialogClose>Close</DialogClose>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
+  );
+}
+```
+
+For Angular 22 and newer, a fixture is a plain `.js` file with no decorator syntax. Define each component by calling the decorator as a function, and make the component class the default export. The tool loads Angular's runtime compiler, so libraries that ship partly compiled work as they are. Import what you use in the component's `imports` list, and export `providers` (an array) when the library needs application providers. State lives in signals. For example:
+
+```js
+import { Component, signal } from "@angular/core";
+import { MatMenu, MatMenuItem, MatMenuTrigger } from "@angular/material/menu";
+
+class Fixture { shown = signal(false); }
+Component({
+  selector: "app-fixture",
+  imports: [MatMenu, MatMenuItem, MatMenuTrigger],
+  template: `<button type="button" data-a11y-trigger [matMenuTriggerFor]="m">Actions</button>
+    <mat-menu #m="matMenu"><button mat-menu-item>Copy</button></mat-menu>`,
+})(Fixture);
+export default Fixture;
+```
+
+An Angular fixture can also be TypeScript (`fixtures/<target id>/<archetype>.ts`) with `@Component({ ... })` decorators. The tool strips the types, but it can't emit constructor parameter metadata, so get services with `inject(Service)` and not through constructor parameters. A missing provider or an unknown element is reported in a plain sentence with Angular's error code.
+
+Angular libraries split their parts across sub-paths, so audit them with a sub-path target, for example `npm:@angular/material/menu`.
+
+For Svelte 5 and newer, a fixture is a `.svelte` file (`fixtures/<target id>/<archetype>.svelte`). Import the library from its package name and write the markup with the library's components, for example `<Dialog.Root>` with `<Dialog.Trigger data-a11y-trigger>`. State uses runes (`let open = $state(false)`), and `lang="ts"` works. A component that takes content takes it as children between its tags. Some Svelte libraries give you builders and not components: you create an object in the script (`const dialog = new Dialog()`) and spread its attributes onto your own elements (`<button {...dialog.trigger} data-a11y-trigger>`). Nothing is generated for those, so write the fixture from the documentation. A fixture can also declare `let { libA11y } = $props()` to receive the library accessibility option. Svelte libraries ship `.svelte` source, and the tool compiles it, so a library that imports SvelteKit-only modules (`$app/...`) can't run.
+
+For plain HTML, a fixture is a `.html` file of markup (`fixtures/<target id>/<archetype>.html`). It's a snippet, not a whole page: no `<html>` or `<body>`. Put `data-a11y-trigger` and `data-a11y-root` on the right elements yourself. The target says what loads, as sub-paths in a list: `npm:pkg/base.css,pkg/components.css,other/behavior.iife.js`. Stylesheets load with the page, the markup goes on next, and the scripts load last, so a script that wires up its elements when it starts finds them. A `<script>` inside the snippet runs. Use the classes and attributes the library's documentation names, and don't invent them.
+
+For web components, make `mount(container)` the file's default export. It adds the archetype to the container. The tool imports the package first, so its elements are defined before `mount` runs. The `data-a11y-trigger` and `data-a11y-root` attributes can sit on a host element, a slotted child, or an element inside an **open** shadow root. A **closed** shadow root hides its content from every tool, so the report lists it as not testable.
+
+```js
+export default function mount(container) {
+  container.innerHTML = `
+    <my-dialog>
+      <button slot="trigger" data-a11y-trigger type="button">Open</button>
+      <div slot="content" data-a11y-root role="dialog" aria-label="Details">...</div>
+    </my-dialog>`;
+}
+```
+
+## Library accessibility options
+
+Some libraries ship accessibility features you have to switch on (a chart library's accessibility module, for example). Declare it at the archetype level in the mapping file, next to `fixture` or `export`, for example `{ "charts": { "chart": { "libA11y": true } } }`. The first key is the target id, and the second is the archetype. The fixture then receives a `libA11y` value, `true` or `false`. In React it's a prop. In web components it's a second argument, `mount(container, { libA11y })`. The tool runs the fixture both ways with `--lib-a11y on,off` and labels each result.
+
+```jsx
+export default function Fixture({ libA11y }) {
+  return <Chart data-a11y-trigger data-a11y-root accessibility={libA11y} />;
+}
+```
+
+## Companion packages
+
+Some libraries need another package beside them, such as a design token stylesheet or a theme. Name it under `install` in the mapping file, next to `fixture`. The first key is the target id, and the second is the archetype. The tool installs it into the same folder as the library, with install scripts off, and the fixture can import it:
+
+```json
+{
+  "lib": {
+    "live-region": { "fixture": "fixtures/lib/live-region.js", "install": ["@scope/tokens"] }
+  }
+}
+```
+
+```js
+import "@scope/tokens/style.css";
+```
+
+List only what the library's documentation asks you to load. Each entry has to be a package name with an optional version. Flags, paths, and URLs are refused.
+
+## States
+
+For a dialog, menu, tooltip, or combobox, the tool tests the closed state, then activates the trigger and tests the open state. For an accordion it tests collapsed, then expanded. The tool activates the trigger by clicking it. For a tooltip it focuses the trigger instead, so a tooltip has to open on focus. If it opens only on pointer hover, the open state never appears. Make sure activating the trigger really opens the surface, and that the element with `data-a11y-root` is then attached to the document, isn't `display: none` or `hidden`, and isn't `visibility: hidden`. The tool also counts the surface as open if the trigger has `aria-expanded="true"`. If neither holds, the open state is reported as failed, with the reason. The interaction checks also press keys and hover, but they don't change how the open state is reached.
+
+## Live regions
+
+The `live-region` archetype covers any message that appears, changes, or goes away without moving focus: alerts, status messages, toasts, snackbars, and other `role="alert"`, `role="status"`, `role="log"`, or `aria-live` content. A library's alert component is a fixture for this archetype. The archetype isn't named after any one component.
+
+* `data-a11y-trigger` goes on the control that makes the message appear or change, such as a "Save" button. It can't be the message itself. A message that's on the page from the start has nothing to announce, so the tool reports a gap and asks for a trigger.
+* `data-a11y-root` goes on the message: the element that carries the role, or the element whose text changes. It may already be in the page and empty, or the trigger may insert it.
+* If the message has a dismiss control, put it inside the root. The tool presses Enter on it and checks that the message goes away and that focus lands somewhere sensible.
+* The tool checks that the message sits in a live region, that the region was in the page before the message arrived (except for `role="alert"`, which is announced on insertion), that the politeness fits the role, and that focus stays on the trigger.
+* The states are "before message" and "message shown". The tool activates the trigger by clicking it, then waits for the message to have text.
+
+## Check your fixture
+
+Run the audit and look at the report's **Archetypes** table. `ran` means it worked. A `gap` row says what went wrong, such as "didn't render an element with data-a11y-trigger" or "didn't bundle." Fix the file and run again.
+
+---
+
+---
+url: /agents.md
+---
+# Using it with an AI agent.
+
+The tool prints its own guidance, so any agent that can run `npx` can learn to use it. If the tool is installed globally, the agent can run `automatica11y guide skill` instead of `npx automatica11y@latest guide skill`:
+
+```bash
+npx automatica11y@latest guide            # where to start (the AGENTS.md file)
+npx automatica11y@latest guide skill      # the core steps: check, build the command, run it
+npx automatica11y@latest guide setup      # what to do for each doctor state (browser, Node)
+npx automatica11y@latest guide targets    # local pages, Storybooks, npm packages, and grouping
+npx automatica11y@latest guide site       # crawling a site, sitemaps, and authentication
+npx automatica11y@latest guide fixtures   # how to write the fixtures an npm package needs
+npx automatica11y@latest guide reporting  # how to write the report from the results
+```
+
+The core steps are small, and they tell the agent which other topic to read, only when the request needs it. That keeps the agent's context free for the work. For setup, the agent runs `doctor --json`, which names the environment's state, so the agent follows the tool's diagnosis instead of interpreting prose.
+
+The guidance ships with the tool, so it always matches the version you run. Tell your agent to run `npx automatica11y@latest guide` and follow it, then ask for things like "How accessible is Radix Dialog?" or "Compare the accessibility of React Aria and Headless UI." The agent needs to run shell commands and read and write files. Nothing here is tied to one agent.
+
+Shell networking can be restricted separately from web search or browser access. If npm can't reach the registry, the agent can request network permission for the exact guide command where the execution environment supports and permits it, then retry once if granted. If permission is denied or unavailable, or the retry fails, it reports the error and stops. Prompt wording and a skill's compatibility field describe requirements; they don't grant access.
+
+## Skills.
+
+If your agent loads skills from a folder, copy [`skills/automatica11y`](https://github.com/thedannywahl/automatica11y/tree/main/skills/automatica11y) into it. That's one small file, `SKILL.md`. It advertises the tool to the agent, and sends it to `guide skill`. It names no version, so it doesn't go stale. The full steps are the [`automatica11y-runner`](https://github.com/thedannywahl/automatica11y/tree/main/skills/automatica11y-runner) skill, which ships in the package and is what `guide skill` prints. Copy it too if you want the steps available without the network. They're also on this site as [the agent steps](agent-steps.md), with a page for each reference.
+
+## AGENTS.md.
+
+[`AGENTS.md`](https://github.com/thedannywahl/automatica11y/blob/main/AGENTS.md) is for agents that read it but don't load skills. It points to the same steps, and tells contributors how to run and change the code.
+
+## Version safety.
+
+The steps name the version series they were written for, and the first thing they do is check it. If the installed tool is the wrong series, the agent stops and says so, instead of running steps that don't match. An installed copy can be older than the steps expect. In that case use `npx`, which always fetches the latest.
+
+---
+
+---
+url: /agent-steps.md
+---
+# automatica11y runner
+
+This skill turns a request into an `automatica11y` command, runs it, and writes a report from the results. The tool does the testing. This skill never guesses at results.
+
+It's plain Markdown, and it isn't tied to one agent. It needs an agent that can run shell commands (including `npx`) and read and write files.
+
+## Read only what the request needs
+
+This file has what every run needs. The steps for particular cases are in references, so they don't fill your context when the request doesn't need them. When a row below applies, read that whole reference before you act on that part of the request. Paths such as `references/setup.md` are relative to this file. If you can't open the file, print it with the guide command in the last column, using the same command prefix that passed the version check. If neither works, say which reference you couldn't read and stop that part of the work; don't continue from memory.
+
+| When | Read | Or print it with |
+|---|---|---|
+| `doctor --json` reports a `state` other than `ok`, or the user already said yes to downloading Chromium | `references/setup.md` | `npx --yes --prefer-online automatica11y@latest guide setup` |
+| A target is anything other than one live URL: a local page or folder, a Storybook, an npm package (including sub-paths, local builds, plain HTML, and several packages in one target), or a comparison whose targets need grouping | `references/targets.md` | `npx --yes --prefer-online automatica11y@latest guide targets` |
+| The user asks to crawl a site, supplies a sitemap, sets discovery limits, or needs authenticated discovery | `references/site.md` | `npx --yes --prefer-online automatica11y@latest guide site` |
+| An npm target needs a fixture: after the first run, an archetype the user cares about is `needs-fixture`, or a generated fixture looks wrong | `references/fixtures.md` | `npx --yes --prefer-online automatica11y@latest guide fixtures` |
+| Before you write any report or summary of results, every time | `references/reporting.md` | `npx --yes --prefer-online automatica11y@latest guide reporting` |
+
+## What results may claim
+
+The tool is **not** an attestation or certification tool. Automated checks cover only part of WCAG. Never say a target is "accessible" or "compliant," and don't use those words or "passes WCAG" about a target even in a negative or hedged sentence ("I can't say whether the page is accessible"). Say what the results do and don't establish instead. If the user asks whether a target is accessible, open with exactly "Automated checks can't answer that." (ending at "that", never "can't answer whether…") followed by the caveat, then report what the engines found. Don't restate the question anywhere in the reply. For axe-core, say "no automated violations found" when it reports zero violations for a target it tested; otherwise list its violations as reported, and where no page was tested, say so without using that phrase. For IBM Equal Access, report what it found, including when it found no violations, without using that phrase.
+
+For the caveat, write "These automated results do not establish that the page meets WCAG; manual review is still needed." Don't quote a positive accessibility claim just to disclaim it. Use this caveat rather than drawing an overall verdict from automated results, whether positive or negative.
+
+## 1. Check the version
+
+Do sections 1 and 2 before you run an audit. A question to the user about a missing target or an unsupported setting (section 3) can come before or after them. Run this section's version check in its own shell call and read its output and exit code before issuing any `doctor`, `audit`, or `compare` command. Never batch the version check with those commands or run them in parallel. If section 3 says not to run anything until the user answers, ask first and wait; otherwise, a clarification question does not replace the version check.
+
+If the user only wants a report from existing results and says not to rerun the tool, skip sections 1 and 2 and go to sections 5 and 6 to read those files. The version check gates commands, not historical results. Preserve the recorded run date and versions, even when they differ from this skill's series; don't relabel them or require a new audit.
+
+If the user asks only to see a command, such as the version check, and says not to run anything, show it exactly as written in this file, in a code block, and stop.
+
+This skill works with automatica11y **0.12.x**. Run:
+
+```bash
+npx --yes --prefer-online automatica11y@latest --version
+```
+
+If the command exits with an error or prints nothing, report its exact error text (or say it printed nothing) and the series this copy expects (`0.12.x`), then end the turn. If the output doesn't start with `0.12.`, report the exact version and expected series above, then end the turn. In either case, do not run `doctor` or an audit. If this copy came from a file, offer to read the matching steps with `npx --yes --prefer-online automatica11y@latest guide skill`, but wait for the user's confirmation before running it.
+
+If the user installed the tool globally (`npm i -g automatica11y`), `automatica11y` is on the `PATH` (so is the short name `a11y`), and it runs the same commands as `npx --yes --prefer-online automatica11y@latest`. Every command in this skill is written with `npx`, so replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above. If the installed version is the wrong series, or nothing is installed, use `npx`.
+
+## 2. Check the setup
+
+If the user has already said yes to downloading Chromium, run this instead of the command below, once, and don't run plain `doctor` first:
+
+```bash
+npx --yes --prefer-online automatica11y@latest doctor --install-browser --json
+```
+
+Apply the exit-code and output checks below, then read `references/setup.md` and follow the row for the state it reports. Otherwise, run:
+
+```bash
+npx --yes --prefer-online automatica11y@latest doctor --json
+```
+
+For either `doctor` command, if it exits with any code other than 0 or 3, or its output is not a JSON object with a `state` field, report the exact error text (or the invalid output if there is no error text) and exit code, do not run `audit` or `compare`, and end the turn. Otherwise, read its `state`. If it's `ok` (exit code 0), continue. For any other state (exit code 3), read `references/setup.md` and follow the row for that state.
+
+Don't install or configure anything yourself, try other installers, change network settings, or bypass sandbox restrictions. That logic lives in the tool. If the user asked to see the audit command without running it, keep that request in effect after the user chooses to install Chromium in section 2, and show the audit command without running it.
+
+## 3. Turn the request into a command
+
+Only two commands run audits:
+
+```bash
+npx --yes --prefer-online automatica11y@latest audit <target> [options]
+npx --yes --prefer-online automatica11y@latest compare <target> <target> [<target>...] [options]
+```
+
+Use `audit` for one target. Use `compare` when the request names two or more separate targets (each a separate URL, local page or folder, Storybook, or npm package), even when they're different kinds. Pages discovered within one site, and packages grouped into one target, count as one target and use `audit`. A target is `[label=]<spec>`. The label is optional and names the target in the report. A live page's spec is its URL, such as `https://example.com/page`. For every other kind of target, read `references/targets.md` before you build the command. Always write an npm package with the `npm:` prefix.
+
+Options the tool supports (crawl and discovery options are in `references/site.md`):
+
+| Option | Default | Use it when |
+|---|---|---|
+| `--wcag 2.0\|2.1\|2.2` | `2.2` | The user names a WCAG version. |
+| `--level A\|AA\|AAA` | `AA` | The user names a level. IBM Equal Access has no AAA rules, so it runs its AA rules and says so. |
+| `--engine axe,ibm` | both | The user wants one rule engine. |
+| `--tiers rules,interactions,computed,conditions,vsr` | all five | The user wants fewer checks. |
+| `--screenshots` / `--no-screenshots` | off | Follow checklist step 4 below. |
+| `--allow-old-browser` | off | The user explicitly agrees to use the outdated browser reported by `doctor`, including after a failed Chromium download. |
+| `--archetypes a,b` | all | The user cares about some components. Choose from button, link, dialog, menu, tabs, combobox, form-field, accordion, tooltip, live-region, chart. |
+| `--lib-a11y on,off` | both | Only for libraries with opt-in accessibility features. |
+| `--mapping <file>` | none | You wrote or edited a mapping file. |
+| `--no-generate` | off | The user wants only authored fixtures and the `button` and `link` templates, with no generated ones. |
+| `--max-stories <n>` | 200 | A large Storybook. |
+| `--local-package <name=path>` | none | The user points at a local package folder or a packed `.tgz`. Repeat it for each such package. |
+| `--out <dir>` | `./a11y-report/<unique-run>` | The user names a folder; use that folder directly. |
+| `--plan` | off | You want to see how targets classify without running anything. |
+| `--fail-on-axe <impact>` | off | CI-style gating on axe impact (`minor`, `moderate`, `serious`, `critical`). |
+| `--fail-on-ibm <1\|2\|3>` | off | Gating on IBM Toolkit level. |
+| `--fail-mode any\|all` | `any` | How to combine the two fail flags. |
+
+Examples: `--fail-on-axe serious`, `--fail-on-ibm 1 --fail-mode all`, `--no-generate`, `--plan`, `--wcag 2.1`, and `--level AAA`.
+
+Use this ordered checklist to decide whether to ask or run:
+
+1. If the target is missing or ambiguous, ask for clarification. If the user doesn't name a target to test (a URL, a Storybook, a local page or site, or an npm package), ask for one; don't pick a target for them.
+2. If grouping is unresolved for multi-package targets, show the proposed grouping and ask the user to confirm it.
+3. If a setting is unsupported, identify it, list supported values, and ask which to use.
+4. Handle screenshots as follows:
+   1. If the user mentions screenshots, images, or a visual record of results without explicitly requesting annotated screenshots or declining screenshots, ask whether they want annotated screenshots and run nothing until they answer.
+   2. Until they answer, show no command containing `--screenshots`, including conditional commands ("if yes, the command is…").
+   3. Use `--screenshots` only when the user explicitly requests annotated screenshots of rule violations. If they say no or don't request them, run without `--screenshots`; use `--no-screenshots` when they disable screenshots configured in YAML.
+
+Ask at most one combined question per turn, listing every unresolved item from steps 1–4 in that message. If none apply, run. Preserve any screenshot links from `report.md` next to the findings they support.
+
+Pass only the options in the tables in this skill and its references, with the values they list. If the user names a setting the tool doesn't have, or a value outside those lists (for example, WCAG 3.0), tell them which setting is unsupported, list the supported values, and ask which to use. Don't substitute a default or invent a value.
+
+Show the user the exact command before you run it. If the user only asks to see the command or says not to run it, show the command and stop. When you show a command, don't list or suggest options the user didn't name (no "tell me if you want `--wcag 2.1`…"); state the defaults it uses in plain words instead. If you have questions (a target that could mean two things, a missing target, an unsupported setting), ask them together in one message. Until the user answers every question about the target, grouping, or unsupported settings, don't run `audit` or `compare`; wait for their reply. When you ask to confirm a grouping, show the command for the proposed grouping with the table.
+
+Don't set the fail flags unless the user asks for gating. They change the exit code. They don't change the results.
+
+## 4. npm packages need fixtures
+
+A package's components can't be guessed from its name alone. Run the audit once first: it installs the package, finds its components, writes `<out>/mapping.json`, and fills what it can from templates and generated fixtures. Then, if an archetype the user cares about is marked `needs-fixture`, or a generated fixture looks wrong for the library, read `references/fixtures.md`, write the fixture it describes, and run the same command again. Don't write fixtures before the first run, and don't invent fixtures for archetypes the user didn't ask about. A gap is an honest result. If the user asked for a comparison, give every target the same archetypes.
+
+## 5. Run, then read the results
+
+Run the command. Note the exit code:
+
+| Code | Meaning |
+|---|---|
+| 0 | The run completed. Findings don't change this unless a fail flag was set. A target that failed while others ran still exits 0, and the failure is in the results. |
+| 1 | The run completed and a fail flag tripped. |
+| 2 | The command was wrong. Read the message, fix it, and run again. |
+| 3 | An environment problem. Relay the fix. |
+| 4 | No target was audited successfully. Read the failed targets and their reasons from `results.json`. |
+
+Then read `<out>/results.json`. It's the source for everything you write. Read `<out>/report.md` too. It's a complete report the tool wrote on its own.
+
+Without `--out`, each invocation uses a unique timestamped folder under `./a11y-report` in the working folder. Read `results.json` and `report.md` from the exact paths printed by that command; its `plan.json`, screenshots, and other artifacts stay in the same run folder. Do not select a different run's report. An explicit `--out` folder is used directly. A normal audit or comparison writes both files even when every target fails during resolution (exit code 4). Those targets are failed, not audited: their reasons are recorded without engine findings or passes. `--plan` writes only `plan.json` and never audit results. The tool writes these artifacts, not the agent. If an expected file is missing, report that gap and the command's error output; don't invent or create replacement results.
+
+A target that can't be reached or built is recorded as failed, with a reason. Don't retry with guesses or substitute a different target. If an npm target failed with a network or install error (for example `ETARGET`), you may run the same command once more. If it fails again, report it. If every target failed (exit code 4), stop and report each failed target and its reason. If others ran, report them, and list the failed target as a gap in coverage.
+
+## 6. Write the report
+
+Read `references/reporting.md` before you write any report or summary, even a short one. Its rules aren't repeated here. These hold in every case:
+
+* Write only from `results.json` and `report.md`. Never write from memory, and never repeat a number you didn't read.
+* Report axe-core and IBM Equal Access separately. Never add their counts together or convert one engine's scale into the other's.
+* A gap, an error, a not-testable result, or a failed target is a finding. It never counts as a pass.
+* Use the caveat sentence above verbatim, and avoid positive accessibility verdicts in headings and summaries.
+
+Always end the turn with a final message listing the report path, results path, and any fixture written. For each generated fixture, include its archetype, exact recipe from `results.json`, lower-evidence caveat, and exact IDs of failed interaction checks in that message, not only in a report file. When the user asks you to write up a report, put the full report, following every rule in `references/reporting.md`, in that final message. Saving a copy to a file is optional and never replaces it. Any shorter summary keeps the run date, the statement that results are a snapshot, any outdated-browser warning, and each WCAG criterion's number and name exactly as `report.md` prints them (for example, 1.1.1 Non-text Content). If a step cannot finish, say so and identify the remaining gaps. If an artifact was not written, say that instead of claiming it exists. For a resolution failure, report the failed target and reason from the results, never a clean audit verdict.
+
+## 7. Stay out of setup
+
+Anything about installing, configuring, or repairing tools belongs to the tool. If `doctor` doesn't cover it, tell the user what failed and stop.
+
+---
+
+---
+url: /agent-setup.md
+---
+# Fixing the setup
+
+Read this when `doctor --json` reports a `state` other than `ok`, or when the user has already said yes to downloading Chromium. The tool decides the state. Don't work it out from prose, and don't install or configure anything the steps below don't name.
+
+## If the user already said yes to downloading Chromium
+
+Complete the version check, then skip the plain `doctor` command and run exactly `npx --yes --prefer-online automatica11y@latest doctor --install-browser --json` once in the shell. Do not substitute `automatica11y` for `npx` for this command. Report its `state` and any `install.output` or `problems`. Don't run `doctor` first, invoke a standalone browser installer, or install anything else. Then follow the row for the new state below.
+
+Browser consent only authorizes the chosen setup step. Preserve any instruction to show the audit command without running it, including after a download or fallback choice.
+
+## What each state means
+
+Exit code 3 means an environment problem. Relay each entry in `problems` (its `message` and `fix`) in plain words, then follow the matching state. When a `fix` names a separate installer, such as `npx playwright-core install`, don't run it; the download below is the only install this skill runs.
+
+| `state` | Next action |
+|---|---|
+| `ok` | Continue. |
+| `node-unsupported` | Node is older than 22. Relay the problem and the fix, then stop until the user applies it. |
+| `browser-missing` | Ask only whether to download Chromium. If declined, report that no browser is available and stop. If accepted, run `npx --yes --prefer-online automatica11y@latest doctor --install-browser --json` once and report its result. |
+| `browser-outdated` | Follow the ordered browser-choice steps below. The browser is more than two major versions behind Playwright's browser; `browser.kind` and `browser.version` name it. |
+| `install-failed-no-browser` | Report the exact error from `install.output`, say that no browser is available, and stop without auditing. |
+| `install-failed-outdated` | Report the exact error from `install.output` and name the remaining browser and its version. Call it the outdated browser in every mention, including next to the final command. Use `--allow-old-browser` only if the user already explicitly authorized using that browser; otherwise, explain that its results may be unreliable, ask whether to use it, and wait. If the user declines, say that no current browser is available and use of the outdated browser was declined. State that the audit did not run and no results, report, or screenshots were produced, then stop in that turn without asking again. |
+| `other` | Relay the exact problem and fix, then stop until the user applies it. |
+
+A download that succeeds reports `ok`. Continue.
+
+## An outdated browser
+
+1. Name the browser and its version. Explain that results may be unreliable and the report header will flag it.
+2. Ask whether to use that browser or download current Chromium through Playwright (about 100 MB), then wait without auditing or downloading.
+3. If the user declines both, report that no current browser is available and that use of the outdated browser was declined, then stop without auditing. If their reply answers neither option, ask for clarification and wait.
+4. If the user chooses the outdated browser, use `--allow-old-browser` on the audit or comparison and every rerun. Whenever you mention that browser afterward, including next to the final command, use the word "outdated" (for example "the outdated headless-shell 141").
+5. If the user chooses a download, run `npx --yes --prefer-online automatica11y@latest doctor --install-browser --json` once and report its result. Follow the row for the new state above. A failed download with an outdated browser remaining (`install-failed-outdated`) requires a separate fallback question unless the user already explicitly authorized that browser.
+
+Download consent never implies outdated-browser consent. The outdated-browser option bypasses only its version check, never missing browsers, unsupported Node, launch failures, or failed rule-engine self-tests.
+
+Add `--allow-old-browser` only after explicit consent to use the outdated browser. Never add it by default.
+
+Do not try other installers, change network settings, or bypass sandbox restrictions.
+
+---
+
+---
+url: /agent-targets.md
+---
+# Writing targets
+
+Read this when a target is anything other than one live URL: a local page or folder, a Storybook, an npm package, or a comparison whose targets need grouping. A target is `[label=]<spec>`. The label is optional and names the target in the report.
+
+## Specs
+
+| The user means | The spec is |
+|---|---|
+| A live page | `https://example.com/page` |
+| A local page or site | `./page.html` or `./dist`. A path with no prefix is relative to the working folder. |
+| A Storybook | its URL, or a local folder with `index.json` |
+| An npm package | `npm:name`, `npm:@scope/name`, or `npm:name@version`. To test one entry of a package, add a sub-path after the version: `npm:@scope/pkg/button` or `npm:@scope/pkg@1.2.3/button/v2`. The sub-path is what a person would import (`import ... from "@scope/pkg/button"`), and it has to be something the package exports. |
+| A local build or packed `.tgz` of a package | `npm:<name>` with `--local-package <name>=<path>`. The name is the `name` in the package's `package.json`. Add one `--local-package` for each package in the target that comes from disk. |
+
+If a local folder is given as a Storybook but has no `index.json`, ask the user for its URL or for a different target before running anything.
+
+If a word could mean a package or a folder, ask the user which one and do not run anything until they answer. Otherwise, use the path rule: A bare word such as `button` is a path: the folder or file `./button`. Always write an npm package with the `npm:` prefix.
+
+## Local packages
+
+For a local packed package, read any README the user supplies and keep `--local-package <name>=<path>` on the initial audit and every rerun. Audit first, then use the documented props to write only requested fixtures marked `needs-fixture` (the fixtures guide has the steps). For React, write `fixtures/<target id>/<archetype>.jsx`, not `.html`, and rerun the same command.
+
+## Plain HTML libraries
+
+A library with no framework, such as a stylesheet package and a script package, is tested by naming the files the page should load as sub-paths: `npm:pkg/base.css,pkg/components.css,other/behavior.iife.js`. A sub-path ending in `.css` is a stylesheet, and one ending in `.js` or `.mjs` is a script. Read the package's documentation or its `exports` to find the right files, and ask the user which stylesheets and scripts they use when the documentation doesn't say. Nothing is generated for plain HTML. Button, link, form-field, dialog, accordion, live-region, menu, and tooltip have templates of bare native markup, so they run with no fixture, and the report says what that does and doesn't show. Say so plainly: a pass on a native template never means the package's own components pass. Tabs, combobox, and chart need a fixture (`fixtures/<id>/<archetype>.html`) or they're gaps. To test the package's own components, write a fixture from its documentation.
+
+## One target can be several packages
+
+Some libraries ship in pieces, such as a stylesheet package and a script package. Join them with commas and no spaces: `npm:@scope/components,@scope/interactions`. They install into one folder and are tested as one target. The first is the primary: it names the target and decides the framework. Every other package is a companion. Each entry can have its own version and sub-path (`npm:a@1.2,b/button`). A list with a space, an empty entry, or the same package twice is rejected. Targets themselves are separated by spaces.
+
+## Reading a comparison in plain language
+
+People write "compare A, B and C and D." Work out the targets before you build the command:
+
+* In plain language, commas can suggest companion packages, and the words "and", "vs", "versus", "against", and "compared with" can suggest separate targets. These are clues for a proposed grouping, not confirmation of it. For "compare A, B and C and D", one proposal is three targets: `A,B`, `C`, and `D`; ask the user to confirm it as described below.
+* Give each target a short label that says what it is, such as `pantoken-html=npm:A,B instui=npm:C pantoken-wc=npm:D`. Use the framework or the library's own name, so the report reads clearly.
+* Packages from the same organization are separate targets when they're alternatives for the same job (a React build and a web component build of one design system). They belong in one target only when the user says they work together, or when one package is the stylesheet or script half of the other.
+* Treat package and target grouping as clear only when the user's words explicitly establish which packages work together and which are alternatives. A comma list, package names, or organization names alone don't establish that.
+* Whenever multiple packages could be grouped in more than one way, show your best grouping in a short table of label, packages, and role, and ask the user to confirm it before running. Don't decide the grouping is obvious from names or punctuation. Ask this with any other needed questions in one message.
+* Run the same archetypes on every target in a comparison. Say in the report which targets are made of several packages.
+* Use `compare` for independent targets even when they're different kinds, such as a live page and an npm package. The comparison report opens with a warning that the evidence isn't equivalent.
+
+---
+
+---
+url: /agent-site-discovery.md
+---
+# Discovering a site
+
+Read this when the user asks to crawl a site, supplies a sitemap, sets discovery limits, or needs authenticated discovery. Only crawl when requested. Preserve the supplied root, sitemap URLs and limits:
+
+```bash
+npx --yes --prefer-online automatica11y@latest audit https://example.com/docs/ --crawl
+npx --yes --prefer-online automatica11y@latest audit https://example.com/docs/ --sitemap https://example.com/sitemap.xml --crawl
+```
+
+Pages discovered within a single site are one audit, not a comparison. Discovery requires one HTTP(S) root. Do not turn discovered pages into `compare` arguments or generate npm fixtures for them. Crawling never means every application state or page was tested.
+
+## Options
+
+| Option | Default | Use it when |
+|---|---|---|
+| `--crawl` | off | The user requests crawling a site. |
+| `--sitemap <url>` | none | The user supplies a sitemap URL. Repeat for each sitemap; it must share the root's exact origin. |
+| `--max-pages <n>` | `100` | The user sets a maximum number of handled requests during discovery (Crawlee handled-request limit; retries are extra). |
+| `--max-depth <n>` | `5` | The user sets a maximum discovery depth; seeds are depth 0. |
+| `--crawl-delay <seconds>` | `1` | The user sets a crawl delay. |
+| `--discovery-scope subtree\|origin` | `subtree` | The user requests origin-wide discovery. |
+| `--ignore-robots` | off | The user explicitly requests ignoring robots rules. Robots rules are respected otherwise. |
+| `--crawler-config <trusted-local-module>` | none | The user provides a reviewed module for authenticated discovery. |
+
+## Authentication
+
+Authentication uses `--crawler-config <trusted-local-module>`, not inline credentials. Reuse the user's reviewed module; never request tokens, passwords or storage-state contents in chat. If authentication is requested without a module, ask for a trusted module path before auditing. It supplies native Crawlee navigation/Browser Pool hooks plus shared `contextOptions`, `setupContext(context)` and mandatory `verifyPage(page)` for secondary audit contexts. The verifier must reject login/expired pages even with HTTP 200. Hooks can refresh login within at most two request retries; they must not implement unbounded loops. External identity-provider origins require explicit `loginOrigins`; they are not audited. Private sitemaps require cookies configured before fetching or `sitemapHeaders(url)`; localStorage tokens are not automatically HTTP headers. Never run untrusted hook code with secrets or invent a login flow. Link the site's authenticated-discovery documentation when setup help is needed.
+
+For a user-requested crawl capped at 20 pages and depth 2, with a supplied reviewed module at `./crawler.config.mjs`:
+
+```bash
+npx --yes --prefer-online automatica11y@latest audit https://example.com/docs/ --crawl --max-pages 20 --max-depth 2 --crawler-config ./crawler.config.mjs
+```
+
+Reports and screenshots from authenticated pages may contain sensitive content; avoid copying private data into chat.
+
+---
+
+---
+url: /agent-reporting.md
+---
+# Writing the report
+
+Read this before you write any report or summary of results, every time. Write the narrative from `<out>/results.json`. Never write from memory, and never repeat a number you didn't read. Read `<out>/report.md` too: it's a complete report the tool wrote, and its structure is the one to follow.
+
+## Before you write
+
+Check that the report uses measured wording from the results; names every failed target with its recorded reason; identifies generated-fixture results as lower evidence and names each recipe; and treats every not-testable result, error, or gap as a finding, never as clean coverage.
+
+Use the caveat sentence verbatim: "These automated results do not establish that the page meets WCAG; manual review is still needed." Avoid positive accessibility verdicts in headings and summaries. Quoted rule text is not itself a claim that a target passed; distinguish quotations and negated statements from an actual verdict.
+
+A title, run metadata, and settings may precede the coverage matrix; the matrix comes before the findings. When IBM Equal Access reports no violations but reports needs-review items, write "IBM Equal Access reported no violations in this run" and list the needs-review items in their own section. Do not use "no automated violations found" for IBM. Never say an engine "found nothing" when it reported needs-review items.
+
+## The rules
+
+1. Put the run date and tool versions first. Say that results are a snapshot. When `results.json` contains an outdated-browser warning, keep it in the report header before coverage and findings, name the browser version, and say results may be unreliable. Preserve that warning in any separate summary; do not hide it in a footer or describe the browser as supported.
+2. For a comparison, say that every target used the same archetypes, WCAG version, level, and rules, in those words. The settings apply to every target, including one that failed, so don't narrow the sentence to the targets that ran.
+3. Open with the coverage matrix (target by archetype by tier). Then give the findings.
+4. Keep violations, needs-review items, and passes in separate lists. Never merge them. For each engine and archetype, write three labeled lists (**Violations**, **Needs review**, **Passes**), even when one is just "none". Don't put two of them in one bullet, line, or sentence, even when they're short. For example:
+
+   ```markdown
+   **axe-core 4.14.0**
+   - Violations: no automated violations found.
+   - Needs review: none.
+   - Passes: 9 rules.
+   ```
+
+   Report only what the results contain; don't add explanations of why something happened.
+5. Break findings out by archetype. Within an archetype, order axe-core findings by impact and IBM findings by Toolkit level.
+6. Use "no automated violations found" only for axe-core when it reports zero violations for that target; otherwise list its violations as reported. Where it doesn't apply (a failed target, a page that wasn't reached, an engine that didn't run), don't write the phrase at all, not even to say it doesn't apply. Say what's missing instead, such as "axe-core has no results, because no page was audited." For IBM Equal Access, write "IBM Equal Access reported no violations in this run." when it reports zero. Never use "no automated violations found" for IBM. `report.md` writes "No automated violations found by IBM Equal Access." for that case; in your report, write "IBM Equal Access reported no violations in this run." instead, and don't quote or mention the original line. Never say "accessible," "compliant," or "passes WCAG." That includes negative or hedged sentences such as "I can't say whether it's accessible" or "the report doesn't say the site is accessible."
+7. Don't print a single score, and don't write an overall or combined line that adds counts across archetypes, fixtures, or engines. Each count stays with its own archetype and engine. If `results.json` or `report.md` has run-level counts across fixtures, don't copy them. If someone insists, pair any number with the coverage matrix and the automated-coverage caveat.
+8. Label virtual screen reader output **simulated**. Label library accessibility options **on** or **off** on every result that has one.
+9. Treat a gap, a not-testable result, an error, or a failed target as a finding. It never counts as a pass.
+10. If the comparison mixes npm package or Storybook targets with live URL or local page or site targets, open the report with a warning that the evidence isn't equivalent.
+11. Label every rule finding with its engine. Report axe-core and IBM Equal Access separately. Never add their counts together. Impact is axe-core's own label. IBM Toolkit level is IBM's staged adoption scale (1 is essential, high-impact requirements); report IBM's result even when it has zero violations, without saying "no automated violations found." Don't convert one scale into the other.
+12. Report computed checks (contrast measured from resolved styles) in their own section. Give the measured ratio next to the ratio the criterion needs, and name the state or the method. Never add them to axe-core or IBM counts. Treat `undetermined` as a gap, never as a pass. When a control has visible text and a pale edge, the result is `not-applicable`, because the text identifies the control. Say that, and leave it for a person to confirm.
+13. Report conditions checks (reduced motion, dark mode, more and less contrast, reduced transparency, forced colors, reflow at 320 pixels, text spacing) in their own section, with the numbers from `results.json`. Never add them to axe-core or IBM counts. In the computed checks section, `not-applicable` means the control's visible text identifies it; in the conditions section, `not-applicable` means the page does not use the feature. Always name the section when reporting this value. Don't list an unused feature, such as a dark theme on a page with no dark theme, as a failure or a pass. Say what each check can't see: JavaScript-driven motion, overlapping text, and two-dimensional content that WCAG exempts from reflow.
+14. Say which results come from generated fixtures. A generated fixture is a guess about how the library is assembled, so a failure may come from the wiring and not from the library. Call those results lower evidence than an authored fixture, name the recipe from the **Fixture** column, and list each failed interaction check by its exact ID from `results.json`. Label each fixture-backed result as generated or authored, using those words (a fixture the user wrote is "authored"). In the report and the final summary, head a generated result as `<archetype> (generated fixture, recipe <recipe>, lower evidence than an authored fixture)`, for example `Dialog (generated fixture, recipe dialog-compound, lower evidence than an authored fixture)`, and keep its failed check IDs, even when the full report is written to a file. Don't compare a generated result with an authored one as if they were equal, and never add their checks into one total. If the user wants a result to stand on its own, write an authored fixture for it.
+15. When you name a WCAG criterion, use the number and name exactly as `report.md` prints them, and keep its "WCAG data" credit to the W3C. Don't write criterion names or levels from memory.
+16. End with a plain method note. Say what automated tools can't catch: whether alt text is meaningful, whether link and heading text make sense in context, cognitive load, real focus and reading order in use, and how real screen readers behave. Those need a person.
+
+Quote selectors and rule IDs exactly as `results.json` has them. Keep `report.md` screenshot links attached to their relevant finding or story when writing a separate summary.
+
+## Site results
+
+For a crawled site, report `discovery.statistics` and `discovery.queue` using their native Crawlee meanings, then the per-page findings and `discovery.gaps`/events. Finished/handled requests are not accessibility passes. Queue exhaustion is not whole-site coverage; pending requests, caps, sitemap failures and failed authentication must be disclosed. Never combine axe/IBM counts or claim a failed login page was audited as the intended application. Reports and screenshots from authenticated pages may contain sensitive content; avoid copying private data into chat. When coverage is missing, say what's missing; don't say what the report doesn't claim about the site (not "the report doesn't say the site is accessible").
+
+## When a target can't be tested
+
+Say these things plainly. Don't soften them, and don't fill in a result.
+
+* **Unsupported framework.** The package needs a framework other than React, Vue 3, Angular 22 and newer, Svelte 5 and newer, plain HTML, or web components. Name it, and say which version is unsupported (Vue 2, Svelte 4, or Angular 21, for example). This version covers React, Vue 3, Angular 22 and newer, Svelte 5 and newer, plain HTML, and web components. A Storybook for the library still works, whatever the framework.
+* **Not applicable.** The package has no rendering surface, such as a utility library. There's nothing to test.
+* **Not testable.** The content is a canvas with no alternative, or sits in a closed shadow root. The rule engines can't see it, so the result is untested, not clean. Under each engine, write "Violations: not testable (coverage gap)" and the reason. Don't write "none" or "none reported" for an engine that tested nothing. The virtual screen reader also can't read open shadow roots.
+* **Gap.** The archetype has no usable fixture or no matching export. Say what the archetype needs.
+* **Error.** An interaction or computed check couldn't finish. It's untested, not failed.
+* **Undetermined.** A computed check found a gradient, an image, or transparency behind the control, so it can't reduce the page to one color. It's untested, not clean.
+* **Failed target.** The target can't be reached, isn't a web page, or couldn't be built. The tool records it as failed with a reason. Tell the user which target failed, using the reason from `results.json`, including when every target failed during resolution before auditing. If others ran, report them, and list the failed target as a gap in coverage.
+
+---
+
+---
+url: /limits.md
+---
+# Limits.
+
+* Automated rules find only part of what WCAG covers. They can't judge whether alt text is meaningful, whether link and heading text make sense in context, cognitive load, real focus and reading order in use, or how real screen readers behave. A person has to check those.
+* Components are tested in the states a fixture shows. Dialogs, menus, tooltips, and comboboxes run closed and open, and live regions run before and after the message. Other states aren't visited.
+* Content on a canvas with no alternative, or inside a closed shadow root, can't be tested, and the report says so. The virtual screen reader can't read inside shadow roots at all.
+* Motion driven by JavaScript timers, such as a carousel that animates with `requestAnimationFrame`, isn't visible to the reduced motion check.
+* A Svelte library that imports SvelteKit-only modules (`$app/environment` and the like) can't run on its own. The target fails, and the report names the import.
+* Vue 2, Svelte 4 and older, Angular older than version 22, and other frameworks report "unsupported framework." Their Storybooks work, because a Storybook renders stories in a page whatever the framework.
+* Native screen readers aren't part of this version.
+* Results are a snapshot. The tools run at their latest versions, and the report records them.
+
+## License.
+
+MIT. See [LICENSE](https://github.com/thedannywahl/automatica11y/blob/main/LICENSE). The WCAG data below has its own terms.
+
+## Attribution.
+
+automatica11y reads WCAG criterion numbers, names, levels, and versions from the W3C's published JSON, [wcag.json](https://www.w3.org/WAI/WCAG22/wcag.json). The package ships that file in `src/data/` without changes.
+
+Source: [Web Content Accessibility Guidelines (WCAG) 2.2](https://www.w3.org/TR/WCAG22/), W3C. The JSON is used under the [terms in the W3C WCAG repository](https://github.com/w3c/wcag/blob/main/11ty/json/README.md): the source is credited with a link, and the content isn't changed. See also the [W3C Document License](https://www.w3.org/copyright/document-license/) and [W3C Intellectual Rights](https://www.w3.org/copyright/intellectual-rights/). The links that reports build to each criterion are added by automatica11y and aren't part of the W3C data.
+
+Every report repeats this credit in its closing section. To refresh the data, run `npm run update-wcag`.
+
+---
+
+---
+url: /404.md
+---
+# Page not found
+
+That page isn't in the documentation. Start at the [home page](/).

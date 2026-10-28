@@ -1,0 +1,1 @@
+import{at as e,it as t,n,vt as r}from"./chunks/framework.B6nQ8gjX.js";var i=JSON.parse(`{"title":"Limits - automatica11y","description":"","frontmatter":{},"headers":[],"relativePath":"limits.md","filePath":"limits.md"}`),a={name:`limits.md`};function o(n,i,a,o,s,c){return r(),t(`div`,null,[...i[0]||=[e("",8)]])}var s=n(a,[[`render`,o]]);export{i as __pageData,s as default};
