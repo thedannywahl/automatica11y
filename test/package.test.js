@@ -64,6 +64,7 @@ command_mocks:
         stdout: "0.9.0\\n"
 `;
   assert.match(updateEvalVersions(suite, "0.10.0"), /stdout: "0\.10\.0\\n"/);
+  assert.match(updateEvalVersions(suite.replace('"--yes", ', '"--yes", "--prefer-online", '), "0.10.0"), /stdout: "0\.10\.0\\n"/);
 
   const versionError = `id: runner-preflight-version-error
 graders:
