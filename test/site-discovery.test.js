@@ -3,6 +3,8 @@ import { createServer } from "node:http";
 import { readFileSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { main } from "../src/cli.js";
 import { parseRunArgs } from "../src/commands/common.js";
 import { configArgs, loadConfig } from "../src/commands/config.js";
@@ -67,6 +69,52 @@ test("malformed sitemap XML records a coverage gap instead of a successful empty
 });
 
 const { browser } = await findBrowser();
+test("crawl CLI processes exit with direct browser DNS and explicit context proxies", { skip: browser ? false : "No Chrome or Chromium found", timeout: 150_000 }, async () => {
+  /** @type {string[]} */
+  const requests = [];
+  const server = createServer((request, response) => {
+    requests.push(request.url ?? "");
+    response.setHeader("content-type", "text/html");
+    response.end('<!doctype html><html lang="en"><title>Direct</title><main><h1>Direct connection</h1></main></html>');
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(undefined)));
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const root = `http://crawl.test:${address.port}/`;
+  try {
+    for (const proxy of [undefined, { server: `http://127.0.0.1:${address.port}` }]) {
+      requests.length = 0;
+      const cwd = makeTree({ "hooks.mjs": `export default {
+    contextOptions: ${JSON.stringify(proxy ? { proxy } : {})},
+    browserPoolOptions: {
+      preLaunchHooks: [(_id, context) => {
+        context.launchOptions.args.push("--host-resolver-rules=MAP crawl.test 127.0.0.1");
+      }],
+    },
+    async verifyPage(page) {
+      if (await page.locator("h1").textContent() !== "Direct connection") throw new Error("Unexpected page");
+    },
+  };` });
+      try {
+        await promisify(execFile)(process.execPath, [
+          fileURLToPath(new URL("../bin/automatica11y.js", import.meta.url)), "ci",
+          root, "--crawl", "--ignore-robots",
+          "--crawler-config", `${cwd}/hooks.mjs`, "--crawl-delay", "0",
+          "--tiers", "rules", "--engine", "axe", "--out", "run",
+        ], { cwd, env: process.env, timeout: 60_000 });
+        const result = parseResults(JSON.parse(readFileSync(`${cwd}/run/results.json`, "utf8")));
+        assert.equal(result.discovery.statistics.requestsFinished, 1);
+        assert.equal(result.discovery.statistics.requestsFailed, 0);
+        assert.equal(result.targets.length, 1);
+        assert.ok(requests.includes(proxy ? root : "/"), JSON.stringify(requests));
+        if (!proxy) assert.ok(requests.every((url) => url.startsWith("/")), JSON.stringify(requests));
+      } finally { rmSync(cwd, { recursive: true }); }
+    }
+  } finally {
+    await new Promise((resolve) => server.close(() => resolve(undefined)));
+  }
+});
+
 test("trusted pre-navigation hooks refresh authentication within native retry limits", { skip: browser ? false : "No Chrome or Chromium found", timeout: 120_000 }, async () => {
   const server = createServer((request, response) => {
     if (request.url === "/robots.txt") { response.end("User-agent: *\nAllow: /\n"); return; }
