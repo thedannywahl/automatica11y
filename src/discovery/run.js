@@ -139,7 +139,16 @@ export async function runSite(plan, io, audit) {
     respectRobotsTxtFile: options.ignoreRobots ? false : { userAgent: "automatica11y" },
     navigationTimeoutSecs: 30,
     requestHandlerTimeoutSecs: 600,
-    launchContext: { launcher: chromium, useIncognitoPages: true, launchOptions: { executablePath: found.path, args: io.env.CI ? ["--no-sandbox"] : [] } },
+    launchContext: {
+      launcher: chromium,
+      useIncognitoPages: true,
+      launchOptions: {
+        executablePath: found.path,
+        args: io.env.CI ? ["--no-sandbox"] : [],
+        // Crawlee injects a shared fallback proxy whose upstream tunnels can outlive the browser.
+        proxy: { bypass: "*" },
+      },
+    },
     browserPoolOptions: {
       ...pool,
       useFingerprints: false,

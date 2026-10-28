@@ -47,6 +47,8 @@ The matrix job has a 40-minute safety limit, but the test command has its own 30
 
 If GitHub shows a cancelled matrix job, check its annotations for "The job has exceeded the maximum execution time" before assuming it was superseded by a push. For a test deadline failure, inspect the last emitted test results and the reports' `libuv` handles to identify the worker and any remaining timers, sockets, or child processes. Passing assertions without worker exit are not a completed test run. Reproduce and repair that resource lifecycle before treating a rerun as resolution; do not extend the job cap or bypass the validation gate.
 
+Site discovery bypasses Crawlee's shared fallback proxy by default. Otherwise Chromium background connections can leave upstream proxy sockets alive after browser teardown, keeping the worker running even when every assertion passed. Explicit proxies supplied through trusted context options still apply. The site-discovery regression test runs the real CLI in child processes with a deadline and checks both direct browser DNS resolution and explicit context-proxy routing.
+
 ## Docs deployment
 
 The Docs workflow does not deploy arbitrary main pushes. It accepts a successful, same-repository Changesets run on main only when that run contains an unexpired `docs-deploy-request` artifact. The request's SHA/version/tag must match the producer and existing release tag. It builds that exact commit, not whichever main commit happens to be current when the workflow runs.
