@@ -1,6 +1,6 @@
 id: runner-preflight-version-mismatch
 name: Wrong version series stops before doctor
-description: "When the version check prints a version outside the 0.11.x series, the runner reports both versions and stops."
+description: "When the version check prints a version outside the 0.12.x series, the runner reports both versions and stops."
 tags:
   - preflight
 inputs:
@@ -41,7 +41,7 @@ graders:
     config:
       contains:
         - "1.0.0"
-        - "0.11"
+        - "0.12"
   - type: tool_constraint
     name: stops-before-doctor-and-audit
     config:

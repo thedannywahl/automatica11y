@@ -15,7 +15,7 @@ command_mocks:
   - name: npx
     responses:
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "--version"]
-        stdout: "0.11.0\n"
+        stdout: "0.12.0\n"
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-skill.md
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "fixtures"]
