@@ -22,7 +22,15 @@ function slug(text) {
 export async function buildPlan({ command, targets, options, browserVersion = null, ctx = {}, now = new Date() }) {
   const view = ctx.npmView ?? npmView;
   const localPackages = options.localPackages ?? {};
-  const classified = await Promise.all(targets.map(async (raw) => resolveNpmTarget(await classifyTarget(raw, ctx), view, localPackages, ctx.cwd ?? process.cwd())));
+  const classified = await Promise.all(targets.map(async (raw) => {
+    if (options.discovery) {
+      const { label, spec } = parseTargetInput(raw);
+      /** @type {import("./classify.js").ClassifiedTarget} */
+      const target = { input: raw, label, name: spec, status: "ok", reason: null, kind: "site", evidenceLevel: "page", resolved: { url: new URL(spec).href } };
+      return target;
+    }
+    return resolveNpmTarget(await classifyTarget(raw, ctx), view, localPackages, ctx.cwd ?? process.cwd());
+  }));
   const seen = new Map();
   const planTargets = classified.map((target) => {
     const base = slug(target.label ?? target.name);

@@ -306,6 +306,50 @@ test("doctor --install-browser downloads only when the browser check fails", { s
   assert.equal(bad.code, 2);
 });
 
+test("doctor --json names one state for each environment", { skip: !onUnix }, async () => {
+  /** @param {string[]} argv @param {string} chrome @param {Partial<import("../src/commands/common.js").Io>} [extra] */
+  const json = async (argv, chrome, extra = {}) => {
+    const result = await run(argv, { env: { PATH: "", AUTOMATICA11Y_CHROME: chrome }, ...extra });
+    assert.equal(result.stderr, "", "JSON mode writes nothing else");
+    return { code: result.code, report: JSON.parse(result.stdout) };
+  };
+  const ok = await json(["doctor", "--json"], makeFakeBrowser("200.0.1.2"));
+  assert.equal(ok.code, 0);
+  assert.equal(ok.report.state, "ok");
+  assert.equal(ok.report.ok, true);
+  assert.deepEqual(ok.report.install, { attempted: false, ok: null, output: "" });
+  assert.equal(ok.report.browser.version, "200.0.1.2");
+  assert.equal(ok.report.browser.outdated, false);
+
+  const missing = await json(["doctor", "--json"], "/does/not/exist");
+  assert.equal(missing.code, 3);
+  assert.equal(missing.report.state, "browser-missing");
+  assert.equal(missing.report.problems[0].id, "browser");
+
+  const old = await json(["doctor", "--json"], makeFakeBrowser("100.0.1.2"));
+  assert.equal(old.code, 3);
+  assert.equal(old.report.state, "browser-outdated");
+  assert.equal(old.report.browser.outdated, true);
+
+  const failed = async () => ({ ok: false, output: "getaddrinfo ENOTFOUND cdn.playwright.dev" });
+  const stillOld = await json(["doctor", "--install-browser", "--json"], makeFakeBrowser("100.0.1.2"), { installBrowser: failed });
+  assert.equal(stillOld.report.state, "install-failed-outdated");
+  assert.deepEqual(stillOld.report.install, { attempted: true, ok: false, output: "getaddrinfo ENOTFOUND cdn.playwright.dev" });
+  const stillMissing = await json(["doctor", "--install-browser", "--json"], "/does/not/exist", { installBrowser: failed });
+  assert.equal(stillMissing.report.state, "install-failed-no-browser");
+});
+
+test("doctorState puts an unsupported Node first", async () => {
+  const { doctorState } = await import("../src/commands/doctor.js");
+  /** @type {{ attempted: boolean, ok: boolean | null }} */
+  const none = { attempted: false, ok: null };
+  /** @param {string[]} ids @returns {any} */
+  const result = (ids) => ({ ok: ids.length === 0, node: "20.0.0", browser: null, warnings: [], problems: ids.map((id) => ({ id, message: "", fix: "" })) });
+  assert.equal(doctorState(result(["node", "browser"]), none), "node-unsupported");
+  assert.equal(doctorState(result(["something-new"]), none), "other");
+  assert.equal(doctorState(result([]), none), "ok");
+});
+
 test("guide prints the guidance files, and each topic prints its own file", async () => {
   const { readFileSync } = await import("node:fs");
   /** @param {string} path */
@@ -313,19 +357,22 @@ test("guide prints the guidance files, and each topic prints its own file", asyn
   assert.equal((await run(["guide"])).stdout, file("AGENTS.md"), "no topic prints AGENTS.md");
   assert.equal((await run(["guide", "agents"])).stdout, file("AGENTS.md"));
   assert.equal((await run(["guide", "skill"])).stdout, file("skills/automatica11y-runner/SKILL.md"));
-  assert.equal((await run(["guide", "fixtures"])).stdout, file("skills/automatica11y-runner/references/fixtures.md"));
+  for (const topic of ["fixtures", "reporting", "setup", "site", "targets"]) {
+    assert.equal((await run(["guide", topic])).stdout, file(`skills/automatica11y-runner/references/${topic}.md`), `guide ${topic}`);
+  }
   const result = await run(["guide", "skill"]);
   assert.equal(result.code, 0);
   assert.equal(result.stderr, "");
 });
 
 test("guide rejects an unknown topic, lists the topics, and has help", async () => {
-  await usageError(["guide", "nope"], /Unknown guide topic "nope"[\s\S]*agents[\s\S]*skill[\s\S]*fixtures/);
+  await usageError(["guide", "nope"], /Unknown guide topic "nope"[\s\S]*agents[\s\S]*skill[\s\S]*fixtures[\s\S]*setup/);
+  await usageError(["guide", "constructor"], /Unknown guide topic "constructor"/);
   await usageError(["guide", "skill", "fixtures"], /guide takes one topic/);
   await usageError(["guide", "--bogus"], /bogus/);
   const help = await run(["guide", "--help"]);
   assert.equal(help.code, 0);
-  assert.match(help.stdout, /Usage: automatica11y guide \[agents\|skill\|fixtures\]/);
+  assert.match(help.stdout, /Usage: automatica11y guide \[agents\|skill\|fixtures\|reporting\|setup\|site\|targets\]/);
   assert.match((await run(["--help"])).stdout, /automatica11y guide/);
   await usageError(["init-skill"], /Unknown command "init-skill"/);
 });

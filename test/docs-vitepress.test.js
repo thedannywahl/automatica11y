@@ -17,6 +17,7 @@ const pageList = [
   { source: "docs/quick-start-ci.md", out: "quick-start-ci.html", route: "/quick-start-ci" },
   { source: "docs/quick-start-ai.md", out: "quick-start-ai.html", route: "/quick-start-ai" },
   { source: "docs/targets.md", out: "targets.html", route: "/targets" },
+  { source: "docs/site-discovery.md", out: "site-discovery.html", route: "/site-discovery" },
   { source: "docs/checks.md", out: "checks.html", route: "/checks" },
   { source: "docs/options.md", out: "options.html", route: "/options" },
   { source: "docs/github-action.md", out: "github-action.html", route: "/github-action" },
@@ -24,6 +25,10 @@ const pageList = [
   { source: "docs/writing-fixtures.md", out: "writing-fixtures.html", route: "/writing-fixtures" },
   { source: "docs/agents.md", out: "agents.html", route: "/agents" },
   { source: "skills/automatica11y-runner/SKILL.md", out: "agent-steps.html", route: "/agent-steps" },
+  { source: "docs/agent-setup.md", out: "agent-setup.html", route: "/agent-setup" },
+  { source: "docs/agent-targets.md", out: "agent-targets.html", route: "/agent-targets" },
+  { source: "docs/agent-site-discovery.md", out: "agent-site-discovery.html", route: "/agent-site-discovery" },
+  { source: "docs/agent-reporting.md", out: "agent-reporting.html", route: "/agent-reporting" },
   { source: "docs/limits.md", out: "limits.html", route: "/limits" },
 ];
 
@@ -32,7 +37,6 @@ writeFileSync(join(out, "CNAME"), "automatica11y.dev\n");
 const html = Object.fromEntries(pageList.map((page) => [page.out, readFileSync(join(out, page.out), "utf8")]));
 const { browser: available } = await findBrowser();
 const skip = available ? false : "No Chrome or Chromium found";
-const skipKnownVitePressA11y = process.env.AUTOMATICA11Y_SKIP_VITEPRESS_A11Y === "1" ? "Known upstream VitePress issue; see the project's open issue." : skip;
 
 test("all documentation sources build at clean VitePress routes", () => {
   const sources = readdirSync(join(root, "docs"))
@@ -138,6 +142,11 @@ test("skill pages stay synchronized with their canonical sources", () => {
   assert.ok(fixtures.startsWith("# Writing fixtures"));
   assert.ok(html["writing-fixtures.html"].includes("<h1 id=\"writing-fixtures\""));
   assert.ok(html["agent-steps.html"].includes('href="/writing-fixtures"'));
+  for (const [topic, page] of [["setup", "agent-setup"], ["targets", "agent-targets"], ["site", "agent-site-discovery"], ["reporting", "agent-reporting"]]) {
+    assert.equal(readFileSync(join(root, "docs", `${page}.md`), "utf8").trim(), `<!-- @include: ../skills/automatica11y-runner/references/${topic}.md -->`);
+    const heading = /^# (.+)$/m.exec(readFileSync(join(root, `skills/automatica11y-runner/references/${topic}.md`), "utf8"))?.[1] ?? "";
+    assert.ok(html[`${page}.html`].includes(heading), `${page} shows ${topic}.md`);
+  }
 });
 
 test("scrollable tables have keyboard-focusable, uniquely labelled regions", () => {
@@ -146,6 +155,28 @@ test("scrollable tables have keyboard-focusable, uniquely labelled regions", () 
   assert.ok(labels.length > 0);
   assert.equal(new Set(labels).size, labels.length);
   assert.equal((text.match(/<table>/g) ?? []).length, labels.length);
+});
+
+test("code-group radios have contextually labelled groups without changing their controls", () => {
+  /** @type {[string, string[]][]} */
+  const cases = [
+    ["quick-start-cli.html", ["Invocation", "Global install", "`audit` command", "`compare` command", "`doctor` command"]],
+    ["quick-start-ci.html", ["`ci` command"]],
+  ];
+  for (const [page, headings] of cases) {
+    const groups = [...html[page].matchAll(/<div class="vp-code-group"><div class="tabs" role="radiogroup" aria-label="([^"]+)">([\s\S]*?)<\/div><div class="blocks">/g)];
+    assert.equal(groups.length, headings.length, `${page} groups have radio semantics`);
+    assert.equal((html[page].match(/class="vp-code-group"/g) ?? []).length, groups.length);
+    assert.deepEqual(groups.map((group) => group[1]), headings.map((heading) => `Code examples: ${heading}`));
+    for (const [, , tabs] of groups) {
+      const inputs = [...tabs.matchAll(/<input type="radio" name="([^"]+)" id="([^"]+)"([^>]*)>/g)];
+      assert.equal(inputs.length, 6);
+      assert.equal(new Set(inputs.map((input) => input[1])).size, 1);
+      assert.equal(inputs.filter((input) => /\bchecked\b/.test(input[3])).length, 1);
+      assert.match(inputs[0][3], /\bchecked\b/);
+      for (const [, , id] of inputs) assert.ok(tabs.includes(`for="${id}"`), `${id} retains its label`);
+    }
+  }
 });
 
 test("Pantoken plum styling and responsive pattern are included", () => {
@@ -198,7 +229,7 @@ test("README preview and public domain remain correct", () => {
   }
 });
 
-test("the home, quick-start, and runner pages pass the tool's accessibility checks", { skip: skipKnownVitePressA11y, timeout: 400_000 }, async () => {
+test("the home, quick-start, and runner pages pass the tool's accessibility checks", { skip, timeout: 400_000 }, async () => {
   for (const page of ["index.html", "quick-start-cli.html", "quick-start-ci.html", "quick-start-ai.html", "agent-steps.html"]) {
     const cwd = makeTree();
     const { io } = makeIo({ cwd, env: process.env });

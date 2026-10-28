@@ -47,15 +47,27 @@ jobs:
         run: npm run lint 2>&1 | tee lint-output.txt
       - name: Run tests with detailed output
         shell: bash
+        timeout-minutes: 32
         run: |
-          npm run test:release 2>&1 | tee test-output.txt
-          node scripts/release-policy.js test-summary
+          mkdir -p test-diagnostics
+          export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--report-on-signal --report-exclude-env --report-directory=$PWD/test-diagnostics"
+          if timeout --signal=USR2 --kill-after=10s 30m npm run test:release 2>&1 | tee test-output.txt; then
+            node scripts/release-policy.js test-summary
+          else
+            status=$?
+            if [[ "$status" == 124 || "$status" == 137 ]]; then
+              echo "::error::Test processes exceeded the 30-minute deadline. Inspect test-output.txt and test-diagnostics for resources keeping a worker alive after its assertions."
+            fi
+            exit "$status"
+          fi
       - name: Upload test log
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-log-node-${{ matrix.node }}-attempt-${{ github.run_attempt }}
-          path: '*-output.txt'
+          path: |
+            *-output.txt
+            test-diagnostics/
           if-no-files-found: warn
       - name: Summarize validation
         if: always()
@@ -66,7 +78,7 @@ jobs:
           {
             printf '### Node %s: %s\n\n' "$NODE_VERSION" "$OUTCOME"
             printf 'Commit: %s\n\n' "$GITHUB_SHA"
-            printf 'Known exception: the upstream VitePress accessibility assertion is opted out.\n'
+            printf 'Release validation requires zero skipped tests, including documentation accessibility checks.\n'
           } >> "$GITHUB_STEP_SUMMARY"
 
   smoke:

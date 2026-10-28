@@ -28,6 +28,8 @@ const OPTION_NAMES = {
   archetypes: "archetypes", libA11y: "lib-a11y", mapping: "mapping",
   maxStories: "max-stories", out: "out", generate: "generate",
   screenshots: "screenshots",
+  crawl: "crawl", sitemaps: "sitemap", maxPages: "max-pages", maxDepth: "max-depth",
+  crawlDelay: "crawl-delay", discoveryScope: "discovery-scope", ignoreRobots: "ignore-robots", crawlerConfig: "crawler-config",
 };
 /** @type {Record<string, string>} */
 const FAIL_NAMES = { axe: "fail-on-axe", ibm: "fail-on-ibm", mode: "fail-mode", incomplete: "fail-on-incomplete", review: "fail-on-review", checks: "fail-on-checks" };
@@ -69,10 +71,12 @@ export function loadConfig(file, cwd) {
   if (config.options !== undefined) {
     object(config.options, "options", Object.keys(OPTION_NAMES));
     for (const [key, value] of Object.entries(config.options)) {
-      if (["tiers", "engines", "archetypes", "libA11y"].includes(key)) {
+      if (["tiers", "engines", "archetypes", "libA11y", "sitemaps"].includes(key)) {
         if (!Array.isArray(value) || !value.length || value.some((item) => typeof item !== "string")) throw new Error(`options.${key} must be a nonempty string array.`);
-      } else if (key === "generate" || key === "screenshots") {
+      } else if (["generate", "screenshots", "crawl", "ignoreRobots"].includes(key)) {
         if (typeof value !== "boolean") throw new Error(`options.${key} must be boolean.`);
+      } else if (["maxPages", "maxDepth", "crawlDelay"].includes(key)) {
+        if (typeof value !== "number" || !Number.isFinite(value) || value < (key === "maxPages" ? 1 : 0) || (key !== "crawlDelay" && !Number.isInteger(value))) throw new Error(`options.${key} must be a valid nonnegative discovery limit.`);
       } else if (key === "maxStories") {
         if (!Number.isInteger(value) || value < 1) throw new Error("options.maxStories must be a positive integer.");
       } else if (typeof value !== "string" || !value.trim()) throw new Error(`options.${key} must be a nonempty string (quote WCAG versions).`);
@@ -103,6 +107,8 @@ export function configArgs(config) {
   for (const [key, value] of Object.entries(config.options ?? {})) {
     if (key === "generate") args.push(value ? "--generate" : "--no-generate");
     else if (key === "screenshots") args.push(value ? "--screenshots" : "--no-screenshots");
+    else if (key === "sitemaps") for (const url of value) args.push("--sitemap", url);
+    else if (key === "crawl" || key === "ignoreRobots") { if (value) args.push(`--${OPTION_NAMES[key]}`); }
     else args.push(`--${OPTION_NAMES[key]}`, Array.isArray(value) ? value.join(",") : String(value));
   }
   for (const [key, value] of Object.entries(config.fail ?? {})) args.push(`--${FAIL_NAMES[key]}`, value === null ? "none" : String(value));

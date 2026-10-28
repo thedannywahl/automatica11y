@@ -87,10 +87,12 @@ export function evaluateFailCheck(targets, fail) {
  * @param {import("../types.js").TargetResult[]} targets
  * @param {Pick<import("../types.js").PlanOptions, "tiers" | "engines"> & { policy?: Partial<import("../types.js").PlanOptions["policy"]> }} options
  * @param {Pick<import("../types.js").FailCheck, "tripped"> | null} failCheck
+ * @param {import("../types.js").Results["discovery"]} [discovery]
  */
-export function evaluateOutcome(targets, options, failCheck) {
+export function evaluateOutcome(targets, options, failCheck, discovery) {
   /** @type {Set<string>} */
   const coverage = new Set();
+  for (const gap of discovery?.gaps ?? []) coverage.add(`Discovery: ${gap}`);
   /** @type {Set<string>} */
   const review = new Set();
   /** @type {Set<string>} */

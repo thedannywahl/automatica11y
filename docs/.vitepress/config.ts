@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type MarkdownIt from "markdown-it";
@@ -10,9 +10,10 @@ const hostname = "https://automatica11y.dev";
 const description = "Test and compare the accessibility of web pages, Storybook builds, and npm component libraries.";
 const repo = "https://github.com/thedannywahl/automatica11y";
 const root = fileURLToPath(new URL("../../", import.meta.url));
+const referencesDir = resolve(root, "skills/automatica11y-runner/references");
 const skillFiles = [
   resolve(root, "skills/automatica11y-runner/SKILL.md"),
-  resolve(root, "skills/automatica11y-runner/references/fixtures.md"),
+  ...readdirSync(referencesDir).filter((name) => name.endsWith(".md")).map((name) => resolve(referencesDir, name)),
 ];
 
 const docsContentPlugin: Plugin = {
@@ -35,15 +36,17 @@ const pantokenRootPlugin: Plugin = {
   },
 };
 
-function installAccessibleTables(md: MarkdownIt) {
+function installAccessibleMarkdown(md: MarkdownIt) {
   const renderHeading = md.renderer.rules.heading_open;
+  const renderCodeGroup = md.renderer.rules["container_code-group_open"];
+  if (!renderCodeGroup) throw new Error("VitePress code-group renderer is unavailable");
 
   md.renderer.rules.heading_open = (tokens, index, options, env, self) => {
-    env.automatica11yTableHeading = tokens[index + 1]?.content || "this page";
+    env.automatica11ySectionHeading = tokens[index + 1]?.content || "this page";
     return renderHeading ? renderHeading(tokens, index, options, env, self) : self.renderToken(tokens, index, options);
   };
   md.renderer.rules.table_open = (tokens, index, options, env, self) => {
-    const heading = env.automatica11yTableHeading || "this page";
+    const heading = env.automatica11ySectionHeading || "this page";
     const counts = env.automatica11yTableCounts ??= new Map();
     const count = (counts.get(heading) ?? 0) + 1;
     counts.set(heading, count);
@@ -51,6 +54,12 @@ function installAccessibleTables(md: MarkdownIt) {
     return `<div class="scroll" role="region" tabindex="0" aria-label="${md.utils.escapeHtml(label)}">\n<table>\n`;
   };
   md.renderer.rules.table_close = () => "</table>\n</div>\n";
+  md.renderer.rules["container_code-group_open"] = (tokens, index, options, env, self) => {
+    const label = md.utils.escapeHtml(`Code examples: ${env.automatica11ySectionHeading || "this page"}`);
+    const html = renderCodeGroup(tokens, index, options, env, self);
+    if (!html.includes('<div class="tabs">')) throw new Error("VitePress code-group tabs markup has changed");
+    return html.replace('<div class="tabs">', `<div class="tabs" role="radiogroup" aria-label="${label}">`);
+  };
 }
 
 export default defineConfig({
@@ -143,7 +152,7 @@ export default defineConfig({
       prompt: "bash",
       skill: "markdown"
     },
-    config: installAccessibleTables,
+    config: installAccessibleMarkdown,
   },
   vite: {
     plugins: [docsContentPlugin, pantokenRootPlugin, llmstxt()],
@@ -169,13 +178,19 @@ export default defineConfig({
           { text: "AI", link: "/quick-start-ai" },
         ] },
         { text: "Targets", link: "/targets" },
+        { text: "Site discovery", link: "/site-discovery" },
         { text: "What it checks", link: "/checks" },
         { text: "Options and exit codes", link: "/options" },
         { text: "GitHub Action", link: "/github-action" },
         { text: "Reading a report", link: "/reports" },
         { text: "Writing fixtures", link: "/writing-fixtures" },
         { text: "Using it with an AI agent", link: "/agents" },
-        { text: "The agent steps", link: "/agent-steps" },
+        { text: "The agent steps", link: "/agent-steps", items: [
+          { text: "Fixing the setup", link: "/agent-setup" },
+          { text: "Writing targets", link: "/agent-targets" },
+          { text: "Discovering a site", link: "/agent-site-discovery" },
+          { text: "Writing the report", link: "/agent-reporting" },
+        ] },
         { text: "Limits", link: "/limits" },
       ] },
     ],

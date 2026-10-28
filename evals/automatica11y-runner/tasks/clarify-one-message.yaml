@@ -5,9 +5,8 @@ tags:
   - clarify
 inputs:
   prompt: "I've already checked the automatica11y guide. Run an accessibility audit against WCAG 3.0. When you have what you need, show me the exact command, but don't run it."
-  responder:
-    instructions: "The target is the live page https://example.org. Use WCAG 2.2. Answer every question you're asked in one reply. Abstain if asked about anything else."
-    max_followups: 2
+  follow_up_prompts:
+    - "Use the live page https://example.org and WCAG 2.2. Show the exact command only; do not run the audit."
 expected:
   should_trigger: true
 checkpoints:
@@ -32,7 +31,7 @@ graders:
     name: builds-command-from-answers
     config:
       regex_match:
-        - "(?i)(automatica11y(@latest)? audit\\s+(\\w+=)?https://example\\.org|which\\s+(target|url|page|storybook|package)|what\\s+(target|url|page))"
+        - "automatica11y(@latest)? audit\\s+(\\w+=)?https://example\\.org"
       not_contains:
         - "--wcag 3"
   - type: tool_constraint

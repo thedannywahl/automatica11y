@@ -22,6 +22,14 @@ export class UsageError extends Error {}
  */
 
 const OPTION_DEFS = /** @type {const} */ ({
+  crawl: { type: "boolean" },
+  sitemap: { type: "string", multiple: true },
+  "max-pages": { type: "string" },
+  "max-depth": { type: "string" },
+  "crawl-delay": { type: "string" },
+  "discovery-scope": { type: "string" },
+  "ignore-robots": { type: "boolean" },
+  "crawler-config": { type: "string" },
   config: { type: "string" },
   generate: { type: "boolean" },
   "fail-on-incomplete": { type: "string" },
@@ -52,7 +60,7 @@ const OPTION_DEFS = /** @type {const} */ ({
   help: { type: "boolean", short: "h" },
 });
 
-/** @typedef {{ [K in keyof typeof OPTION_DEFS]?: K extends "local-package" ? string[] : typeof OPTION_DEFS[K]["type"] extends "boolean" ? boolean : string }} RunValues */
+/** @typedef {{ [K in keyof typeof OPTION_DEFS]?: K extends "local-package" | "sitemap" ? string[] : typeof OPTION_DEFS[K]["type"] extends "boolean" ? boolean : string }} RunValues */
 
 /**
  * @typedef {object} ParsedRun
@@ -120,6 +128,28 @@ export function parseRunArgs(command, argv, context = {}) {
   if (positionals.some((target) => !target.trim())) throw new UsageError("A target can't be empty.");
   const duplicate = findDuplicateLabel(positionals);
   if (duplicate) throw new UsageError(`Two targets use the label "${duplicate}". Labels must be unique.`);
+  const discoveryRequested = values.crawl || values.sitemap?.length;
+  const discoveryOptions = /** @type {const} */ (["max-pages", "max-depth", "crawl-delay", "discovery-scope", "ignore-robots", "crawler-config"]);
+  if (!discoveryRequested && discoveryOptions.some((key) => values[key] !== undefined)) throw new UsageError("Discovery options require --crawl or --sitemap.");
+  /** @type {import("../types.js").PlanOptions["discovery"]} */
+  let discovery;
+  if (discoveryRequested) {
+    if (command === "compare" || positionals.length !== 1) throw new UsageError("Site discovery requires one audit or ci HTTP(S) root, not compare.");
+    const root = positionals[0].replace(/^[A-Za-z0-9][\w.-]*=/, "");
+    for (const input of [root, ...(values.sitemap ?? [])]) {
+      let url;
+      try { url = new URL(input); } catch { throw new UsageError(`Discovery requires an HTTP(S) URL: ${input}.`); }
+      if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new UsageError("Discovery URLs must be HTTP(S) without embedded credentials.");
+      if (new URL(root).origin !== url.origin) throw new UsageError("Sitemaps must use the root's exact origin.");
+    }
+    /** @param {"max-pages" | "max-depth" | "crawl-delay"} flag @param {number} fallback @param {number} minimum */
+    const number = (flag, fallback, minimum) => {
+      const value = values[flag] === undefined ? fallback : Number(values[flag]);
+      if (!Number.isFinite(value) || value < minimum || (flag !== "crawl-delay" && !Number.isInteger(value))) throw new UsageError(`--${flag} must be ${flag === "crawl-delay" ? "a finite number" : "an integer"} of ${minimum} or more.`);
+      return value;
+    };
+    discovery = { crawl: Boolean(values.crawl), sitemaps: values.sitemap ?? [], maxPages: number("max-pages", 100, 1), maxDepth: number("max-depth", 5, 0), delay: number("crawl-delay", 1, 0), scope: /** @type {"subtree" | "origin"} */ (parseChoice("discovery-scope", values["discovery-scope"] ?? "subtree", ["subtree", "origin"])), ignoreRobots: values["ignore-robots"] === true, config: values["crawler-config"] ? resolve(context.cwd ?? process.cwd(), values["crawler-config"]) : null };
+  }
 
   const tiers = values.tiers ? parseList("tiers", values.tiers, TIERS) : [...TIERS];
   const engines = values.engine ? parseList("engine", values.engine, ENGINES) : [...ENGINES];
@@ -173,6 +203,7 @@ export function parseRunArgs(command, argv, context = {}) {
     maxStories,
     screenshots,
     allowOldBrowser: values["allow-old-browser"] === true,
+    ...(discovery ? { discovery } : {}),
     generate: (parsed.tokens?.filter((token) => token.kind === "option" && ["generate", "no-generate"].includes(token.name)).at(-1)?.name ?? (values["no-generate"] ? "no-generate" : "generate")) === "generate",
     out: values.out ?? `./a11y-report/${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`,
     fail,
@@ -352,6 +383,14 @@ export async function runSavedPlan(argv, io) {
 }
 
 const FLAGS = `Options:
+  --crawl                    Discover rendered links within the root's path subtree.
+  --sitemap <url>            Seed pages from a same-origin sitemap (repeatable).
+  --max-pages <n>            Crawlee handled-request limit. Default 100; retries are extra.
+  --max-depth <n>            Crawlee link depth, seeds at 0. Default 5.
+  --crawl-delay <seconds>    Crawlee same-domain delay. Default 1; not subrequest pacing.
+  --discovery-scope <scope>  subtree (default) or origin.
+  --ignore-robots            Explicitly opt out of robots.txt checks.
+  --crawler-config <module>  Trusted local ESM hook module. Never put secrets in plans.
   --config <file>            YAML configuration. Default .automatica11y.yml if present.
   --wcag <2.0|2.1|2.2>        WCAG version. Default 2.2.
   --level <A|AA|AAA>          Conformance level. Default AA.
@@ -400,8 +439,8 @@ export function usage(command) {
   automatica11y compare <target> <target> [<target>...] [options]
   automatica11y ci [<target>...] [options]
   automatica11y run --plan <plan.json>
-  automatica11y doctor
-  automatica11y guide [agents|skill|fixtures]
+  automatica11y doctor [--install-browser] [--json]
+  automatica11y guide [<topic>]
   automatica11y --version
 
 Run a command with --help for its options.

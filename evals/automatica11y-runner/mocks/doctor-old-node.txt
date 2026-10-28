@@ -1,7 +1,0 @@
-automatica11y doctor
-  Node     20.11.1  problem
-  Browser  chrome 155.0.8059.80  ok
-           /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
-
-Node 20.11.1 is too old. automatica11y needs Node 22 or newer.
-  Fix: Install Node 22 or newer from https://nodejs.org.

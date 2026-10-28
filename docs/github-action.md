@@ -2,6 +2,8 @@ With `screenshots: true`, annotated PNGs are included in the same artifact and l
 Add `options.archetypes: [button, dialog]` to limit component coverage or `options.mapping: ./mapping.json` for authored fixtures. To audit local monorepo builds, add root-level `localPackages` entries from package names to built package directories (or `.tgz` files); build those packages before the action runs. `--plan` reports their resolved paths and versions without installing them. Add the `server` object from the next example when testing a local application instead of built files.
 # GitHub Action
 
+For site audits, set `crawl: 'true'` and/or `sitemaps` (one URL per line) with one HTTP(S) root in `targets`. Discovery limits and `crawler-config` match the CLI. See [authenticated site discovery](site-discovery.md) for inputs and trusted-hook security requirements.
+
 Run on an Ubuntu GitHub-hosted runner or an Ubuntu self-hosted runner with permission to install Chromium's system dependencies. The Action sets up Node 26, installs the tool from the selected Action checkout in an isolated temporary directory, and downloads the matching Playwright headless shell. It does not install or build your application.
 
 The npm package and Action share the same release version and immutable `v<version>` tag. Pin the reviewed release commit for production; the Action runs code from that checkout, not the latest npm version. Releases are created only after the Node matrix and Action smoke tests pass. GitHub Marketplace listing setup remains a repository-owner task.

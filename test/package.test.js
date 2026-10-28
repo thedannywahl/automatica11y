@@ -43,7 +43,7 @@ test("the package is ready to publish: public, MIT, ESM, Node 22 or newer", () =
 
 test("browser-heavy test files run with bounded concurrency in both test commands", () => {
   assert.ok(pkg.scripts.test.split(/\s+/).includes("--test-concurrency=2"), "limit browser contention without relaxing fixture deadlines");
-  assert.equal(pkg.scripts["test:release"], "AUTOMATICA11Y_SKIP_VITEPRESS_A11Y=1 npm test");
+  assert.equal(pkg.scripts["test:release"], "npm test");
 });
 
 test("release version sync updates all runner skill version checks", () => {
@@ -165,6 +165,24 @@ test("the test matrix refreshes the npm download cache after test-time installs"
   assert.ok(steps.indexOf(cache) < steps.findIndex((/** @type {{ name?: string }} */ step) => step.name === "Install dependencies"));
 });
 
+test("the test matrix fails hung workers before the job deadline and retains diagnostics", () => {
+  const workflow = parse(readFileSync(join(root, ".github/workflows/test.yml"), "utf8"));
+  const job = workflow.jobs.test;
+  const run = job.steps.find((/** @type {{ name?: string }} */ step) => step.name === "Run tests with detailed output");
+  assert.equal(job["timeout-minutes"], 40);
+  assert.equal(run["timeout-minutes"], 32);
+  assert.match(run.run, /timeout --signal=USR2 --kill-after=10s 30m npm run test:release/);
+  assert.match(run.run, /--report-on-signal --report-exclude-env --report-directory=/);
+  assert.match(run.run, /if timeout .* \| tee test-output\.txt; then\n\s+node scripts\/release-policy\.js test-summary/);
+  assert.match(run.run, /status=\$\?/);
+  assert.match(run.run, /::error::Test processes exceeded the 30-minute deadline/);
+  assert.match(run.run, /exit "\$status"/);
+  assert.doesNotMatch(run.run, /--test-force-exit|continue-on-error|\|\| true/);
+  const upload = job.steps.find((/** @type {{ name?: string }} */ step) => step.name === "Upload test log");
+  assert.equal(upload.if, "always()");
+  assert.deepEqual(upload.with.path.trim().split("\n"), ["*-output.txt", "test-diagnostics/"]);
+});
+
 test("release policy distinguishes shipped changes from development-only changes", () => {
   const manifest = { name: "automatica11y", version: "0.9.0", dependencies: { axe: "1" }, devDependencies: { typescript: "1" } };
   assert.equal(requiresChangeset(["src/cli.js"], manifest, manifest), true);
@@ -178,11 +196,13 @@ test("release policy distinguishes shipped changes from development-only changes
 });
 
 test("release validation rejects missing-browser and unexpected skipped tests", () => {
-  validateTestSummary("Known upstream VitePress issue\n# skipped 1\n");
-  assert.throws(() => validateTestSummary("Known upstream VitePress issue\n# skipped 2\n"), /one known VitePress skip/);
-  assert.throws(() => validateTestSummary("No Chrome or Chromium found\n# skipped 1\n"), /sole skip/);
-  assert.throws(() => validateTestSummary(""), /one known VitePress skip/);
-  const cwd = makeTree({ "test-output.txt": "Known upstream VitePress issue\n# skipped 1\n" });
+  validateTestSummary("# skipped 0\n");
+  validateTestSummary("ℹ skipped 0\n");
+  assert.throws(() => validateTestSummary("# skipped 1\n"), /zero skipped tests/);
+  assert.throws(() => validateTestSummary("# skipped 2\n"), /zero skipped tests/);
+  assert.throws(() => validateTestSummary("No Chrome or Chromium found\n# skipped 1\n"), /zero skipped tests/);
+  assert.throws(() => validateTestSummary(""), /zero skipped tests/);
+  const cwd = makeTree({ "test-output.txt": "# skipped 0\n" });
   execFileSync(process.execPath, [join(root, "scripts/release-policy.js"), "test-summary"], { cwd, stdio: "pipe" });
   assert.throws(() => execFileSync(process.execPath, [join(root, "scripts/release-policy.js"), "test-summary", "../outside.txt"], { cwd, stdio: "pipe" }), /no file path arguments/);
 });

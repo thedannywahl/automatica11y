@@ -1,4 +1,0 @@
-automatica11y doctor
-  Node     24.22.0  ok
-  Browser  chrome 155.0.8059.80  ok
-           /Applications/Google Chrome.app/Contents/MacOS/Google Chrome

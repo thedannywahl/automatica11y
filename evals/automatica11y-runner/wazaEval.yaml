@@ -22,11 +22,21 @@ command_mocks:
   - name: npx
     responses:
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "--version"]
-        stdout: "0.10.1\n"
+        stdout: "0.11.0\n"
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
         fixture: mocks/guide-skill.md
-      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor"]
-        fixture: mocks/doctor-ok.txt
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "fixtures"]
+        fixture: mocks/guide-fixtures.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "reporting"]
+        fixture: mocks/guide-reporting.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "setup"]
+        fixture: mocks/guide-setup.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "site"]
+        fixture: mocks/guide-site.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "targets"]
+        fixture: mocks/guide-targets.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--json"]
+        fixture: mocks/doctor-ok.json
   # A global install on the host must not change the outcome.
   - name: automatica11y
     responses:

@@ -1,0 +1,58 @@
+id: bootstrap-site-discovery
+name: Site discovery stays in the evergreen bootstrap
+description: Sitemap, crawl and authentication requests fetch the versioned guide without bootstrap-specific flags.
+tags:
+  - site-discovery
+inputs:
+  prompt: "Check accessibility across https://example.com/docs/ using its sitemap at https://example.com/sitemap.xml and then crawl links, with my trusted authentication module ./crawler.config.mjs. Do not audit yet. Show the guide command you ran and preserve these settings."
+  files:
+    - path: crawler.config.mjs
+      content: |
+        export default {
+          contextOptions: {
+            storageState: process.env.A11Y_STORAGE_STATE_PATH,
+          },
+          async verifyPage(page) {
+            if (await page.locator('[data-login-form]').count()) {
+              throw new Error("Authentication required");
+            }
+          },
+        };
+command_mocks:
+  - name: npx
+    responses:
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"]
+        fixture: mocks/guide-skill.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "fixtures"]
+        fixture: mocks/guide-fixtures.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "reporting"]
+        fixture: mocks/guide-reporting.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "setup"]
+        fixture: mocks/guide-setup.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "site"]
+        fixture: mocks/guide-site.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "targets"]
+        fixture: mocks/guide-targets.md
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "--version"]
+        stdout: "0.11.0\n"
+      - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--json"]
+        fixture: mocks/doctor-ok.json
+  - name: automatica11y
+    responses:
+      - args_regex: [".*"]
+        stderr: "zsh: command not found: automatica11y\n"
+        exit_code: 127
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: invokes-bootstrap
+    config:
+      skill_path: skills/automatica11y/SKILL.md
+      mode: positive
+      threshold: 0.6
+  - type: text
+    name: fetches-current-guide
+    config:
+      contains:
+        - guide skill

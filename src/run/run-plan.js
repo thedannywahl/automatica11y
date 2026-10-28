@@ -53,11 +53,28 @@ const UNSUPPORTED_KIND = (/** @type {string} */ kind) => `${kind} targets aren't
 async function auditPage(browser, url, planTarget, plan, extraWarnings, outputDir) {
   const opened = await openPage(browser, url);
   try {
+    return await auditOpenedPage(browser, opened.page, url, planTarget, plan, [...extraWarnings, ...opened.warnings], outputDir);
+  } finally {
+    await opened.close();
+  }
+}
+
+/**
+ * @param {Browser} browser
+ * @param {import("../types.js").Page} page
+ * @param {string} url
+ * @param {PlanTarget} planTarget
+ * @param {Plan} plan
+ * @param {string[]} extraWarnings
+ * @param {string} outputDir
+ * @returns {Promise<TargetResult>}
+ */
+export async function auditOpenedPage(browser, page, url, planTarget, plan, extraWarnings, outputDir) {
     /** @type {ReturnType<typeof import("../schema.js").parseResults>["targets"][number]["archetypes"][string]["configs"][number]["tiers"]} */
     const tiers = {};
     for (const tier of plan.options.tiers) {
       if (tier === "rules") {
-        tiers.rules = await runRules(opened.page, { engines: plan.options.engines, wcag: plan.options.wcag, level: plan.options.level });
+        tiers.rules = await runRules(page, { engines: plan.options.engines, wcag: plan.options.wcag, level: plan.options.level });
       } else if (tier === "interactions") {
         tiers.interactions = NOT_APPLICABLE_FOR_PAGES;
       } else if (tier === "computed") {
@@ -66,13 +83,13 @@ async function auditPage(browser, url, planTarget, plan, extraWarnings, outputDi
         // Each check opens its own copies of the page, so this runs while the first page is still open.
         tiers.conditions = await runConditions(browser, url, "page");
       } else {
-        tiers.vsr = await runVsr(opened.page, { scope: "body" }).catch(failedVsr);
+        tiers.vsr = await runVsr(page, { scope: "body" }).catch(failedVsr);
       }
-      if (tier === "rules") await captureRuleScreenshots(opened.page, tiers.rules, { enabled: plan.options.screenshots, outputDir, target: planTarget.id, context: "page" });
+      if (tier === "rules") await captureRuleScreenshots(page, tiers.rules, { enabled: plan.options.screenshots, outputDir, target: planTarget.id, context: "page" });
     }
     /** @type {Record<string, ArchetypeResult>} */
     const archetypes = { page: { status: "ran", configs: [{ libA11y: "n/a", tiers }] } };
-    const hidden = notTestableEntries(await closedShadowHosts(opened.page));
+    const hidden = notTestableEntries(await closedShadowHosts(page));
     const summary = summarize(archetypes, plan.options.engines);
     summary.notTestable = [...summary.notTestable, ...hidden];
     return {
@@ -81,11 +98,8 @@ async function auditPage(browser, url, planTarget, plan, extraWarnings, outputDi
       reason: null,
       archetypes,
       summary,
-      warnings: [...extraWarnings, ...opened.warnings, ...hidden.map((h) => `Not testable: ${h}.`)],
+      warnings: [...extraWarnings, ...hidden.map((h) => `Not testable: ${h}.`)],
     };
-  } finally {
-    await opened.close();
-  }
 }
 
 /**
@@ -290,6 +304,14 @@ export async function runPlan(plan, io) {
         return EXIT.ENVIRONMENT;
       }
     }
+    if (plan.options.discovery) {
+      const { runSite } = await import("../discovery/run.js");
+      const site = await runSite(plan, io, auditOpenedPage);
+      const results = writeResults(plan, site.targets, version, io, warnings, site.discovery);
+      io.stdout.write(`\n  Site requests finished: ${site.discovery.statistics.requestsFinished}; failed: ${site.discovery.statistics.requestsFailed}; queued pending: ${site.discovery.queue.pendingRequestCount}\n  CI outcome: ${results.outcome.status}\n  Wrote ${resolve(io.cwd, plan.options.out, "results.json")}\n  Wrote ${resolve(io.cwd, plan.options.out, "report.md")}\n`);
+      if (!results.targets.some((target) => target.status === "ran")) return EXIT.ALL_TARGETS_FAILED;
+      return results.outcome.status === "incomplete" ? EXIT.INCOMPLETE : results.outcome.status === "failed" ? EXIT.FAIL_THRESHOLD : EXIT.OK;
+    }
     /** @type {TargetResult[]} */
     const targets = [];
     /** @type {Record<string, Record<string, MappingEntry>>} */
@@ -345,8 +367,9 @@ export async function runPlan(plan, io) {
  * @param {string | null} chromium
  * @param {import("../commands/common.js").Io} io
  * @param {string[]} [warnings]
+ * @param {import("../types.js").Results["discovery"]} [discovery]
  */
-function writeResults(plan, targets, chromium, io, warnings = []) {
+function writeResults(plan, targets, chromium, io, warnings = [], discovery) {
   const failCheck = evaluateFailCheck(targets, plan.options.fail);
   const results = parseResults({
     schema: 1,
@@ -355,7 +378,8 @@ function writeResults(plan, targets, chromium, io, warnings = []) {
     tools: readToolVersions({ chromium }),
     targets,
     failCheck,
-    outcome: evaluateOutcome(targets, plan.options, failCheck),
+    outcome: evaluateOutcome(targets, plan.options, failCheck, discovery),
+    ...(discovery ? { discovery } : {}),
     warnings,
   });
   const outDir = resolve(io.cwd, plan.options.out);

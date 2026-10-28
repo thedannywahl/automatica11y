@@ -43,8 +43,7 @@ export function productionLock(lock) {
 /** @param {string} output */
 export function validateTestSummary(output) {
   const skipped = [...output.matchAll(/(?:\u2139|#)\s*skipped (\d+)/g)].at(-1)?.[1];
-  assert.equal(skipped, "1", "CI permits only the one known VitePress skip; missing-browser or additional skips block release.");
-  assert.match(output, /Known upstream VitePress issue/, "The sole skip must be the acknowledged upstream assertion.");
+  assert.equal(skipped, "0", "CI requires zero skipped tests; missing-browser or other skips block release.");
 }
 
 /** @param {{ status: string, path: string }[]} changes @param {(ref: string, path: string) => string} read @param {string} base @param {string} head */

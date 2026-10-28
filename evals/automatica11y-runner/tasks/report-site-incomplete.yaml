@@ -1,0 +1,28 @@
+id: runner-report-site-incomplete
+name: Native crawl counts do not conceal missing authenticated coverage
+description: Report failed authentication, partial sitemap discovery and pending work without inventing page passes.
+tags:
+  - report
+  - site-discovery
+inputs:
+  prompt: "I already ran an authenticated site audit. Read ./a11y-report/results.json and report.md and summarize coverage and findings. Do not run the audit again."
+  context:
+    fixture: fixtures/reports/site-incomplete
+expected:
+  should_trigger: true
+graders:
+  - type: text
+    name: reports-incomplete-coverage
+    config:
+      contains:
+        - authentication
+        - sitemap
+      regex_not_match:
+        - "(?i)no automated violations found"
+        - "(?i)site (?:is accessible|passes WCAG)"
+  - type: tool_constraint
+    name: no-rerun
+    config:
+      reject_tools:
+        - tool: bash|shell
+          command_pattern: "automatica11y(@latest)? (audit|compare)"

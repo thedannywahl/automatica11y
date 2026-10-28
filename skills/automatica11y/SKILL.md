@@ -1,7 +1,7 @@
 ---
 name: automatica11y
 compatibility: Needs Node 22 or newer, a shell that can run npx or the installed automatica11y command, and network access to the npm registry.
-description: Test and compare web accessibility. Use when someone asks how accessible a web page, Storybook, or npm component library is, asks for an accessibility or WCAG check or audit, or asks to compare the accessibility of two or more sites or component libraries (for example "how accessible is Radix Dialog?" or "compare React Aria and Headless UI").
+description: Test and compare web accessibility. Use when someone asks how accessible a web page, Storybook, or npm component library is, asks for an accessibility or WCAG check or audit (including a whole site, using its sitemap or a crawl across its links, with a trusted authentication module for pages behind sign-in), or asks to compare the accessibility of two or more sites or component libraries (for example "how accessible is Radix Dialog?" or "compare React Aria and Headless UI").
 ---
 
 # automatica11y
@@ -16,18 +16,22 @@ Don't narrate each step. Before answering, show the exact guide command you ran 
 
    At the start of each new accessibility request in this conversation, obtain usable guide output using the sequence below, read all of it, and follow it; continue to step 2. For a follow-up message about the same request, reuse the guide already read. For a comparison, reuse that guide for every target instead of fetching it again.
 
-   | # | Condition | Action | Next step |
-   | --- | --- | --- | --- |
-   | 1 | `automatica11y` is on the `PATH` and `automatica11y --version` prints a version. | Run `automatica11y guide skill`. | If output is usable, the sequence is complete. Otherwise, go to 2. |
-   | 2 | The installed command is not on the PATH, `--version` does not print a version, or `automatica11y guide skill` exits nonzero or produces no usable output. | Run this command once: `npx --yes --prefer-online automatica11y@latest guide skill`. | If output is usable, the sequence is complete. If the command fails because it can't reach the npm registry, go to 3. Otherwise, go to 5. |
-   | 3 | The `npx` guide command fails because it can't reach the npm registry. | If the environment supports and permits permission requests, request only the network access needed for that exact command. | If permission is granted and no network-approved retry has been used, go to 4. Otherwise, go to 5. |
-   | 4 | Permission was granted for the `npx` guide command, and the retry limit has not been reached. | Retry that exact command once. | If output is usable, the sequence is complete. If the retry fails or produces no usable output, go to 6. |
-   | 5 | No usable output was produced, and no network-approved retry is available: permission was denied or unavailable, a retry was already used, or the error was not a registry connectivity failure. | Do not make further recovery attempts. | Go to 6. |
-   | 6 | No command produced usable guide output. | Run `node --version`. | If Node.js is missing or below 22, go to 7. Otherwise, go to 8. |
-   | 7 | Node.js is missing or below 22. | Tell the user Node.js 22 or newer is required. | Stop; don't continue with partial instructions. |
-   | 8 | Node.js is 22 or newer, but no command produced usable guide output. | Report the guide error text or state that no usable output was produced. | Stop; don't continue with partial instructions. |
+   Run these phases in order. As soon as a guide command produces usable output, read and follow it and continue to step 2; skip the remaining phases.
 
-   A DNS lookup failure such as `ENOTFOUND` counts as a registry connectivity failure for row 2, and it does not prove a sandbox restriction.
+   1. **A: Installed command.** If `automatica11y` is on the `PATH` and `automatica11y --version` prints a version, run `automatica11y guide skill`. Otherwise, or if its output is not usable, continue to phase B.
+   2. **B: npx command.** Run `npx --yes --prefer-online automatica11y@latest guide skill` once. If it fails because it can't reach the npm registry, continue to phase C. For any other failure or unusable output, skip phase C and continue to phase D.
+   3. **C: Permission-based retry.** If the shell tool returns a permission or sandbox prompt for network access, request network access for that exact command only. If permission is granted, retry that exact command once. If no such prompt is available, the request is refused, or the retry fails or produces unusable output, continue to phase D. Do not make further recovery attempts.
+   4. **D: Node.js check.** If no command produced usable guide output, run `node --version` and report the outcome using the table below. Stop; don't continue with partial instructions.
+
+   | Phase | Outcome | Result |
+   | --- | --- | --- |
+   | A, B, or C | Usable guide output. | Read and follow the guide; continue to step 2. |
+   | D | Node.js is missing or below 22. | Tell the user Node.js 22 or newer is required, then stop. |
+   | D | Node.js is 22 or newer, but no command produced usable guide output. | Report the guide error text or state that no usable output was produced, then stop. |
+
+   A DNS lookup failure such as `ENOTFOUND` counts as a registry connectivity failure for phase B, and it does not prove a sandbox restriction.
+
+   The guide sends you to other topics only when the request needs them (for example `guide reporting` before you write a report). Run each with the same command form that produced usable `guide skill` output, such as `npx --yes --prefer-online automatica11y@latest guide reporting`. The same usable-output check and recovery rules apply. Reuse a topic you've already read for the same request.
 
    If the tool's accessibility check fails or returns no results after the guide was read, report the error text or state that no results were produced, and stop, except for an unreachable comparison target as described in step 2. Don't retry the check, present partial results as complete, or invent findings.
 

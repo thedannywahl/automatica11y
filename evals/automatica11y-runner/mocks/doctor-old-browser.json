@@ -1,0 +1,23 @@
+{
+  "ok": false,
+  "state": "browser-outdated",
+  "node": "22.22.2",
+  "browser": {
+    "kind": "headless-shell",
+    "version": "141.0.7390.0",
+    "path": "/opt/chromium/headless_shell",
+    "outdated": true
+  },
+  "install": {
+    "attempted": false,
+    "ok": null,
+    "output": ""
+  },
+  "problems": [
+    {
+      "id": "browser-old",
+      "message": "headless-shell 141.0.7390.0 is too old. The recommended minimum is Chrome or Chromium 154.",
+      "fix": "Run the audit or comparison with --allow-old-browser to use this outdated browser with a report warning, or download Chromium with: automatica11y doctor --install-browser"
+    }
+  ]
+}

@@ -49,7 +49,7 @@ export function parseMappingFile(input) {
   return result.output;
 }
 
-export const TARGET_KINDS = ["npm", "npm-react", "npm-vue", "npm-angular", "npm-svelte", "npm-html", "npm-wc", "npm-unsupported", "npm-non-ui", "storybook", "url", "html-file", "static-dir"];
+export const TARGET_KINDS = ["npm", "npm-react", "npm-vue", "npm-angular", "npm-svelte", "npm-html", "npm-wc", "npm-unsupported", "npm-non-ui", "storybook", "url", "html-file", "static-dir", "site"];
 
 const nullableString = v.nullable(v.string());
 
@@ -87,6 +87,16 @@ export const PlanSchema = v.object({
     mapping: nullableString,
     localPackages: v.optional(v.record(v.string(), v.string())),
     maxStories: v.pipe(v.number(), v.integer(), v.minValue(1)),
+    discovery: v.optional(v.object({
+      crawl: v.boolean(),
+      sitemaps: v.array(v.string()),
+      maxPages: v.pipe(v.number(), v.integer(), v.minValue(1)),
+      maxDepth: v.pipe(v.number(), v.integer(), v.minValue(0)),
+      delay: v.pipe(v.number(), v.minValue(0)),
+      scope: v.picklist(["subtree", "origin"]),
+      ignoreRobots: v.boolean(),
+      config: nullableString,
+    })),
     /** Build fixtures from a package's parts when none is authored. A plan saved before this existed generates. */
     generate: v.optional(v.boolean(), true),
     /** Capture annotated screenshots for rule violations. */
@@ -215,6 +225,7 @@ const StorybookInfoSchema = v.object({
 
 export const TargetResultSchema = v.object({
   id: v.string(),
+  page: v.optional(v.object({ siteId: v.string(), url: v.string(), finalUrl: v.string(), key: v.string() })),
   status: v.picklist(["ran", "failed", "unsupported", "not-applicable"]),
   reason: nullableString,
   archetypes: v.record(
@@ -286,6 +297,14 @@ export const ResultsSchema = v.object({
   runAt: v.string(),
   tools: v.record(v.string(), nullableString),
   targets: v.array(TargetResultSchema),
+  discovery: v.optional(v.object({
+    root: v.string(),
+    scope: v.string(),
+    statistics: v.record(v.string(), v.union([v.number(), v.array(v.nullable(v.number())), v.null()])),
+    queue: v.object({ totalRequestCount: v.number(), handledRequestCount: v.number(), pendingRequestCount: v.number() }),
+    events: v.array(v.object({ url: v.string(), reason: v.string() })),
+    gaps: v.array(v.string()),
+  })),
   failCheck: v.nullable(FailCheckSchema),
   outcome: v.optional(v.object({
     status: v.picklist(["passed", "failed", "incomplete"]),

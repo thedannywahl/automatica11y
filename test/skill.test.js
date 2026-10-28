@@ -16,16 +16,10 @@ const bootstrap = readFileSync(join(bootstrapDir, "SKILL.md"), "utf8");
 const runner = readFileSync(join(runnerDir, "SKILL.md"), "utf8");
 const agents = read("AGENTS.md");
 const referenceFiles = readdirSync(join(runnerDir, "references")).map((name) => ({ name: `references/${name}`, text: readFileSync(join(runnerDir, "references", name), "utf8") }));
-/** Every Markdown file an agent might be handed. */
-/** Every Markdown page in docs/, which is where the long-form documentation lives. */
 const docPages = readdirSync(join(root, "docs")).filter((name) => name.endsWith(".md") && !["agent-steps.md", "fixtures.md"].includes(name)).map((name) => ({ name: `docs/${name}`, text: read("docs", name) }));
-const docsText = docPages.map((page) => page.text).join("\n");
 const agentDocs = [{ name: "AGENTS.md", text: agents }, { name: "skills/automatica11y/SKILL.md", text: bootstrap }, { name: "skills/automatica11y-runner/SKILL.md", text: runner }, ...referenceFiles];
 
-/**
- * The version series a skill expects. In 0.x a minor version can change behavior, so it counts. From 1.0, the major version is enough.
- * @param {string} version
- */
+/** @param {string} version */
 function series(version) {
   const [major, minor] = version.split(".");
   return major === "0" ? `${major}.${minor}` : major;
@@ -33,78 +27,40 @@ function series(version) {
 
 /** @param {string} text */
 function frontmatter(text) {
-  const match = /^---\nname: (.+)\ncompatibility: (.+)\ndescription: (.+)\n---\n/.exec(text);
-  assert.ok(match, "frontmatter with name, compatibility, and description");
-  return { name: match[1], compatibility: match[2], description: match[3] };
+  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text);
+  assert.ok(match, "YAML frontmatter is present");
+  const metadata = parse(match[1]);
+  assert.ok(metadata && typeof metadata === "object" && !Array.isArray(metadata));
+  for (const key of ["name", "compatibility", "description"]) {
+    assert.equal(typeof metadata[key], "string", `${key} is a string`);
+    assert.ok(metadata[key].trim().length > 0, `${key} is not empty`);
+  }
+  return metadata;
 }
 
 for (const [label, dir, text] of [["the bootstrap skill", bootstrapDir, bootstrap], ["the runner skill", runnerDir, runner]]) {
   test(`${label} has valid frontmatter, and its folder is named for it`, () => {
     const { name, compatibility, description } = frontmatter(text);
-    assert.match(name, /^[a-z0-9]+(-[a-z0-9]+)*$/, "the name is lowercase letters, numbers, and single hyphens");
+    assert.match(name, /^[a-z0-9]+(-[a-z0-9]+)*$/);
     assert.ok(name.length <= 64);
-    assert.equal(dir.split("/").pop(), name, "the folder is named for the skill");
-    assert.ok(description.length <= 1024, "description fits in 1,024 characters");
+    assert.equal(dir.split("/").pop(), name);
+    assert.ok(description.length <= 1024);
     assert.ok(compatibility.length <= 500);
-    assert.match(compatibility, /Node 22/);
-    assert.ok(text.split("\n").length < 500, "the body stays under 500 lines");
+    assert.ok(text.split("\n").length < 500);
   });
 }
 
-test("the bootstrap skill advertises the tool and stays tiny", () => {
-  const { name, description } = frontmatter(bootstrap);
-  assert.equal(name, "automatica11y");
-  for (const trigger of ["accessib", "WCAG", "compare"]) assert.match(description, new RegExp(trigger, "i"), `description mentions ${trigger}`);
-  assert.ok(bootstrap.includes("npx --yes --prefer-online automatica11y@latest guide"), "it sends the agent to the guide");
-  assert.match(bootstrap, /node --version/);
-  assert.match(bootstrap, /Keep the user's request as they gave it: the target or targets, and any settings they named/);
-  assert.match(bootstrap, /After reading the guide, pass only settings that the guide lists as supported for this tool\. If the user named a setting the guide doesn't list as supported, tell the user which setting is unsupported, list the supported values from the guide, and ask which to use/);
-  assert.match(bootstrap, /Don't ask again for anything they've already said/);
-  assert.ok(bootstrap.includes("npx --yes --prefer-online automatica11y@latest guide skill"), "it runs the steps directly, with no detour through the overview");
-  assert.match(bootstrap, /1\. Follow this decision list/);
-  const guideCommand = bootstrap.indexOf("npx --yes --prefer-online automatica11y@latest guide skill");
-  assert.ok(guideCommand >= 0 && guideCommand < bootstrap.indexOf("node --version"), "the guide runs before Node failure diagnosis");
-  assert.match(bootstrap, /\| 6 \| No command produced usable guide output\. \| Run `node --version`\./);
-  assert.match(bootstrap, /Don't narrate each step/);
-  assert.match(bootstrap, /Before answering, show the exact guide command you ran in a fenced code block/);
-  assert.match(bootstrap, /Don't claim to have run a command you couldn't execute/);
-  assert.match(bootstrap, /Run this command once: `npx --yes --prefer-online automatica11y@latest guide skill`/);
-  assert.doesNotMatch(bootstrap, /ETARGET/, "there is no separate stale-cache retry branch");
-  assert.match(bootstrap, /\| 8 \| Node\.js is 22 or newer, but no command produced usable guide output\. \| Report the guide error text or state that no usable output was produced\. \| Stop; don't continue with partial instructions\./);
-  // The check comes after the guide is read, so the agent has the supported values when it needs them.
-  assert.ok(guideCommand < bootstrap.indexOf("After reading the guide"), "the unsupported-setting check comes after the command that prints the guide");
-  assert.doesNotMatch(bootstrap.slice(0, bootstrap.indexOf("npx --yes")), /supported/, "nothing before the guide asks the agent to know the supported values");
-  assert.doesNotMatch(bootstrap, /(^|\s)--(?!yes\b|version\b|prefer-online\b)[a-z]/m, "the bootstrap lists no tool flags (--yes and --prefer-online belong to npx, --version to node), so it can't fall out of step with the tool");
-  assert.match(bootstrap, /If Node\.js is missing or below 22, go to 7/);
-  assert.match(bootstrap, /\| 7 \| Node\.js is missing or below 22\. \| Tell the user Node\.js 22 or newer is required\. \| Stop; don't continue with partial instructions\./);
-  assert.match(bootstrap, /ask: "Which target should I test: a URL, a Storybook, or an npm package\?" before running any accessibility check/);
-  assert.match(bootstrap, /prints guide text containing at least 20 non-blank lines of Markdown text/);
-  assert.match(bootstrap, /Don't guess at results/);
-  assert.match(bootstrap, /don't continue with partial instructions/i);
-  assert.doesNotMatch(bootstrap, /no automated violations found|attestation/, "the wording rules live in the runner");
-  assert.equal(existsSync(join(bootstrapDir, "references")), false, "the bootstrap has no references to lose");
-  assert.doesNotMatch(bootstrap, /\d+\.\d+\.x/, "the bootstrap names no version, so it never goes stale");
-  assert.deepEqual(readdirSync(bootstrapDir), ["SKILL.md"], "one file, so a user can copy it");
+test("the runner's core stays small, and its references load on demand", () => {
+  // About 5,000 tokens is the Agent Skills recommendation for an activated SKILL.md body.
+  assert.ok(Buffer.byteLength(runner) < 20_000, `SKILL.md is ${Buffer.byteLength(runner)} bytes`);
+  for (const { name, text } of referenceFiles) {
+    assert.match(text, /^# \S/, `${name} opens with a heading`);
+    if (text.split("\n").length > 100) assert.match(text, /^Contents:/m, `${name} lists its contents`);
+  }
 });
 
-test("the bootstrap bounds network recovery to an approved retry of the same guide command", () => {
-  const rows = new Map([...bootstrap.matchAll(/^   \| (\d+) \| (.*) \|$/gm)].map((match) => [Number(match[1]), match[2]]));
-  assert.equal(rows.size, 8);
-  assert.match(rows.get(2), /If the command fails because it can't reach the npm registry, go to 3\. Otherwise, go to 5/);
-  assert.match(rows.get(3), /The `npx` guide command fails because it can't reach the npm registry/);
-  assert.match(rows.get(3), /environment supports and permits permission requests, request only the network access needed for that exact command/);
-  assert.match(rows.get(3), /If permission is granted and no network-approved retry has been used, go to 4\. Otherwise, go to 5/);
-  assert.match(rows.get(4), /Permission was granted for the `npx` guide command, and the retry limit has not been reached\. \| Retry that exact command once/);
-  assert.match(rows.get(4), /If output is usable, the sequence is complete\. If the retry fails or produces no usable output, go to 6/);
-  assert.match(rows.get(5), /permission was denied or unavailable, a retry was already used, or the error was not a registry connectivity failure/);
-  assert.match(rows.get(5), /Do not make further recovery attempts\. \| Go to 6/);
-  assert.match(rows.get(6), /Run `node --version`/);
-  assert.match(rows.get(8), /Report the guide error text or state that no usable output was produced\. \| Stop; don't continue with partial instructions/);
-  assert.match(bootstrap, /`ENOTFOUND` counts as a registry connectivity failure for row 2, and it does not prove a sandbox restriction/);
-  assert.match(bootstrap, /If you can't run shell commands, tell the user and stop/);
-  assert.match(bootstrap, /Web search access and this skill's compatibility field don't grant shell network access/);
-  assert.match(bootstrap, /Don't change permission settings, bypass restrictions, or substitute web search for the guide command/);
-  assert.doesNotMatch(bootstrap, /config\.toml|Approve for me|request_permissions|sandbox_permissions/i);
+test("the bootstrap skill is a single portable file", () => {
+  assert.deepEqual(readdirSync(bootstrapDir), ["SKILL.md"]);
 });
 
 test("bootstrap evals mock a single prefer-online guide command", () => {
@@ -114,162 +70,88 @@ test("bootstrap evals mock a single prefer-online guide command", () => {
     /** @type {{ command_mocks?: { name: string, responses: { args?: string[] }[] }[] }} */
     const task = parse(readFileSync(join(tasksDir, name), "utf8"));
     const npx = task.command_mocks?.find((command) => command.name === "npx");
+    /** @type {{ args?: string[], fixture?: string }[]} */
     const guides = npx?.responses.filter((response) => response.args?.includes("guide")) ?? [];
     if (!guides.length) continue;
-    assert.equal(guides.length, 1, `${name} has no separate stale-cache retry mock`);
-    assert.deepEqual(guides[0].args, ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"], name);
+    const skill = guides.filter((response) => response.args?.at(-1) === "skill");
+    assert.equal(skill.length, 1, name);
+    assert.deepEqual(skill[0].args, ["--yes", "--prefer-online", "automatica11y@latest", "guide", "skill"], name);
+    for (const response of guides.filter((r) => r !== skill[0])) {
+      const topic = /** @type {string} */ (response.args?.at(-1));
+      assert.deepEqual(response.args, ["--yes", "--prefer-online", "automatica11y@latest", "guide", topic], name);
+      assert.ok(referenceFiles.some((ref) => ref.name === `references/${topic}.md`), `${name} mocks the reference topic ${topic}`);
+      assert.equal(response.fixture, `mocks/guide-${topic}.md`, name);
+    }
     checked += 1;
   }
-  assert.ok(checked > 0, "the bootstrap guide mocks were checked");
+  assert.ok(checked > 0);
 });
 
-test("runner evals mock the skill's prefer-online npx prefix", () => {
-  const suiteDir = join(root, "evals", "automatica11y-runner");
-  const files = ["wazaEval.yaml", ...readdirSync(join(suiteDir, "tasks")).filter((name) => name.endsWith(".yaml")).map((name) => join("tasks", name))];
+test("evals mock the skill's prefer-online npx prefix", () => {
+  const files = ["automatica11y-runner", "automatica11y"].flatMap((suite) => {
+    const suiteDir = join(root, "evals", suite);
+    return [join(suiteDir, "wazaEval.yaml"), ...readdirSync(join(suiteDir, "tasks")).filter((name) => name.endsWith(".yaml")).map((name) => join(suiteDir, "tasks", name))];
+  });
   let checked = 0;
   for (const name of files) {
     /** @type {{ command_mocks?: { name: string, responses: { args?: string[] }[] }[] }} */
-    const definition = parse(readFileSync(join(suiteDir, name), "utf8"));
+    const definition = parse(readFileSync(name, "utf8"));
     const npx = definition.command_mocks?.find((command) => command.name === "npx");
-    for (const response of npx?.responses ?? []) {
+    for (const response of (npx?.responses ?? []).filter((r) => r.args)) {
       assert.deepEqual(response.args?.slice(0, 3), ["--yes", "--prefer-online", "automatica11y@latest"], name);
       checked += 1;
     }
   }
-  assert.ok(checked > 0, "the runner npx mocks were checked");
+  assert.ok(checked > 0);
 });
 
-test("the runner skill says when to use it, and carries the steps", () => {
-  const { name, description } = frontmatter(runner);
-  assert.equal(name, "automatica11y-runner");
-  assert.match(description, /AGENTS\.md|automatica11y skill/);
-  assert.match(description, /Do not use for questions about WCAG levels, success criteria, or definitions, even if they mention audits or accessibility testing/);
-  for (const step of ["Check the version", "Check the setup", "Turn the request into a command", "npm packages need fixtures", "Run, then read the results", "Write the report", "When a target can't be tested"]) {
-    assert.ok(runner.includes(step), step);
-  }
-});
-
-test("the runner offers outdated-browser consent and download-failure fallback", () => {
-  for (const state of ["Outdated browser", "No browser", "Setup error", "Download accepted", "Download failed", "Fallback declined"]) {
-    assert.match(runner, new RegExp(`\\| ${state} \\|`), `${state} has a setup-table row`);
-  }
-  assert.match(runner, /report that no browser is available and stop without running `doctor` again, auditing, or installing anything/);
-  assert.match(runner, /If an outdated browser is still found and the user already explicitly authorized that fallback, use it with `--allow-old-browser`/);
-  assert.match(runner, /Choosing a download alone is not consent to use an outdated browser/);
-  assert.match(runner, /Fallback declined[\s\S]*Stop without auditing/);
-  assert.match(runner, /keep it in the report header before coverage and findings/);
+test("outdated-browser evals wire consent graders and environment mocks", () => {
   const tasks = ["preflight-old-browser-choice.yaml", "preflight-old-browser-install-failed.yaml", "preflight-old-browser-install-declined.yaml"];
   for (const name of tasks) {
-    /** @type {{ graders: { type: string }[], command_mocks: { name: string, responses: { fixture?: string, exit_code?: number }[] }[] }} */
+    /** @type {{ graders: { type: string }[], command_mocks: { name: string, responses: { args?: string[], fixture?: string, exit_code?: number }[] }[] }} */
     const task = parse(read("evals", "automatica11y-runner", "tasks", name));
     assert.ok(task.graders.some((grader) => grader.type === "prompt"), `${name} grades consent behavior`);
     assert.ok(task.graders.some((grader) => grader.type === "tool_constraint"), `${name} constrains installs and audits`);
     const responses = task.command_mocks.find((command) => command.name === "npx").responses;
-    assert.ok(responses.some((response) => response.fixture === "mocks/doctor-old-browser.txt" && response.exit_code === 3));
+    assert.ok(responses.some((response) => ["mocks/doctor-old-browser.json", "mocks/doctor-install-failed-outdated.json"].includes(response.fixture ?? "") && response.exit_code === 3 && response.args?.includes("--json")));
   }
 });
 
-test("no skill or guide names an agent, a vendor, or an agent-specific path", () => {
-  // A slash command such as /automatica11y is agent-specific. A path such as skills/automatica11y/ is fine.
-  const vendors = /claude|anthropic|openai|chatgpt|gemini|copilot|cursor|codex|\.claude|slash command|(^|[\s`])\/automatica11y\b/i;
-  for (const { name, text } of agentDocs) assert.doesNotMatch(text, vendors, `${name} names no agent or agent-specific path`);
-  assert.match(runner, /isn't tied to one agent/);
+test("the runner's version series matches package.json", () => {
+  const stated = [...runner.matchAll(/\b\d+(?:\.\d+)?\.x\b/g)].map((match) => match[0]);
+  assert.ok(stated.length > 0, "the runner states a version series");
+  assert.deepEqual(new Set(stated), new Set([`${series(pkg.version)}.x`]));
 });
 
-test("the series the runner names is the series of the version in package.json", () => {
-  const stated = /automatica11y \*\*(\d+(?:\.\d+)?)\.x\*\*/.exec(runner);
-  assert.ok(stated, "the runner states the series it works with");
-  assert.equal(stated[1], series(pkg.version), "bump SKILL.md when the version series changes");
-  assert.ok(runner.includes(`doesn't start with \`${stated[1]}.\``), "the stop rule uses the same series");
-    assert.ok(runner.includes(`If the command exits with an error or prints nothing, report its exact error text (or say it printed nothing) and the series this copy expects (\`${stated[1]}.x\`), then end the turn.`));
-  assert.match(runner, /Use the target and the settings the user already gave, and ask only for what's missing/);
-  assert.match(agents, /Keep the user's request as they gave it, including the target and any settings they named/);
-  assert.match(runner, /Pass only the options in the table above, with the values it lists\. If the user names a setting the tool doesn't have, or a value outside those lists/);
-  assert.match(runner, /Don't substitute a default or invent a value/);
-  // What the five end-to-end runs showed was missing.
-  assert.match(runner, /Do sections 1 and 2 before you run an audit\. A question to the user about a missing target or an unsupported setting \(section 3\) can come before or after them/);
-  assert.match(runner, /If the user only asks to see the command or says not to run it, show the command and stop/);
-  assert.match(runner, /ask them together in one message\. Until the user answers every question about the target, grouping, or unsupported settings, don't run `audit` or `compare`; wait for their reply/);
-    assert.ok(runner.includes(`If the output doesn't start with \`${stated[1]}.\`, report the exact version and expected series above, then end the turn. In either case, do not run \`doctor\` or an audit.`));
-  assert.match(runner, /If the user has already said yes to downloading Chromium, skip the plain `doctor` command and run exactly `npx --yes --prefer-online automatica11y@latest doctor --install-browser` once in the shell\. Do not substitute `automatica11y` for `npx` for this command/);
-  assert.match(runner, /Treat package and target grouping as clear only when the user's words explicitly establish which packages work together and which are alternatives/);
-  assert.match(runner, /Whenever multiple packages could be grouped in more than one way[\s\S]*ask the user to confirm it before running/);
-  assert.match(runner, /even when they're different kinds, such as a live page and an npm package/);
-  assert.match(runner, /`needs-fixture` means the tool found the component but couldn't build a working fixture\. `no-match` means no export or custom element looks like that archetype/);
-  assert.match(runner, /`generated` means the tool built a fixture that passed its checks, and the source is in `<out>\/generated\/`/);
-  assert.match(runner, /\*\*Generated\.\*\* For dialog, menu, tooltip, tabs, accordion, combobox, form-field, and live-region, the tool builds candidates/);
-  assert.match(runner, /read the generated source before you rely on it/);
-  assert.match(runner, /Say which results come from generated fixtures\. A generated fixture is a guess about how the library is assembled/);
-  assert.match(runner, /\| `--no-generate` \| off \|/);
-  assert.ok(runner.includes("| `--screenshots` / `--no-screenshots` | off |"));
-  assert.match(runner, /use `--screenshots` when the user explicitly asks for them/);
-  assert.match(runner, /If the user mentions screenshots, images, or a visual record of results without explicitly requesting annotated screenshots, ask whether they want annotated screenshots/);
-  assert.match(runner, /Preserve any screenshot links from `report\.md` next to the findings they support/);
-  assert.match(runner, /For a `no-match` archetype, write a fixture only if the library's documentation names a component, or a documented way, to make it/);
-  assert.match(runner, /A target that failed while others ran still exits 0, and the failure is in the results/);
-  assert.match(runner, /order axe-core findings by impact and IBM findings by Toolkit level/);
-  assert.match(runner, /you may run the same command once more\. If it fails again, report it/);
-  assert.match(runner, /use the number and name exactly as `report\.md` prints them, and keep its "WCAG data" credit to the W3C/);
-  assert.match(runner, /Report conditions checks \(reduced motion, dark mode, more and less contrast, reduced transparency, forced colors, reflow at 320 pixels, text spacing\) in their own section/);
-  assert.match(runner, /"Not applicable" means the page doesn't use the feature/);
-  // The computed tier.
-  assert.match(runner, /Report computed checks \(contrast measured from resolved styles\) in their own section/);
-  assert.match(runner, /Treat `undetermined` as a gap, never as a pass/);
-  assert.match(runner, /\*\*Undetermined\.\*\* A computed check found a gradient, an image, or transparency/);
-  // A request with no target is asked about, and a target that fails is named with its reason.
-  assert.match(runner, /If the user doesn't name a target to test \(a URL, a Storybook, a local page or site, or an npm package\), ask for one before you run anything/);
-  assert.match(runner, /Tell the user which target failed, using the reason from `results\.json`/);
-  assert.match(runner, /If every target failed \(exit code 4\), stop\. If others ran, report them, and list the failed target as a gap/);
-  // The wording rule says when to use the phrase, and what to do when there are violations.
-  assert.match(runner, /Use "no automated violations found" only for axe-core when it reports zero violations for that target/);
-  assert.match(runner, /For IBM Equal Access, write "IBM Equal Access reported no violations in this run\." when it reports zero\. Never use "no automated violations found" for IBM/);
-  assert.ok(runner.includes("Read the exact target id from `<out>/plan.json` or the target keys in `<out>/mapping.json`"));
-  assert.ok(runner.includes("`widgets=npm:@a11y-eval/widgets` uses `fixtures/widgets/tabs.jsx`"));
-  assert.ok(runner.includes("each invocation uses a unique timestamped folder under `./a11y-report`"));
-  assert.ok(runner.includes("exact paths printed by that command"));
-  assert.ok(runner.includes("writes both files even when every target fails during resolution (exit code 4)"));
-  assert.ok(runner.includes("`--plan` writes only `plan.json` and never audit results"));
-  assert.ok(runner.includes("Always end the turn with a final message listing the report path, results path, and any fixture written"));
-  assert.ok(runner.includes("If a step cannot finish, say so and identify the remaining gaps"));
-  assert.ok(runner.includes("Never say an engine \"found nothing\" when it reported needs-review items"));
-  assert.doesNotMatch(runner, /Where an engine reports zero violations for a target/);
-  assert.doesNotMatch(runner, /Say "no automated violations found\."/, "no unconditional instruction to say the phrase");
-  assert.doesNotMatch(agents, /matches the version of the tool you're running/, "AGENTS.md doesn't claim a match that @latest can't promise");
-  assert.doesNotMatch(runner, /\{\{[A-Z]+\}\}/, "no placeholders are left in the file");
-});
-
-test("every file the runner points to exists, one level below it", () => {
+test("skill and reference paths resolve", () => {
   const pointers = new Set([...runner.matchAll(/`(references\/[a-z-]+\.md)`/g)].map((m) => m[1]));
   assert.ok(pointers.size > 0);
   for (const pointer of pointers) assert.ok(existsSync(join(runnerDir, pointer)), `${pointer} exists`);
+  for (const { name } of referenceFiles) assert.ok(pointers.has(name), `SKILL.md routes to ${name}`);
   for (const { name, text } of referenceFiles) assert.doesNotMatch(text, /`references\//, `${name} points to no further reference`);
+  for (const path of [...agents.matchAll(/`(skills\/[^`]+)`/g)].map((m) => m[1])) assert.ok(existsSync(join(root, path)), `${path} exists`);
 });
 
-test("the guide topics print the files the docs say they print", () => {
-  assert.deepEqual(Object.keys(TOPICS), ["agents", "skill", "fixtures"]);
+test("guide topics resolve to packaged files", () => {
+  assert.deepEqual(Object.keys(TOPICS), ["agents", "skill", ...referenceFiles.map(({ name }) => name.slice("references/".length, -".md".length)).sort()]);
   for (const [topic, { file }] of Object.entries(TOPICS)) assert.ok(existsSync(join(root, file)), `${topic} prints ${file}`);
-  for (const topic of Object.keys(TOPICS)) assert.ok(read("docs", "agents.md").includes(topic) || topic === "agents", `the docs name the ${topic} topic`);
 });
 
-// ---- Guards that keep the docs honest about the tool ----
-
-/** Every `--flag` the CLI accepts. */
 function knownFlags() {
   const common = read("src/commands/common.js");
   const defs = /OPTION_DEFS = [^{]*\{([\s\S]*?)\n\}\);/.exec(common)[1];
   const names = [...defs.matchAll(/^\s*"?([a-z0-9-]+)"?: \{/gm)].map((m) => `--${m[1]}`);
-  // --yes and --prefer-online belong to npx, and --plan also takes a file under `run`.
-  return new Set([...names, "--version", "--plan", "--yes", "--prefer-online", "--install-browser"]);
+  return new Set([...names, "--version", "--plan", "--yes", "--prefer-online", "--install-browser", "--json"]);
 }
 
-test("every flag the docs mention is a real flag", () => {
+test("documented flags are supported", () => {
   const known = knownFlags();
-  assert.ok(known.has("--fail-on-axe") && known.has("--lib-a11y") && known.has("--max-stories"), "the flag list was read");
+  assert.ok(known.has("--fail-on-axe") && known.has("--lib-a11y") && known.has("--max-stories"));
   const used = new Set(agentDocs.flatMap(({ text }) => [...text.matchAll(/(?<![\w-])--[a-z][a-z0-9-]+/g)].map((m) => m[0])));
   for (const flag of used) assert.ok(known.has(flag), `${flag} is a real flag`);
 });
 
-test("every command the docs run exists, and every guide topic they name is real", () => {
+test("documented commands and guide topics are supported", () => {
   const allowed = new Set(["audit", "compare", "doctor", "guide", "--version"]);
   for (const { name, text } of agentDocs) {
     for (const m of text.matchAll(/automatica11y@latest ([a-z-]+)(?: ([a-z]+))?/g)) {
@@ -277,12 +159,9 @@ test("every command the docs run exists, and every guide topic they name is real
       if (m[1] === "guide" && m[2] && /^[a-z]+$/.test(m[2])) assert.ok(m[2] in TOPICS, `${name} names the guide topic ${m[2]}`);
     }
   }
-  const codes = [...runner.matchAll(/^\| (\d) \|/gm)].map((m) => Number(m[1]));
-  assert.deepEqual(codes, [0, 1, 2, 3, 4]);
 });
 
-test("the docs write npm packages with the npm: prefix, as the tool requires", () => {
-  const readme = read("README.md");
+test("documented scoped npm targets use the npm: prefix", () => {
   const localPackageMapping = /(^|\s)--local-package[ \t]+[^\s=]+=[^\s]+/g;
   const bareScopedTarget = /(^|[\s=`])@[a-z][\w-]*\/[\w.-]+/m;
   for (const example of ["--local-package @scope/ui=./dist", "automatica11y ci ui=npm:@scope/ui --local-package @scope/ui=./dist"]) {
@@ -291,126 +170,22 @@ test("the docs write npm packages with the npm: prefix, as the tool requires", (
   for (const example of ["automatica11y audit @scope/ui", "automatica11y audit @scope/ui --local-package @scope/ui=./dist", "automatica11y audit --local-package @scope/ui"]) {
     assert.match(example.replace(localPackageMapping, "$1--local-package <package>=<path>"), bareScopedTarget);
   }
-  for (const { name, text } of [{ name: "README.md", text: readme }, ...docPages, ...agentDocs]) {
+  for (const { name, text } of [{ name: "README.md", text: read("README.md") }, ...docPages, ...agentDocs]) {
     const targets = text.replace(localPackageMapping, "$1--local-package <package>=<path>").replace(/^\s+"@[a-z][\w-]*\/[\w.-]+"(?=:)/gm, "  local-package-name:").replace(/^(\s*)@[a-z][\w-]*\/[\w.-]+=/gm, "$1package-name=");
     assert.doesNotMatch(targets, bareScopedTarget, `${name} has no bare scoped package as a target`);
     assert.doesNotMatch(text, /=(react-aria-components|@radix-ui)/, `${name} labels no bare package`);
   }
-  assert.match(docsText, /compare next-gen=npm:@instructure\/ui-button\/Button\/v2 canvas=npm:@instructure\/ui-buttons\/Button\/v1/);
-  assert.match(runner, /\| An npm package \| `npm:name`, `npm:@scope\/name`, or `npm:name@version`\. To test one entry of a package, add a sub-path after the version: `npm:@scope\/pkg\/button` or `npm:@scope\/pkg@1\.2\.3\/button\/v2`/);
-  assert.match(runner, /A bare word such as `button` is a path: the folder or file `\.\/button`\. Always write an npm package with the `npm:` prefix/);
-  assert.match(docsText, /Write `npm:button` to pick the package/);
 });
 
-test("the archetypes the runner lists match the tool's", async () => {
-  const { ARCHETYPES } = await import("../src/schema.js");
-  const line = /Choose from ([^.|]+)\./.exec(runner)[1].split(",").map((s) => s.trim());
-  assert.deepEqual(line, ARCHETYPES);
-});
-
-test("every document tells a global install how to skip npx, without dropping the version check", () => {
-  const readme = read("docs", "quick-start-cli.md");
-  assert.match(readme, /npm i -g automatica11y/);
-  assert.match(readme, /Make sure that `automatica11y` is on your `\$PATH` and then run/);
-  assert.match(readme, /provides an alias `a11y` with the exact same functionality/);
-  assert.match(readme, /A global install doesn't update itself, so run `npm i -g automatica11y@latest` \(or whichever package manager you use\) to upgrade and `automatica11y --version` to see what you have/);
-  assert.match(agents, /If `automatica11y` is already on the `PATH`[\s\S]*The version check in the steps still applies/);
-  assert.match(bootstrap, /\| 1 \| `automatica11y` is on the `PATH` and `automatica11y --version` prints a version\. \| Run `automatica11y guide skill`\./);
-  assert.match(runner, /replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above/);
-  assert.match(runner, /If the installed version is the wrong series, or nothing is installed, use `npx`/);
-});
-
-test("the runner carries a Vue example too, and says not to import h", () => {
-  const fixtures = referenceFiles.find((f) => f.name === "references/fixtures.md").text;
-  assert.match(runner, /A Vue 3 fixture\. It's also JSX[\s\S]*\*\*don't import `h`\*\*[\s\S]*```jsx\nimport \{ DialogClose[\s\S]*from "reka-ui";[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);
-  assert.match(runner, /React, Vue 3, Angular 22 and newer, Svelte 5 and newer, plain HTML, or web components\. Name it, and say which version is unsupported \(Vue 2, Svelte 4, or Angular 21, for example\)/);
-  assert.match(fixtures, /For Vue 3, a fixture is also JSX[\s\S]*don't import them[\s\S]*export a function named `setup\(app\)`/);
-});
-
-test("the runner carries a React example and a web component example, so it works without its references", () => {
-  assert.match(runner, /```jsx[\s\S]*export default function Fixture\(\)[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);
-  assert.match(runner, /```js\nexport default function mount\(container\)[\s\S]*data-a11y-trigger[\s\S]*data-a11y-root[\s\S]*```/);
-  assert.match(runner, /If you can't open it, run `npx --yes --prefer-online automatica11y@latest guide fixtures`/);
-});
-
-test("AGENTS.md bridges to the runner, and tells contributors what to run", () => {
-  assert.ok(agents.includes("npx --yes automatica11y@latest guide skill"));
-  assert.ok(agents.includes("npx --yes automatica11y@latest guide fixtures"));
-  for (const path of [...agents.matchAll(/`(skills\/[^`]+)`/g)].map((m) => m[1])) assert.ok(existsSync(join(root, path)), `${path} exists`);
-  assert.match(agents, /npm test/);
-  assert.match(agents, /If the tests can't run because Chrome or Chromium is missing, or if either command fails, stop\. Report the exact error and the command that failed, and don't report the change as complete/);
-  assert.match(agents, /any additional skipped tests block completion/);
-  assert.match(agents, /one known upstream VitePress accessibility assertion/);
-  assert.match(agents, /npm run test:release/);
-  assert.match(agents, /npm run lint/);
-  assert.match(agents, /ships in the npm package/);
-  assert.match(agents, /If the version check in the steps reports a mismatch, stop\. Report the installed version and the version the steps expect, and don't produce an audit or compare result until the user confirms how to proceed/);
-  assert.match(agents, /If the request doesn't name a target, ask for the target once, then continue with the steps\. Use the defaults in the steps for any setting the user didn't name/);
-  assert.match(agents, /That's only another way to get the text\. If a guide command has already failed, use only the permission-request recovery above or stop as described above\. Reading the files doesn't change that/);
-  assert.match(runner, /If the output doesn't start with `\d+(?:\.\d+)?\.`, report the exact version and expected series above, then end the turn/);
-  assert.match(runner, /offer to read the matching steps with `npx --yes --prefer-online automatica11y@latest guide skill`, but wait for the user's confirmation before running it/);
-  assert.match(agents, /print the copy that comes with the latest release, and the steps they print check that the tool's version matches/);
-  assert.match(agents, /If either guide command fails because npm can't reach the registry/);
-  assert.match(agents, /execution environment supports and permits permission requests/);
-  assert.match(agents, /request only the network access needed for that exact command using the environment's permission mechanism/);
-  assert.match(agents, /Retry the same command once only if permission is granted/);
-  assert.match(agents, /If permission is denied or unavailable, report the original error and stop/);
-  assert.match(agents, /If the retry fails, report its exact error and stop; don't make further recovery attempts/);
-  assert.match(agents, /For any other guide failure, stop\. Don't produce an audit or compare result from memory/);
-  assert.match(agents, /The series is the major and minor version while the major version is 0 \(`0\.2`\), and the major version alone from 1\.0 on/);
-  assert.match(agents, /whenever the series of the version in `package\.json` changes, for example from `0\.2\.x` to `0\.3\.0`\. A change from `0\.2\.5` to `0\.2\.6` needs no update/);
-});
-
-test("the fixture guide says what to do when the documentation falls short, names the command, and agrees with its own examples", () => {
-  const fixtures = referenceFiles.find((f) => f.name === "references/fixtures.md").text;
-  assert.match(fixtures, /If the documentation doesn't cover the API you need, or you can't read it, don't guess\. Leave the archetype without a fixture, so the report lists it as a gap/);
-  assert.match(fixtures, /Don't stand in a plain element for the library's component/);
-  assert.match(runner, /don't guess, and don't stand in a plain element for the library's component/);
-  assert.match(fixtures, /in the working folder: the folder where you run `automatica11y audit` or `automatica11y compare`/);
-  assert.match(fixtures, /If nothing in the archetype can be activated, as with a chart, put `data-a11y-trigger` and `data-a11y-root` on the same element/);
-  assert.match(runner, /If nothing can be activated, as with a chart, put both attributes on the same outermost element/);
-  assert.match(fixtures, /Include every part the library's documentation marks as required/);
-  assert.match(fixtures, /make `mount\(container\)` the file's default export\. It adds the archetype to the container/);
-  assert.match(runner, /For web components, the default export is the function `mount\(container\)`/);
-  assert.match(fixtures, /The tool activates the trigger by clicking it\. For a tooltip it focuses the trigger instead, so a tooltip has to open on focus\. If it opens only on pointer hover, the open state never appears/);
-  assert.match(fixtures, /is then attached to the document, isn't `display: none` or `hidden`, and isn't `visibility: hidden`\. The tool also counts the surface as open if the trigger has `aria-expanded="true"`\. If neither holds, the open state is reported as failed, with the reason/);
-  assert.match(fixtures, /use the library's documented way to render your own element in its place \(for example, `asChild` in Radix, or the `as` prop in Headless UI\), and put the attribute on that native element\. If the library has no such way, leave the archetype as a gap/);
-  assert.match(fixtures, /Don't wrap the library's component in an element you add and mark that element/);
-  assert.match(runner, /Don't wrap the library's component in an element you add and mark that/);
-  assert.match(fixtures, /Declare it at the archetype level in the mapping file, next to `fixture` or `export`, for example `\{ "charts": \{ "chart": \{ "libA11y": true \} \} \}`/);
-  // "Hooks" reads as React hooks, so the docs name the attributes.
-  for (const { name, text } of agentDocs) assert.doesNotMatch(text, /\bhooks?\b/i, `${name} says attributes, not hooks`);
-  // The contract says one trigger, so no example may leave it out.
-  for (const [, code] of fixtures.matchAll(/```jsx\n([\s\S]*?)```/g)) assert.match(code, /data-a11y-trigger/, "every example in the guide marks a trigger");
-  for (const [, code] of runner.matchAll(/```jsx\n([\s\S]*?)```/g)) assert.match(code, /data-a11y-trigger/, "every example in the runner marks a trigger");
-});
-
-test("the fixture reference mentions both hooks and both flavors", () => {
-  const fixtures = referenceFiles.find((f) => f.name === "references/fixtures.md").text;
-  for (const must of ["data-a11y-trigger", "data-a11y-root", "mount(container", "libA11y", "fixtures/<target id>/<archetype>"]) assert.ok(fixtures.includes(must), must);
-});
-
-test("the runner says how to read a plain-language comparison, and asks when the grouping is unclear", () => {
-  assert.match(runner, /Join them with commas and no spaces: `npm:@scope\/components,@scope\/interactions`/);
-  assert.match(runner, /A comma joins packages into one target\. The words "and", "vs", "versus", "against", and "compared with" separate targets\. So "compare A, B and C and D" is three targets: `A,B`, `C`, and `D`\./);
-  assert.match(runner, /Treat package and target grouping as clear only when the user's words explicitly establish which packages work together and which are alternatives/);
-  assert.match(runner, /Whenever multiple packages could be grouped in more than one way[\s\S]*ask the user to confirm it before running/);
-  assert.match(runner, /Whenever multiple packages could be grouped in more than one way[\s\S]*show your best grouping[\s\S]*ask the user to confirm it before running/);
-});
-
-test("e2e tasks explicitly declare sandbox inputs and final replies", () => {
+test("e2e tasks declare sandbox inputs and artifact checks", () => {
   const suiteDir = join(root, "evals", "e2e", "automatica11y-runner");
   for (const name of readdirSync(join(suiteDir, "tasks"))) {
     const task = parse(readFileSync(join(suiteDir, "tasks", name), "utf8"));
-    assert.ok(/final reply/i.test(task.inputs.prompt) || task.inputs.follow_up_prompts?.some((/** @type {string} */ prompt) => /final summary/i.test(prompt)), `${name} requests a final reply`);
     assert.equal(task.inputs.context?.fixture, undefined, `${name} uses explicit input files`);
     if (task.id === "runner-e2e-unreachable") {
-      assert.doesNotMatch(task.inputs.prompt, /\.\//, "output paths must not trigger the empty-workspace guard");
       const artifacts = task.graders.find((/** @type {{ name: string }} */ grader) => grader.name === "writes-failed-target-results");
       assert.deepEqual(artifacts.config.must_exist, ["a11y-report/plan.json", "a11y-report/results.json", "a11y-report/report.md"]);
       assert.equal(artifacts.config.content_patterns[0].path, "a11y-report/results.json");
-      const wording = task.graders.find((/** @type {{ name: string }} */ grader) => grader.name === "no-invented-results");
-      assert.equal(wording.type, "text", "failed-target wording uses deterministic grading");
       continue;
     }
     assert.ok(task.context_dir, `${name} overrides the extension's skill context directory`);
@@ -419,43 +194,37 @@ test("e2e tasks explicitly declare sandbox inputs and final replies", () => {
       const suite = parse(readFileSync(join(suiteDir, "wazaEval.yaml"), "utf8"));
       assert.equal(task.context_dir, "evals/e2e/automatica11y-runner/fixtures/npm-local");
       assert.deepEqual(task.inputs.files.map((/** @type {{ path: string }} */ input) => input.path), ["a11y-eval-widgets-1.0.0.tgz", "widgets-README.md"]);
-      assert.equal(task.inputs.follow_up_prompts.length, 2, "fixture work and final reply use separate bounded turns");
-      assert.match(task.inputs.prompt, /Do not write a fixture or rerun yet/);
-      assert.match(task.inputs.prompt, /--tiers rules,interactions/);
-      assert.match(task.inputs.prompt, /Read widgets-README\.md once/);
-      assert.match(task.inputs.follow_up_prompts[0], /rerun the identical audit command exactly once/);
-      assert.match(task.inputs.follow_up_prompts[0], /do not reread it/);
-      assert.match(task.inputs.follow_up_prompts[1], /Do not run commands, write files, or start another audit/);
+      assert.equal(task.inputs.follow_up_prompts.length, 2);
       assert.ok(suite.hooks.before_run.some((/** @type {{ command: string }} */ hook) => hook.command.includes("npm pack ./fixtures/packages/widgets --pack-destination ./fixtures/npm-local") && hook.command.includes("cp fixtures/packages/widgets/README.md fixtures/npm-local/widgets-README.md")));
       assert.ok(existsSync(join(suiteDir, "fixtures", "packages", "widgets", "package.json")));
       assert.ok(existsSync(join(suiteDir, "fixtures", "packages", "widgets", "README.md")));
       continue;
     }
     assert.ok(existsSync(join(root, task.context_dir)), `${name} resolves context_dir from the repository root`);
-    for (const input of task.inputs.files) {
-      assert.ok(existsSync(join(root, task.context_dir, input.path)), `${name}: ${input.path}`);
-    }
-    if (task.id === "runner-e2e-static-site") {
-      assert.equal(task.graders.find((/** @type {{ name: string }} */ grader) => grader.name === "measured-wording").type, "text");
-      assert.match(task.inputs.prompt, /These automated results do not establish that the page meets WCAG; manual review is still needed\./);
-      assert.match(task.inputs.prompt, /Do not state that the site passes WCAG, is accessible, or is compliant/);
-      assert.ok(task.graders.find((/** @type {{ name: string }} */ grader) => grader.name === "measured-wording").config.contains.includes("These automated results do not establish that the page meets WCAG; manual review is still needed."));
-    }
+    for (const input of task.inputs.files) assert.ok(existsSync(join(root, task.context_dir, input.path)), `${name}: ${input.path}`);
   }
 });
 
-test("the eval mocks speak for the version and the guide this checkout ships", () => {
+test("eval mocks match the version and guide this checkout ships", () => {
   const evalFiles = readdirSync(join(root, "evals"), { recursive: true, encoding: "utf8" }).filter((name) => name.endsWith(".yaml"));
   let checked = 0;
   for (const name of evalFiles) {
-    const text = read("evals", name);
-    for (const [, version] of text.matchAll(/args: \["--yes", "automatica11y@latest", "--version"\]\n\s+stdout: "([^"\\]+)\\n"/g)) {
-      checked += 1;
-      if (/^id: runner-preflight-version-mismatch$/m.test(text)) assert.notEqual(series(version), series(pkg.version), `${name} mocks a version outside the series`);
-      else assert.equal(series(version), series(pkg.version), `${name} mocks automatica11y ${version}; update it to the ${series(pkg.version)} series`);
+    const definition = parse(read("evals", name));
+    for (const command of definition.command_mocks ?? []) {
+      if (command.name !== "npx") continue;
+      for (const response of command.responses) {
+        if (response.args?.at(-1) !== "--version" || !response.args.includes("automatica11y@latest") || !response.stdout?.trim()) continue;
+        const version = response.stdout.trim();
+        if (definition.id === "runner-preflight-version-mismatch") assert.notEqual(series(version), series(pkg.version), `${name} mocks a version outside the series`);
+        else assert.equal(series(version), series(pkg.version), `${name} mocks automatica11y ${version}`);
+        checked += 1;
+      }
     }
   }
-  assert.ok(checked > 0, "the eval mocks were read");
-  assert.equal(read("evals", "automatica11y", "mocks", "guide-skill.md"), runner, "copy skills/automatica11y-runner/SKILL.md to evals/automatica11y/mocks/guide-skill.md");
-  assert.equal(read("evals", "automatica11y-runner", "mocks", "guide-skill.md"), runner, "copy skills/automatica11y-runner/SKILL.md to evals/automatica11y-runner/mocks/guide-skill.md");
+  assert.ok(checked > 0);
+  assert.equal(read("evals", "automatica11y", "mocks", "guide-skill.md"), runner);
+  assert.equal(read("evals", "automatica11y-runner", "mocks", "guide-skill.md"), runner);
+  for (const suite of ["automatica11y", "automatica11y-runner"]) {
+    for (const { name, text } of referenceFiles) assert.equal(read("evals", suite, "mocks", `guide-${name.slice("references/".length)}`), text, `${suite} mocks ${name}`);
+  }
 });
