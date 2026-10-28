@@ -36,13 +36,13 @@ If the user only wants a report from existing results and says not to rerun the 
 
 If the user asks only to see a command, such as the version check, and says not to run anything, show it exactly as written in this file, in a code block, and stop.
 
-This skill works with automatica11y **0.11.x**. Run:
+This skill works with automatica11y **0.12.x**. Run:
 
 ```bash
 npx --yes --prefer-online automatica11y@latest --version
 ```
 
-If the command exits with an error or prints nothing, report its exact error text (or say it printed nothing) and the series this copy expects (`0.11.x`), then end the turn. If the output doesn't start with `0.11.`, report the exact version and expected series above, then end the turn. In either case, do not run `doctor` or an audit. If this copy came from a file, offer to read the matching steps with `npx --yes --prefer-online automatica11y@latest guide skill`, but wait for the user's confirmation before running it.
+If the command exits with an error or prints nothing, report its exact error text (or say it printed nothing) and the series this copy expects (`0.12.x`), then end the turn. If the output doesn't start with `0.12.`, report the exact version and expected series above, then end the turn. In either case, do not run `doctor` or an audit. If this copy came from a file, offer to read the matching steps with `npx --yes --prefer-online automatica11y@latest guide skill`, but wait for the user's confirmation before running it.
 
 If the user installed the tool globally (`npm i -g automatica11y`), `automatica11y` is on the `PATH` (so is the short name `a11y`), and it runs the same commands as `npx --yes --prefer-online automatica11y@latest`. Every command in this skill is written with `npx`, so replace that prefix with `automatica11y` only when `automatica11y --version` passes the check above. If the installed version is the wrong series, or nothing is installed, use `npx`.
 

@@ -21,7 +21,7 @@ command_mocks:
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "guide", "targets"]
         fixture: mocks/guide-targets.md
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "--version"]
-        stdout: "0.11.0\n"
+        stdout: "0.12.0\n"
       - args: ["--yes", "--prefer-online", "automatica11y@latest", "doctor", "--json"]
         fixture: mocks/doctor-ok.json
   - name: automatica11y
