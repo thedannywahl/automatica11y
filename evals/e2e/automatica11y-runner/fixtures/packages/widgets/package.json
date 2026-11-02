@@ -13,8 +13,8 @@
     "README.md"
   ],
   "peerDependencies": {
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "license": "MIT"
 }
