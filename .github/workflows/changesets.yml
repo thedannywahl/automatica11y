@@ -22,7 +22,7 @@ jobs:
   version:
     name: Open or update version PR
     needs: validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -79,7 +79,7 @@ jobs:
     name: Publish npm package and GitHub Release
     needs: [validation, version]
     if: needs.version.outputs.has-changesets == 'false'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     permissions:
       contents: write
