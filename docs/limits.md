@@ -6,7 +6,7 @@
 - Motion driven by JavaScript timers, such as a carousel that animates with `requestAnimationFrame`, isn't visible to the reduced motion check.
 - A Svelte library that imports SvelteKit-only modules (`$app/environment` and the like) can't run on its own. The target fails, and the report names the import.
 - Vue 2, Svelte 4 and older, Angular older than version 22, and other frameworks report "unsupported framework." Their Storybooks work, because a Storybook renders stories in a page whatever the framework.
-- Native screen readers aren't part of this version.
+- Native screen readers aren't part of this version. The [ARIA-AT-informed regression fixtures and manual follow-up](checks.md#aria-at-informed-regression-fixtures) distinguish browser-observable checks from real speech and reading-cursor behavior; automated passes do not establish real-AT interoperability.
 - Results are a snapshot. The tools run at their latest versions, and the report records them.
 
 ## License.

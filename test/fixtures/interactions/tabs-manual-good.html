@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>tabs-manual-good</title>
+<style>button { min-width: 44px; min-height: 44px; } :focus { outline: 2px solid navy; } [hidden] { display: none !important; }</style>
+</head>
+<body>
+<div role="tablist" aria-label="Project details">
+<button type="button" role="tab" id="overview" aria-controls="overview-panel" aria-selected="true" tabindex="0" data-a11y-trigger data-a11y-root>Overview</button>
+<button type="button" role="tab" id="history" aria-controls="history-panel" aria-selected="false" tabindex="-1">History</button>
+<button type="button" role="tab" id="settings" aria-controls="settings-panel" aria-selected="false" tabindex="-1">Settings</button>
+</div>
+<div role="tabpanel" id="overview-panel" aria-labelledby="overview" tabindex="0">Project summary.</div>
+<div role="tabpanel" id="history-panel" aria-labelledby="history" tabindex="0" hidden>Recent changes.</div>
+<div role="tabpanel" id="settings-panel" aria-labelledby="settings" tabindex="0" hidden>Project preferences.</div>
+<script>
+const tabs = [...document.querySelectorAll("[role=tab]")];
+function move(index) {
+  const next = tabs[(index + tabs.length) % tabs.length];
+  tabs.forEach((tab) => { tab.tabIndex = tab === next ? 0 : -1; });
+  next.focus();
+}
+function select(selected) {
+  tabs.forEach((tab) => {
+    const on = tab === selected;
+    tab.setAttribute("aria-selected", String(on));
+    document.getElementById(tab.getAttribute("aria-controls")).hidden = !on;
+  });
+  move(tabs.indexOf(selected));
+}
+tabs.forEach((tab) => tab.addEventListener("click", () => select(tab)));
+document.querySelector("[role=tablist]").addEventListener("keydown", (event) => {
+  const index = tabs.indexOf(document.activeElement);
+  if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  if (event.key === "ArrowRight") move(index + 1);
+  if (event.key === "ArrowLeft") move(index - 1);
+  if (event.key === "Home") move(0);
+  if (event.key === "End") move(tabs.length - 1);
+});
+</script>
+</body>
+</html>
