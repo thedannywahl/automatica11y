@@ -73,6 +73,8 @@ const PAGES = {
   "menu-bad": ["menu", { ...common(P, P, P), "opens-with-enter-or-arrow": P, "arrow-keys-move-between-items": F, "escape-closes-and-returns-focus": F }],
   "menu-bad-open": ["menu", { ...common(P, P, P), "opens-with-enter-or-arrow": F, "arrow-keys-move-between-items": N, "escape-closes-and-returns-focus": N }],
   "tabs-good": ["tabs", { ...common(P, P, P), "arrow-keys-move-between-tabs": P, "home-and-end-work": P, "selected-state-exposed": P }],
+  "tabs-manual-good": ["tabs", { ...common(P, P, P), "arrow-keys-move-between-tabs": P, "home-and-end-work": P, "selected-state-exposed": P }],
+  "tabs-manual-bad": ["tabs", { ...common(P, P, P), "arrow-keys-move-between-tabs": P, "home-and-end-work": P, "selected-state-exposed": F }],
   "tabs-bad": ["tabs", { ...common(P, P, P), "arrow-keys-move-between-tabs": F, "home-and-end-work": F, "selected-state-exposed": F }],
   "combobox-good": ["combobox", { ...common(P, P, P), "arrow-down-opens-list": P, "arrow-keys-change-active-option": P, "enter-selects": P, "escape-closes": P }],
   "combobox-bad": ["combobox", { ...common(P, P, P), "arrow-down-opens-list": F, "arrow-keys-change-active-option": N, "enter-selects": N, "escape-closes": N }],
@@ -127,6 +129,28 @@ test("active-descendant menu keeps DOM focus on the container while navigating i
     assert.deepEqual(await state(), { focus: "actions", item: "rename" });
   } finally {
     await opened.close();
+  }
+});
+
+test("manual tabs move focus without selecting until Enter or Space activates the tab", { skip }, async () => {
+  for (const key of ["Enter", "Space"]) {
+    const opened = await openPage(session.browser, `${server.origin}/tabs-manual-good.html`, { waitUntil: "load" });
+    try {
+      const page = opened.page;
+      const state = () => page.evaluate(() => ({
+        focus: document.activeElement?.id,
+        selected: [...document.querySelectorAll('[role="tab"][aria-selected="true"]')].map((tab) => tab.id),
+        panels: [...document.querySelectorAll('[role="tabpanel"]:not([hidden])')].map((panel) => panel.id),
+      }));
+      await page.locator("[data-a11y-trigger]").focus();
+      assert.deepEqual(await state(), { focus: "overview", selected: ["overview"], panels: ["overview-panel"] });
+      await page.keyboard.press("ArrowRight");
+      assert.deepEqual(await state(), { focus: "history", selected: ["overview"], panels: ["overview-panel"] });
+      await page.keyboard.press(key);
+      assert.deepEqual(await state(), { focus: "history", selected: ["history"], panels: ["history-panel"] }, key);
+    } finally {
+      await opened.close();
+    }
   }
 });
 
