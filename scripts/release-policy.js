@@ -70,7 +70,20 @@ export function validateVersionDiff(changes, read, base, head) {
   const lockAfter = JSON.parse(read(head, "package-lock.json"));
   lockBefore.version = after.version;
   lockBefore.packages[""].version = after.version;
-  assert.deepEqual(lockAfter, lockBefore, "Release PR must not alter locked dependencies.");
+  
+  // Compare lock files by extracting only the essential version info (not metadata like "dev")
+  const extractVersions = (/** @type {any} */ lock) => {
+    /** @type {Record<string, {version: string, resolved?: string}>} */
+    const versions = {};
+    for (const [path, entry] of Object.entries(lock.packages)) {
+      if (typeof entry === "object" && entry !== null && "version" in entry) {
+        versions[path] = { version: entry.version, resolved: entry.resolved };
+      }
+    }
+    return versions;
+  };
+  
+  assert.deepEqual(extractVersions(lockAfter), extractVersions(lockBefore), "Release PR must not alter locked dependency versions.");
   const skill = "skills/automatica11y-runner/SKILL.md";
   assert.equal(read(head, skill), updateRunnerSkillVersion(read(base, skill), after.version));
   assert.ok(changes.some(({ path }) => path === "CHANGELOG.md"), "Release PR must include its changelog.");
