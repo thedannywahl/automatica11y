@@ -66,6 +66,8 @@ const PAGES = {
   "link-good": ["link", { ...common(P, P, P), "enter-activates": P, "space-activates": N }],
   "link-bad": ["link", { ...common(P, F, P), "enter-activates": F, "space-activates": N }],
   "dialog-good": ["dialog", { ...common(P, P, P), "focus-moves-into-dialog": P, "tab-stays-inside-dialog": P, "escape-closes": P, "focus-returns-to-trigger": P }],
+  "dialog-static-focus-good": ["dialog", { ...common(P, P, P), "focus-moves-into-dialog": P, "tab-stays-inside-dialog": P, "escape-closes": P, "focus-returns-to-trigger": P }],
+  "dialog-static-focus-bad": ["dialog", { ...common(P, P, P), "focus-moves-into-dialog": P, "tab-stays-inside-dialog": P, "escape-closes": P, "focus-returns-to-trigger": F }],
   "dialog-bad": ["dialog", { ...common(P, P, P), "focus-moves-into-dialog": F, "tab-stays-inside-dialog": F, "escape-closes": F, "focus-returns-to-trigger": N }],
   "menu-good": ["menu", { ...common(P, P, P), "opens-with-enter-or-arrow": P, "arrow-keys-move-between-items": P, "escape-closes-and-returns-focus": P }],
   "menu-active-descendant-good": ["menu", { ...common(P, P, P), "opens-with-enter-or-arrow": P, "arrow-keys-move-between-items": P, "escape-closes-and-returns-focus": P }],
@@ -151,6 +153,22 @@ test("manual tabs move focus without selecting until Enter or Space activates th
     } finally {
       await opened.close();
     }
+  }
+});
+
+test("static-heading dialog focuses its heading initially and contains reverse Tab navigation", { skip }, async () => {
+  const opened = await openPage(session.browser, `${server.origin}/dialog-static-focus-good.html`, { waitUntil: "load" });
+  try {
+    const page = opened.page;
+    const activeId = () => page.evaluate(() => document.activeElement?.id);
+    await page.locator("[data-a11y-trigger]").press("Enter");
+    assert.equal(await activeId(), "heading");
+    await page.keyboard.press("Shift+Tab");
+    assert.equal(await activeId(), "cancel");
+    await page.keyboard.press("Tab");
+    assert.equal(await activeId(), "save");
+  } finally {
+    await opened.close();
   }
 });
 

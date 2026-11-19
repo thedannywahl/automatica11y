@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>dialog-static-focus-bad</title>
+<style>button { min-width: 44px; min-height: 44px; } :focus { outline: 2px solid navy; } [hidden] { display: none !important; }</style>
+</head>
+<body>
+<button type="button" id="trigger" data-a11y-trigger aria-haspopup="dialog" aria-controls="review" aria-expanded="false">Review document</button>
+<button type="button" id="unrelated">Unrelated action</button>
+<div role="dialog" aria-modal="true" aria-labelledby="heading" id="review" data-a11y-root hidden>
+<h2 id="heading" tabindex="-1">Review changes</h2>
+<p>Read the summary before saving your changes.</p>
+<button type="button" id="save">Save changes</button>
+<button type="button" id="cancel">Cancel review</button>
+</div>
+<script>
+const trigger = document.getElementById("trigger"), dialog = document.getElementById("review");
+const heading = document.getElementById("heading"), first = document.getElementById("save"), last = document.getElementById("cancel");
+function close() { dialog.hidden = true; trigger.setAttribute("aria-expanded", "false"); document.getElementById("unrelated").focus(); }
+trigger.onclick = () => { dialog.hidden = false; trigger.setAttribute("aria-expanded", "true"); heading.focus(); };
+first.onclick = close;
+last.onclick = close;
+dialog.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") { event.preventDefault(); close(); }
+  if (event.key === "Tab") {
+    const active = document.activeElement;
+    if (event.shiftKey && (active === heading || active === first)) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && active === last) { event.preventDefault(); first.focus(); }
+  }
+});
+</script>
+</body>
+</html>
