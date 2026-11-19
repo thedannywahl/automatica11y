@@ -3,6 +3,7 @@ import { after, before, test } from "node:test";
 import { findBrowser } from "../src/env/browser.js";
 import { launchBrowser } from "../src/harness/browser.js";
 import { serveStatic } from "../src/harness/static-serve.js";
+import { openPage } from "../src/harness/url.js";
 import { ARCHETYPE_CHECKS, COMMON } from "../src/tiers/interactions/archetypes.js";
 import { runCheck, runInteractions } from "../src/tiers/interactions/index.js";
 import { ARCHETYPES } from "../src/schema.js";
@@ -67,6 +68,8 @@ const PAGES = {
   "dialog-good": ["dialog", { ...common(P, P, P), "focus-moves-into-dialog": P, "tab-stays-inside-dialog": P, "escape-closes": P, "focus-returns-to-trigger": P }],
   "dialog-bad": ["dialog", { ...common(P, P, P), "focus-moves-into-dialog": F, "tab-stays-inside-dialog": F, "escape-closes": F, "focus-returns-to-trigger": N }],
   "menu-good": ["menu", { ...common(P, P, P), "opens-with-enter-or-arrow": P, "arrow-keys-move-between-items": P, "escape-closes-and-returns-focus": P }],
+  "menu-active-descendant-good": ["menu", { ...common(P, P, P), "opens-with-enter-or-arrow": P, "arrow-keys-move-between-items": P, "escape-closes-and-returns-focus": P }],
+  "menu-active-descendant-bad": ["menu", { ...common(P, P, P), "opens-with-enter-or-arrow": P, "arrow-keys-move-between-items": F, "escape-closes-and-returns-focus": P }],
   "menu-bad": ["menu", { ...common(P, P, P), "opens-with-enter-or-arrow": P, "arrow-keys-move-between-items": F, "escape-closes-and-returns-focus": F }],
   "menu-bad-open": ["menu", { ...common(P, P, P), "opens-with-enter-or-arrow": F, "arrow-keys-move-between-items": N, "escape-closes-and-returns-focus": N }],
   "tabs-good": ["tabs", { ...common(P, P, P), "arrow-keys-move-between-tabs": P, "home-and-end-work": P, "selected-state-exposed": P }],
@@ -107,6 +110,25 @@ for (const [page, [archetype, expected]] of Object.entries(PAGES)) {
     }
   });
 }
+
+test("active-descendant menu keeps DOM focus on the container while navigating items", { skip }, async () => {
+  const opened = await openPage(session.browser, `${server.origin}/menu-active-descendant-good.html`, { waitUntil: "load" });
+  try {
+    const page = opened.page;
+    await page.locator("[data-a11y-trigger]").press("Enter");
+    const state = () => page.evaluate(() => ({
+      focus: document.activeElement?.id,
+      item: document.getElementById("actions").getAttribute("aria-activedescendant"),
+    }));
+    assert.deepEqual(await state(), { focus: "actions", item: "rename" });
+    await page.keyboard.press("ArrowDown");
+    assert.deepEqual(await state(), { focus: "actions", item: "archive" });
+    await page.keyboard.press("ArrowUp");
+    assert.deepEqual(await state(), { focus: "actions", item: "rename" });
+  } finally {
+    await opened.close();
+  }
+});
 
 test("every archetype with checks has a good page and a bad page", () => {
   const withChecks = Object.keys(ARCHETYPE_CHECKS);
