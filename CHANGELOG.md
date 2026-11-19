@@ -1,5 +1,11 @@
 # automatica11y
 
+## 0.12.1
+
+### Patch Changes
+
+- e7e3155: Dependency updates: bump all production and development dependencies to latest available versions.
+
 ## 0.12.0
 
 ### Minor Changes
